@@ -56,8 +56,8 @@ export const engagements: Record<string, EngagementData> = {
     ],
     // TODO(jourden): replace with the real Coros signatory's name and email —
     // Documenso needs an actual email address to send the signing request to.
-    clientSignatoryName: "[Client Signatory Name]",
-    clientSignatoryEmail: "TODO@coros.example",
+    clientSignatoryName: "Johnny Test",
+    clientSignatoryEmail: "jourden@fonder.studio",
     fonderSignatoryName: "Tom Abrams",
     fonderSignatoryEmail: "tom@fonder.studio",
     // TODO(jourden): drop the final, client-approved SOW+MSA PDF (merged into
