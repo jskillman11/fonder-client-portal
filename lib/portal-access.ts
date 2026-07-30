@@ -25,14 +25,13 @@ export async function createAndSendMagicLink(
 
   const { data: engagement } = await supabase
     .from("engagements")
-    .select("id, engagement_title, clients(email, first_name), companies(name)")
+    .select("id, engagement_title, clients(email, first_name)")
     .eq("client_slug", clientSlug)
     .single();
 
   if (!engagement) return { error: "Unknown client" };
 
   const client = Array.isArray(engagement.clients) ? engagement.clients[0] : engagement.clients;
-  const company = Array.isArray(engagement.companies) ? engagement.companies[0] : engagement.companies;
   const registeredEmail = client?.email?.toLowerCase().trim();
 
   if (!registeredEmail || registeredEmail !== requestedEmail.toLowerCase().trim()) {
@@ -63,12 +62,34 @@ export async function createAndSendMagicLink(
     to: registeredEmail,
     subject: `Access your portal — ${engagement.engagement_title}`,
     html: `
-      <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto;">
-        <p>Hi ${client?.first_name ?? "there"},</p>
-        <p>Here's your link to access ${company?.name ?? "your"} portal for <strong>${engagement.engagement_title}</strong>:</p>
-        <p><a href="${link}" style="display:inline-block; background:#181a1e; color:#fff; padding:12px 20px; border-radius:999px; text-decoration:none; font-weight:600;">Open my portal</a></p>
-        <p style="color:#6c6f76; font-size:13px;">This link expires in ${LINK_EXPIRY_MINUTES} minutes. If you didn't request this, you can safely ignore this email.</p>
-      </div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F2F1EC;padding:40px 16px;font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="360" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid #DED9CF;border-radius:22px;max-width:360px;">
+            <tr>
+              <td align="center" style="padding:40px 36px;">
+                <img src="https://partners.fonder.studio/fonder-logo.png" width="52" height="52" alt="Fonder Studio" style="border-radius:12px;display:block;margin:0 auto;" />
+                <h1 style="font-size:21px;font-weight:700;letter-spacing:-.02em;color:#181A1E;margin:20px 0 6px;">${engagement.engagement_title}</h1>
+                <p style="font-size:13px;color:#6C6F76;line-height:1.5;margin:0 0 26px;">Your portal is ready to review and sign.</p>
+                <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                  <tr>
+                    <td align="center" style="border-radius:999px;background:#181A1E;">
+                      <a href="${link}" style="display:block;padding:13px 20px;font-size:13.5px;font-weight:600;color:#ffffff;text-decoration:none;">
+                        Open my portal
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+                <p style="font-size:12px;color:#6C6F76;line-height:1.6;margin:22px 0 0;">
+                  This link expires in ${LINK_EXPIRY_MINUTES} minutes and can only be used by you. If you didn't request it, you can safely ignore this email.
+                </p>
+              </td>
+            </tr>
+          </table>
+          <p style="font-size:11px;color:#8A8D93;margin-top:20px;">Fonder Studio &middot; sent to ${registeredEmail}</p>
+        </td>
+      </tr>
+    </table>
     `,
   });
 
