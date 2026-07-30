@@ -237,6 +237,7 @@ access to the Supabase project.
 | `PDF_RENDER_SERVICE_URL` | Vercel → Settings → Environment Variables (the Railway URL of `fonder-pdf-renderer`) |
 | `PDF_RENDER_API_KEY` | Vercel → Settings → Environment Variables (must match `RENDER_API_KEY` set on the `fonder-pdf-renderer` Railway service itself) |
 | `RESEND_API_KEY` | Vercel → Settings → Environment Variables (this app's own Resend key, for magic-link emails — separate from Documenso's own Resend config on Railway) |
+| `PORTAL_EMAIL_FROM` | Vercel → Settings → Environment Variables (optional — the "from" address for magic-link emails, e.g. `Fonder Studio <hello@send.fonder.studio>`. Must match a domain actually verified in whichever Resend account `RESEND_API_KEY` belongs to. Falls back to `hello@fonder.studio` if unset — set this explicitly if testing with a different domain, like `letsmesh.studio`, to avoid a "not authorized to send" error.) |
 | R2 credentials (`NEXT_PRIVATE_UPLOAD_*`) | Railway → documenso-web → Variables |
 | `NEXT_PRIVATE_RESEND_API_KEY` | Railway → documenso-web → Variables |
 

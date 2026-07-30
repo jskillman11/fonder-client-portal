@@ -59,7 +59,7 @@ export async function createAndSendMagicLink(
 
   const resend = new Resend(process.env.RESEND_API_KEY);
   const { error: emailError } = await resend.emails.send({
-    from: "Fonder Studio <hello@fonder.studio>",
+    from: process.env.PORTAL_EMAIL_FROM || "Fonder Studio <hello@fonder.studio>",
     to: registeredEmail,
     subject: `Access your portal — ${engagement.engagement_title}`,
     html: `
