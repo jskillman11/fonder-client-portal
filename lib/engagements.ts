@@ -18,6 +18,15 @@ export type EngagementData = {
     label: string;
     description: string;
   }[];
+  // Needed to actually send the document for signature via Documenso.
+  clientSignatoryName: string;
+  clientSignatoryEmail: string;
+  fonderSignatoryName: string;
+  fonderSignatoryEmail: string;
+  // Path (relative to /documents) to the final, client-approved SOW+MSA PDF,
+  // merged into one file. This must be the FINAL signed-ready version —
+  // not a draft — since this is what actually gets sent for signature.
+  documentPdfPath: string;
 };
 
 export const engagements: Record<string, EngagementData> = {
@@ -45,5 +54,14 @@ export const engagements: Record<string, EngagementData> = {
           "The general terms that govern this and future engagements between Fonder and Coros.",
       },
     ],
+    // TODO(jourden): replace with the real Coros signatory's name and email —
+    // Documenso needs an actual email address to send the signing request to.
+    clientSignatoryName: "[Client Signatory Name]",
+    clientSignatoryEmail: "jourden@fonder.studio",
+    fonderSignatoryName: "Tom Abrams",
+    fonderSignatoryEmail: "tom@fonder.studio",
+    // TODO(jourden): drop the final, client-approved SOW+MSA PDF (merged into
+    // one file) into /documents/coros-sow-msa.pdf before this can send for real.
+    documentPdfPath: "coros-sow-msa.pdf",
   },
 };
