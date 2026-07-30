@@ -221,6 +221,20 @@ again later (separate from the sign flow), that component's logic is straightfor
 from the Markdown-rendering pattern already used elsewhere (`react-markdown` + `remark-gfm`, still
 installed as dependencies even though currently unused).
 
+## UX change: "Review & sign" acts in place, no navigation
+
+The button on the main portal page now calls `/api/sign/create-session` directly and changes its
+own text to "Email sent" on success — no navigation anywhere. This reflects reality more honestly:
+the embedded-iframe signing experience (`/portal/[client]/sign/[docType]`, built earlier) hasn't
+been confirmed reliably working in practice, while the email fallback (Documenso's own `/send`
+call, kept as a safety net when the embed flow was first built) demonstrably does work. Rather than
+show a broken embed, the button now just does the thing that's actually working.
+
+**This leaves `/portal/[client]/sign/[docType]` and `components/SigningSession.tsx` orphaned** —
+still present, still functional as routes, but nothing in the UI links to them anymore. Kept in
+place rather than deleted, in case the embedded-iframe approach is worth debugging and fixing
+later — but worth a deliberate decision (remove vs. revisit) rather than leaving them unnoticed.
+
 ## The admin flow
 
 `/admin` — dashboard listing every client, with a link to view their live portal or edit their
