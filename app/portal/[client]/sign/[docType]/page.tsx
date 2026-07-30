@@ -46,7 +46,6 @@ export default async function SignDocumentPage({
           clientSlug={client}
           docType={docType}
           docLabel={docLabel}
-          markdown={markdown}
         />
       </div>
     </main>

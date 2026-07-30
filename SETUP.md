@@ -209,6 +209,18 @@ the next step would be showing the specific blocking engagement(s) by name in th
 lost or a client's device changes — they'd just request a fresh link via the gate screen, which
 works fine, but there's no admin visibility into active sessions or a way to force one out.
 
+## UX change: no reading step before signing
+
+Clicking "Review & sign" on the portal page now goes straight into the embedded Documenso signing
+iframe — the intermediate page that rendered the SOW/MSA content natively (via
+`components/DocumentContent.tsx`) for the client to read first has been removed, since that's no
+longer part of the flow. `SigningSession.tsx` now auto-starts the signing session on page load
+(via `useEffect`) instead of waiting for a second button click after reading. `DocumentContent.tsx`
+was deleted since nothing references it anymore — if a "read-only preview" experience is wanted
+again later (separate from the sign flow), that component's logic is straightforward to rebuild
+from the Markdown-rendering pattern already used elsewhere (`react-markdown` + `remark-gfm`, still
+installed as dependencies even though currently unused).
+
 ## The admin flow
 
 `/admin` — dashboard listing every client, with a link to view their live portal or edit their
