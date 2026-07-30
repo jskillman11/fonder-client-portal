@@ -28,12 +28,10 @@ export const engagements: Record<string, EngagementData> = {
     totalFee: "$12,000",
     finalDeliveryDate: "August 30, 2026",
     team: [
-      {
-        name: "Tom Abrams",
-        role: "Fonder Studio",
-        // TODO(jourden): add the rest of the Coros account team here —
-        // { name: "...", role: "...", blurb: "..." }
-      },
+      { name: "Tom Abrams", role: "Founder, Creative Director" },
+      { name: "Josh Block", role: "Co-Founder, Design Director" },
+      { name: "Jourden Skillman", role: "Co-Founder, Operations" },
+      { name: "Jackson Roberts", role: "Head of Brand Growth" },
     ],
     documents: [
       {
