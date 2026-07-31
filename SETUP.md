@@ -235,6 +235,15 @@ still present, still functional as routes, but nothing in the UI links to them a
 place rather than deleted, in case the embedded-iframe approach is worth debugging and fixing
 later — but worth a deliberate decision (remove vs. revisit) rather than leaving them unnoticed.
 
+## Fix: admins can now preview any portal directly, no magic link needed
+
+Clicking "View portal" from the admin dashboard was hitting the client-facing magic-link gate,
+since admin auth (Supabase login for `/admin/*`) and portal access (magic-link session cookies)
+are two entirely separate systems — being logged into one didn't mean anything to the other.
+Fixed via `isAdminSession()` in `lib/supabase/server.ts`: both the portal welcome page and the
+sign page now check for a valid admin session as an alternative to the client's own magic-link
+cookie, granting access either way.
+
 ## The admin flow
 
 `/admin` — dashboard listing every client, with a link to view their live portal or edit their

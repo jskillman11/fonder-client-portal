@@ -32,3 +32,16 @@ export function createServiceClient() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   );
 }
+
+// Checks whether the current request has a logged-in Fonder admin session --
+// used to let admins preview any client's portal directly, bypassing the
+// magic-link gate that real clients go through. This is a separate auth
+// system entirely (Supabase admin login vs. the portal's own token-based
+// sessions), so the portal pages need to check both.
+export async function isAdminSession(): Promise<boolean> {
+  const supabase = await createServerAuthClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return Boolean(user);
+}

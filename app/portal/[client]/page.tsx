@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { getEngagement } from "@/lib/get-engagement";
 import { getPortalCopy, renderTemplate } from "@/lib/portal-copy";
 import { hasValidSession, getPortalCookieName } from "@/lib/portal-access";
+import { isAdminSession } from "@/lib/supabase/server";
 import { AccessGate } from "@/components/AccessGate";
 import { WelcomeHero } from "@/components/WelcomeHero";
 import { TeamIntro } from "@/components/TeamIntro";
@@ -28,7 +29,11 @@ export default async function PortalPage({
 
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get(getPortalCookieName(client))?.value;
-  const isAuthorized = await hasValidSession(client, sessionCookie);
+  const [hasSession, isAdmin] = await Promise.all([
+    hasValidSession(client, sessionCookie),
+    isAdminSession(),
+  ]);
+  const isAuthorized = hasSession || isAdmin;
 
   if (!isAuthorized) {
     return <AccessGate clientSlug={client} />;
