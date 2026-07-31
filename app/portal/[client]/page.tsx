@@ -6,9 +6,9 @@ import { hasValidSession, getPortalCookieName } from "@/lib/portal-access";
 import { isAdminSession } from "@/lib/supabase/server";
 import { AccessGate } from "@/components/AccessGate";
 import { WelcomeHero } from "@/components/WelcomeHero";
+import { EngagementOverview } from "@/components/EngagementOverview";
 import { TeamIntro } from "@/components/TeamIntro";
 import { WhatsNext } from "@/components/WhatsNext";
-import { ReviewAndSignList } from "@/components/ReviewAndSignList";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +54,13 @@ export default async function PortalPage({
           clientLogoUrl={engagement.clientLogoUrl}
           subtitle={renderTemplate(copy.welcome_subtitle, templateVars)}
         />
+        <EngagementOverview
+          heading={copy.overview_heading}
+          subheading={copy.overview_subheading}
+          scopeSummary={engagement.scopeSummary}
+          totalFee={engagement.totalFee}
+          finalDeliveryDate={engagement.finalDeliveryDate}
+        />
         <TeamIntro
           team={engagement.team}
           heading={copy.team_heading}
@@ -67,21 +74,15 @@ export default async function PortalPage({
             { title: copy.whats_next_step_2_title, body: copy.whats_next_step_2_body },
             { title: copy.whats_next_step_3_title, body: copy.whats_next_step_3_body },
           ]}
-          calLink={process.env.CAL_COM_EVENT_LINK}
-          kickoffEarliestDate={engagement.kickoffEarliestDate}
-        />
-        <ReviewAndSignList
           clientSlug={engagement.clientSlug}
           hasSow={Boolean(engagement.sowContentMarkdown)}
           hasMsa={Boolean(engagement.msaContentMarkdown)}
-          totalFee={engagement.totalFee}
-          finalDeliveryDate={engagement.finalDeliveryDate}
-          heading={copy.review_sign_heading}
-          subheading={copy.review_sign_subheading}
           sowLabel={copy.sow_label}
           sowDescription={copy.sow_description}
           msaLabel={copy.msa_label}
           msaDescription={copy.msa_description}
+          calLink={process.env.CAL_COM_EVENT_LINK}
+          kickoffEarliestDate={engagement.kickoffEarliestDate}
         />
       </div>
       <p className="text-center text-[11px] text-[var(--color-faint)] mt-8">

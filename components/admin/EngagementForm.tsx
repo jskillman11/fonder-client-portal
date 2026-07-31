@@ -19,6 +19,7 @@ export type EngagementFormValues = {
   totalFee: string;
   finalDeliveryDate: string;
   kickoffEarliestDate: string;
+  scopeSummary: string;
   teamMemberIds: string[];
 };
 
@@ -46,6 +47,7 @@ export function EngagementForm({
     totalFee: "",
     finalDeliveryDate: "",
     kickoffEarliestDate: "",
+    scopeSummary: "",
     teamMemberIds: [],
   };
 
@@ -291,6 +293,17 @@ export function EngagementForm({
               placeholder="August 30, 2026"
             />
           </div>
+        </div>
+
+        <div className="mt-4">
+          <label className={labelClass}>Scope summary</label>
+          <textarea
+            value={values.scopeSummary}
+            onChange={(e) => set("scopeSummary", e.target.value)}
+            rows={3}
+            className={inputClass}
+            placeholder="A short, high-level description of what this engagement covers — shown in the portal's Overview section, separate from the full SOW."
+          />
         </div>
 
         <div className="mt-4">

@@ -264,6 +264,26 @@ availability naturally limits what's actually bookable — but worth knowing the
 
 **New environment variable:** `CAL_COM_EVENT_LINK` — Vercel → Settings → Environment Variables.
 
+## Portal restructuring: Overview section, sign/pay/schedule flow
+
+- **New Overview section** (`components/EngagementOverview.tsx`), positioned between the welcome
+  header and the team section. Shows a short admin-written scope summary (new `scope_summary`
+  field, distinct from the full SOW), plus total fee and final delivery date — both **moved here**
+  from where they used to live (the old standalone Review & Sign section's summary bar).
+- **What's Next is now the real action center**, three steps: **Review & sign** (the actual
+  per-document sign buttons, moved here from the old standalone section —
+  `components/SignActionsList.tsx`), **Pay invoice** (a visibly disabled placeholder —
+  `components/PayInvoiceAction.tsx`, real Quickbooks integration not built yet), **Schedule
+  kickoff** (the Cal.com embed, unchanged, just moved from step 2 to step 3 in this new sequence).
+- **The old standalone "Review & Sign" section and its component (`ReviewAndSignList.tsx`) are
+  gone** — replaced entirely by the above. Its portal-copy keys (`review_sign_heading`,
+  `review_sign_subheading`) were removed too; the SOW/MSA label/description keys carried over
+  into the What's Next copy group instead, since that's genuinely where they're used now.
+- **No real payment gating exists yet** — the three steps are presented in order, but nothing
+  currently prevents scheduling a kickoff before an invoice is (theoretically) paid. That's
+  intentional for now, not an oversight: real enforcement would need the Quickbooks integration
+  to exist first, so there's something real to gate on.
+
 ## The admin flow
 
 `/admin` — dashboard listing every client, with a link to view their live portal or edit their

@@ -31,6 +31,7 @@ export type EngagementData = {
   sowContentMarkdown: string | null;
   msaContentMarkdown: string | null;
   kickoffEarliestDate: string | null;
+  scopeSummary: string | null;
 };
 
 export async function listEngagements(): Promise<
@@ -120,6 +121,7 @@ export async function getEngagement(
     sowContentMarkdown: sowDoc?.content_markdown ?? null,
     msaContentMarkdown: msaDoc?.content_markdown ?? null,
     kickoffEarliestDate: engagement.kickoff_earliest_date,
+    scopeSummary: engagement.scope_summary,
     team: (teamRows ?? [])
       .map((row) => {
         const tm = Array.isArray(row.team_members) ? row.team_members[0] : row.team_members;

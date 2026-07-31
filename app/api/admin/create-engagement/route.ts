@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
         total_fee: engagement.totalFee,
         final_delivery_date: engagement.finalDeliveryDate,
         kickoff_earliest_date: engagement.kickoffEarliestDate || null,
+        scope_summary: engagement.scopeSummary || null,
         sow_document_id: engagement.sowDocumentId || null,
         msa_document_id: engagement.msaDocumentId || null,
       },

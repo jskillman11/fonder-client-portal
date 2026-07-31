@@ -15,6 +15,13 @@ const FIELD_GROUPS: { heading: string; fields: { key: PortalCopyKey; label: stri
     ],
   },
   {
+    heading: "Overview section",
+    fields: [
+      { key: "overview_heading", label: "Heading" },
+      { key: "overview_subheading", label: "Subheading" },
+    ],
+  },
+  {
     heading: "Team section",
     fields: [
       { key: "team_heading", label: "Heading" },
@@ -26,19 +33,12 @@ const FIELD_GROUPS: { heading: string; fields: { key: PortalCopyKey; label: stri
     fields: [
       { key: "whats_next_heading", label: "Heading" },
       { key: "whats_next_subheading", label: "Subheading" },
-      { key: "whats_next_step_1_title", label: "Step 1 title" },
+      { key: "whats_next_step_1_title", label: "Step 1 title (Review & sign)" },
       { key: "whats_next_step_1_body", label: "Step 1 body", multiline: true },
-      { key: "whats_next_step_2_title", label: "Step 2 title" },
+      { key: "whats_next_step_2_title", label: "Step 2 title (Pay invoice)" },
       { key: "whats_next_step_2_body", label: "Step 2 body", multiline: true },
-      { key: "whats_next_step_3_title", label: "Step 3 title" },
+      { key: "whats_next_step_3_title", label: "Step 3 title (Schedule kickoff)" },
       { key: "whats_next_step_3_body", label: "Step 3 body", multiline: true },
-    ],
-  },
-  {
-    heading: "Review & sign section",
-    fields: [
-      { key: "review_sign_heading", label: "Heading" },
-      { key: "review_sign_subheading", label: "Subheading" },
       { key: "sow_label", label: "SOW label" },
       { key: "sow_description", label: "SOW description" },
       { key: "msa_label", label: "MSA label" },

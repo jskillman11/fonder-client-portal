@@ -1,16 +1,32 @@
 import { Card } from "./Card";
 import { KickoffScheduler } from "./KickoffScheduler";
+import { SignActionsList } from "./SignActionsList";
+import { PayInvoiceAction } from "./PayInvoiceAction";
 
 export function WhatsNext({
   heading,
   subheading,
   steps,
+  clientSlug,
+  hasSow,
+  hasMsa,
+  sowLabel,
+  sowDescription,
+  msaLabel,
+  msaDescription,
   calLink,
   kickoffEarliestDate,
 }: {
   heading: string;
   subheading: string;
   steps: { title: string; body: string }[];
+  clientSlug: string;
+  hasSow: boolean;
+  hasMsa: boolean;
+  sowLabel: string;
+  sowDescription: string;
+  msaLabel: string;
+  msaDescription: string;
   calLink?: string;
   kickoffEarliestDate?: string | null;
 }) {
@@ -35,7 +51,22 @@ export function WhatsNext({
               <p className="text-[13.5px] text-[var(--color-muted)] leading-relaxed">
                 {step.body}
               </p>
-              {i === 1 && calLink && (
+
+              {i === 0 && (
+                <SignActionsList
+                  clientSlug={clientSlug}
+                  hasSow={hasSow}
+                  hasMsa={hasMsa}
+                  sowLabel={sowLabel}
+                  sowDescription={sowDescription}
+                  msaLabel={msaLabel}
+                  msaDescription={msaDescription}
+                />
+              )}
+
+              {i === 1 && <PayInvoiceAction />}
+
+              {i === 2 && calLink && (
                 <div className="mt-3">
                   <KickoffScheduler
                     calLink={calLink}

@@ -50,6 +50,7 @@ create table engagements (
   fonder_signatory_email text not null default 'tom@fonder.studio',
   document_storage_path text, -- reserved for the final signed PDF (post-signing)
   kickoff_earliest_date date, -- opens the Cal.com scheduling embed to this month by default
+  scope_summary text, -- short admin-written scope description for the portal Overview section
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
