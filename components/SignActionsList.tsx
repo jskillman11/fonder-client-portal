@@ -12,6 +12,7 @@ export function SignActionsList({
   sowDescription,
   msaLabel,
   msaDescription,
+  onAllSent,
 }: {
   clientSlug: string;
   hasSow: boolean;
@@ -20,6 +21,7 @@ export function SignActionsList({
   sowDescription: string;
   msaLabel: string;
   msaDescription: string;
+  onAllSent?: () => void;
 }) {
   const docs = [
     hasSow && { key: "sow" as const, label: sowLabel, description: sowDescription },
@@ -49,7 +51,12 @@ export function SignActionsList({
         return;
       }
 
-      setStatuses((prev) => ({ ...prev, [docType]: "sent" }));
+      setStatuses((prev) => {
+        const next = { ...prev, [docType]: "sent" as DocStatus };
+        const allSent = docs.every((d) => next[d.key] === "sent");
+        if (allSent) onAllSent?.();
+        return next;
+      });
     } catch {
       setStatuses((prev) => ({ ...prev, [docType]: "error" }));
       setErrorDetails((prev) => ({ ...prev, [docType]: "Couldn't reach the signing service." }));

@@ -284,6 +284,23 @@ availability naturally limits what's actually bookable — but worth knowing the
   intentional for now, not an oversight: real enforcement would need the Quickbooks integration
   to exist first, so there's something real to gate on.
 
+## Step-locking in What's Next: a real limitation worth knowing
+
+Each step is now its own visually distinct bordered block, and steps 2/3 (invoice, schedule) show
+greyed-out/locked until step 1's signing actions are triggered — implemented as local React state
+in `WhatsNext.tsx`, unlocked via a callback from `SignActionsList` once every present document
+shows "sent."
+
+**This lock state is client-side only, for the current page load — it is not persisted.** If the
+client refreshes the page (or leaves and comes back later), steps 2/3 will show locked again, even
+if they'd already triggered the sign emails earlier. This isn't a bug so much as a real product
+decision that was deferred: true persistence would mean tracking actual signing completion in the
+database, which is the same "live status tracking" gap already flagged earlier (the Documenso
+webhook receiver exists but doesn't update anything yet). If this refresh-resets-the-lock behavior
+turns out to matter in practice, that's the natural next thing to build — store a real
+"documents sent" (or better, "documents signed," via the webhook) flag on the engagement, and read
+it server-side instead of relying on in-page state.
+
 ## The admin flow
 
 `/admin` — dashboard listing every client, with a link to view their live portal or edit their

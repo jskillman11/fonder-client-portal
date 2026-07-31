@@ -39,9 +39,9 @@ export const PORTAL_COPY_DEFAULTS: Record<PortalCopyKey, string> = {
   whats_next_step_1_title: "Review & sign",
   whats_next_step_1_body:
     "Review and sign your Statement of Work and Master Services Agreement below.",
-  whats_next_step_2_title: "Pay your invoice",
+  whats_next_step_2_title: "Invoice & deposit",
   whats_next_step_2_body:
-    "Once signed, you'll receive an invoice to complete before kickoff.",
+    "Once signed, you'll receive an invoice for your project deposit — this secures your spot and kicks off scheduling.",
   whats_next_step_3_title: "Schedule your kickoff",
   whats_next_step_3_body: "Pick a time below that works for you.",
   sow_label: "Statement of Work",

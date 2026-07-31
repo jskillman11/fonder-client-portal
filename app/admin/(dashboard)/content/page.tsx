@@ -35,7 +35,7 @@ const FIELD_GROUPS: { heading: string; fields: { key: PortalCopyKey; label: stri
       { key: "whats_next_subheading", label: "Subheading" },
       { key: "whats_next_step_1_title", label: "Step 1 title (Review & sign)" },
       { key: "whats_next_step_1_body", label: "Step 1 body", multiline: true },
-      { key: "whats_next_step_2_title", label: "Step 2 title (Pay invoice)" },
+      { key: "whats_next_step_2_title", label: "Step 2 title (Invoice & deposit)" },
       { key: "whats_next_step_2_body", label: "Step 2 body", multiline: true },
       { key: "whats_next_step_3_title", label: "Step 3 title (Schedule kickoff)" },
       { key: "whats_next_step_3_body", label: "Step 3 body", multiline: true },
