@@ -37,6 +37,7 @@ export default async function EditClientPage({
           engagementTitle: engagement.engagementTitle,
           totalFee: engagement.totalFee,
           finalDeliveryDate: engagement.finalDeliveryDate,
+          kickoffEarliestDate: engagement.kickoffEarliestDate ?? "",
           teamMemberIds,
         }}
       />

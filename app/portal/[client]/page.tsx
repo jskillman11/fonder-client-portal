@@ -67,6 +67,8 @@ export default async function PortalPage({
             { title: copy.whats_next_step_2_title, body: copy.whats_next_step_2_body },
             { title: copy.whats_next_step_3_title, body: copy.whats_next_step_3_body },
           ]}
+          calLink={process.env.CAL_COM_EVENT_LINK}
+          kickoffEarliestDate={engagement.kickoffEarliestDate}
         />
         <ReviewAndSignList
           clientSlug={engagement.clientSlug}

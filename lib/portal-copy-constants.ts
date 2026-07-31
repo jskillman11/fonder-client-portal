@@ -37,9 +37,9 @@ export const PORTAL_COPY_DEFAULTS: Record<PortalCopyKey, string> = {
   whats_next_step_1_title: "You sign below",
   whats_next_step_1_body:
     "Review and sign your Statement of Work and Master Services Agreement.",
-  whats_next_step_2_title: "We schedule kickoff",
+  whats_next_step_2_title: "Schedule your kickoff",
   whats_next_step_2_body:
-    "Within 2 business days, we'll reach out to schedule your kickoff call and get you set up in our shared Slack channel.",
+    "Pick a time below that works for you.",
   whats_next_step_3_title: "Work begins",
   whats_next_step_3_body:
     "Your project timeline starts per the dates in your Statement of Work — you'll always know what's happening and when.",

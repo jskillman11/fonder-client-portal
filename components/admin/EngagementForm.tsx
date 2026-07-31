@@ -18,6 +18,7 @@ export type EngagementFormValues = {
   engagementTitle: string;
   totalFee: string;
   finalDeliveryDate: string;
+  kickoffEarliestDate: string;
   teamMemberIds: string[];
 };
 
@@ -44,6 +45,7 @@ export function EngagementForm({
     engagementTitle: "",
     totalFee: "",
     finalDeliveryDate: "",
+    kickoffEarliestDate: "",
     teamMemberIds: [],
   };
 
@@ -289,6 +291,20 @@ export function EngagementForm({
               placeholder="August 30, 2026"
             />
           </div>
+        </div>
+
+        <div className="mt-4">
+          <label className={labelClass}>Kickoff earliest date</label>
+          <input
+            type="date"
+            value={values.kickoffEarliestDate}
+            onChange={(e) => set("kickoffEarliestDate", e.target.value)}
+            className={inputClass}
+          />
+          <p className="text-[11px] text-[var(--color-faint)] mt-1">
+            Opens the scheduling calendar to this month by default — doesn&apos;t block earlier
+            dates from being picked, just controls the starting view.
+          </p>
         </div>
       </Card>
 

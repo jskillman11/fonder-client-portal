@@ -244,6 +244,26 @@ Fixed via `isAdminSession()` in `lib/supabase/server.ts`: both the portal welcom
 sign page now check for a valid admin session as an alternative to the client's own magic-link
 cookie, granting access either way.
 
+## Cal.com scheduling integration
+
+The "Schedule your kickoff" step in What's Next now embeds a real Cal.com booking calendar
+(`components/KickoffScheduler.tsx`, using the official `@calcom/embed-react` package) instead of
+just text saying someone will reach out. One event type is shared across every client — set via
+the `CAL_COM_EVENT_LINK` environment variable (e.g. `tomabrams/kickoff-call`), not per-engagement
+data, since there's only ever one event type in use.
+
+**Per-engagement, admins set a "Kickoff earliest date"** (Engagement Details section of the form)
+— this opens the calendar to that month by default via Cal.com's `?month=YYYY-MM` parameter,
+confirmed by reading Cal.com's actual booking-page source rather than assumed. **Important
+nuance:** this is a soft default only — it does not prevent a client from scrolling back and
+picking an earlier date. A hard restriction would require date-range limits configured on the
+event type itself, inside Cal.com's own dashboard, which isn't something this integration
+controls dynamically per-client. In practice this is usually fine, since your own real calendar
+availability naturally limits what's actually bookable — but worth knowing the difference between
+"opens to the right month" and "can't select an earlier one" if it ever comes up.
+
+**New environment variable:** `CAL_COM_EVENT_LINK` — Vercel → Settings → Environment Variables.
+
 ## The admin flow
 
 `/admin` — dashboard listing every client, with a link to view their live portal or edit their
