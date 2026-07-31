@@ -60,6 +60,7 @@ export default async function PortalPage({
           scopeSummary={engagement.scopeSummary}
           totalFee={engagement.totalFee}
           finalDeliveryDate={engagement.finalDeliveryDate}
+          milestones={engagement.milestones}
         />
         <TeamIntro
           team={engagement.team}
@@ -73,6 +74,7 @@ export default async function PortalPage({
             { title: copy.whats_next_step_1_title, body: copy.whats_next_step_1_body },
             { title: copy.whats_next_step_2_title, body: copy.whats_next_step_2_body },
             { title: copy.whats_next_step_3_title, body: copy.whats_next_step_3_body },
+            { title: copy.whats_next_step_4_title, body: copy.whats_next_step_4_body },
           ]}
           clientSlug={engagement.clientSlug}
           hasSow={Boolean(engagement.sowContentMarkdown)}

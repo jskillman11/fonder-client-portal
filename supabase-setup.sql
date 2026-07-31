@@ -55,6 +55,17 @@ create table engagements (
   updated_at timestamptz not null default now()
 );
 
+-- Schedule items for the portal Overview section -- start date, deliverable
+-- dates, etc. Admin-managed list per engagement.
+create table engagement_milestones (
+  id uuid primary key default gen_random_uuid(),
+  engagement_id uuid not null references engagements(id) on delete cascade,
+  label text not null,
+  milestone_date date not null,
+  sort_order int not null default 0,
+  created_at timestamptz not null default now()
+);
+
 -- Team members: Fonder's own staff, as a reusable global roster.
 create table team_members (
   id uuid primary key default gen_random_uuid(),
@@ -103,6 +114,7 @@ alter table companies enable row level security;
 alter table clients enable row level security;
 alter table documents enable row level security;
 alter table team_members enable row level security;
+alter table engagement_milestones enable row level security;
 alter table engagements enable row level security;
 alter table engagement_team_assignments enable row level security;
 alter table portal_copy enable row level security;
@@ -127,6 +139,9 @@ create policy "authenticated users manage engagements"
 
 create policy "authenticated users manage team members roster"
   on team_members for all to authenticated using (true) with check (true);
+
+create policy "authenticated users manage milestones"
+  on engagement_milestones for all to authenticated using (true) with check (true);
 
 create policy "authenticated users manage team assignments"
   on engagement_team_assignments for all to authenticated using (true) with check (true);

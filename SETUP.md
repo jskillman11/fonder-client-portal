@@ -301,6 +301,39 @@ turns out to matter in practice, that's the natural next thing to build — stor
 "documents sent" (or better, "documents signed," via the webhook) flag on the engagement, and read
 it server-side instead of relying on in-page state.
 
+## Schedule/milestones in Overview
+
+Overview now shows a real schedule list (`engagement_milestones` table — label + date pairs,
+admin-managed as a dynamic add/remove list on the engagement form), not just the single final
+delivery date. Use it for start date, deliverable dates, or anything else worth surfacing.
+
+## Client portal app — structural scaffolding only, not functional yet
+
+A whole new authenticated area at `/portal/[client]/app/*` — Home, Tasks, Project Resources, Chat,
+Invoices, Deliverables, Signed Documents, Change Request. This is genuinely just scaffolding, as
+asked for: real routes, real tab navigation, real auth protection (same magic-link/admin-session
+check as the rest of the portal, applied once in `app/portal/[client]/app/layout.tsx`), but every
+page's actual content is a placeholder — no real tasks, chat, invoices, or deliverables exist yet.
+
+**Home** has three distinct placeholder sections (Action items, Next touchpoint, Project status)
+matching what was described, rather than one generic blank.
+
+**Change Request** has real (but disabled) form structure — a date picker and priority selector —
+plus a description of the intended full workflow (show affected tasks, new timeline, budget
+impact, accept/decline) as informational text. **Building this for real will need to integrate
+with the existing ClickUp↔Google Sheets scheduling sync** (built in an earlier, separate project) —
+worth keeping in mind when this gets picked up again, since that's real existing infrastructure to
+plug into, not something to build from scratch.
+
+**What's Next now has a 4th step** — "Access your client portal," linking into this new area,
+locked the same way as steps 2/3 (until step 1's documents are sent).
+
+## Framework note (not urgent)
+
+The build now prints a deprecation warning: Next.js is moving away from `middleware.ts` in favor
+of a `proxy.ts` convention. Nothing breaks today, but this is worth migrating before a future
+Next.js major version potentially removes the old convention entirely.
+
 ## The admin flow
 
 `/admin` — dashboard listing every client, with a link to view their live portal or edit their

@@ -21,6 +21,8 @@ export type PortalCopyKey =
   | "whats_next_step_2_body"
   | "whats_next_step_3_title"
   | "whats_next_step_3_body"
+  | "whats_next_step_4_title"
+  | "whats_next_step_4_body"
   | "sow_label"
   | "sow_description"
   | "msa_label"
@@ -44,6 +46,9 @@ export const PORTAL_COPY_DEFAULTS: Record<PortalCopyKey, string> = {
     "Once signed, you'll receive an invoice for your project deposit — this secures your spot and kicks off scheduling.",
   whats_next_step_3_title: "Schedule your kickoff",
   whats_next_step_3_body: "Pick a time below that works for you.",
+  whats_next_step_4_title: "Access your client portal",
+  whats_next_step_4_body:
+    "Log in anytime to see project status, tasks, deliverables, and more.",
   sow_label: "Statement of Work",
   sow_description: "Scope, deliverables, timeline, and fees for this engagement.",
   msa_label: "Master Services Agreement",

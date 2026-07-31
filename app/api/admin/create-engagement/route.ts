@@ -65,5 +65,33 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Same replace-cleanly approach for the schedule/milestones list.
+  await supabase
+    .from("engagement_milestones")
+    .delete()
+    .eq("engagement_id", engagementRow.id);
+
+  const milestones: { label: string; date: string }[] = engagement.milestones || [];
+  const validMilestones = milestones.filter((m) => m.label?.trim() && m.date);
+  if (validMilestones.length > 0) {
+    const milestoneRows = validMilestones.map((m, i) => ({
+      engagement_id: engagementRow.id,
+      label: m.label,
+      milestone_date: m.date,
+      sort_order: i,
+    }));
+
+    const { error: milestoneError } = await supabase
+      .from("engagement_milestones")
+      .insert(milestoneRows);
+
+    if (milestoneError) {
+      return NextResponse.json(
+        { error: "Saved engagement but failed to save schedule", detail: milestoneError.message },
+        { status: 500 },
+      );
+    }
+  }
+
   return NextResponse.json({ success: true, clientSlug: engagement.clientSlug });
 }

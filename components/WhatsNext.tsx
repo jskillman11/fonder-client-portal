@@ -105,6 +105,22 @@ export function WhatsNext({
                         </div>
                       )
                     ))}
+
+                  {i === 3 &&
+                    (locked ? (
+                      <p className="text-[12px] text-[var(--color-faint)] mt-3">
+                        Unlocks once your documents are sent for signature.
+                      </p>
+                    ) : (
+                      <div className="mt-3">
+                        <a
+                          href={`/portal/${clientSlug}/app`}
+                          className="inline-block rounded-[var(--radius-pill)] bg-[var(--color-ink)] text-white text-[13px] font-semibold px-5 py-2.5"
+                        >
+                          Open client portal
+                        </a>
+                      </div>
+                    ))}
                 </div>
               </div>
             </div>

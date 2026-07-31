@@ -39,6 +39,8 @@ const FIELD_GROUPS: { heading: string; fields: { key: PortalCopyKey; label: stri
       { key: "whats_next_step_2_body", label: "Step 2 body", multiline: true },
       { key: "whats_next_step_3_title", label: "Step 3 title (Schedule kickoff)" },
       { key: "whats_next_step_3_body", label: "Step 3 body", multiline: true },
+      { key: "whats_next_step_4_title", label: "Step 4 title (Client portal)" },
+      { key: "whats_next_step_4_body", label: "Step 4 body", multiline: true },
       { key: "sow_label", label: "SOW label" },
       { key: "sow_description", label: "SOW description" },
       { key: "msa_label", label: "MSA label" },

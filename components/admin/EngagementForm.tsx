@@ -20,6 +20,7 @@ export type EngagementFormValues = {
   finalDeliveryDate: string;
   kickoffEarliestDate: string;
   scopeSummary: string;
+  milestones: { label: string; date: string }[];
   teamMemberIds: string[];
 };
 
@@ -48,6 +49,7 @@ export function EngagementForm({
     finalDeliveryDate: "",
     kickoffEarliestDate: "",
     scopeSummary: "",
+    milestones: [],
     teamMemberIds: [],
   };
 
@@ -91,6 +93,24 @@ export function EngagementForm({
       values.teamMemberIds.includes(id)
         ? values.teamMemberIds.filter((existing) => existing !== id)
         : [...values.teamMemberIds, id],
+    );
+  }
+
+  function updateMilestone(index: number, field: "label" | "date", value: string) {
+    set(
+      "milestones",
+      values.milestones.map((m, i) => (i === index ? { ...m, [field]: value } : m)),
+    );
+  }
+
+  function addMilestone() {
+    set("milestones", [...values.milestones, { label: "", date: "" }]);
+  }
+
+  function removeMilestone(index: number) {
+    set(
+      "milestones",
+      values.milestones.filter((_, i) => i !== index),
     );
   }
 
@@ -319,6 +339,53 @@ export function EngagementForm({
             dates from being picked, just controls the starting view.
           </p>
         </div>
+      </Card>
+
+      {/* --- Schedule --- */}
+      <Card className="px-9 py-9">
+        <h2 className="text-[16px] font-bold text-[var(--color-ink)] mb-1">
+          Schedule
+        </h2>
+        <p className="text-[13px] text-[var(--color-muted)] mb-4">
+          Start date, deliverable dates, and any other milestones — shown in the portal&apos;s
+          Overview section.
+        </p>
+        {values.milestones.map((m, i) => (
+          <div key={i} className="grid grid-cols-[1fr_auto_auto] gap-3 mb-3 items-end">
+            <div>
+              <label className={labelClass}>Label</label>
+              <input
+                value={m.label}
+                onChange={(e) => updateMilestone(i, "label", e.target.value)}
+                className={inputClass}
+                placeholder="Project start"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Date</label>
+              <input
+                type="date"
+                value={m.date}
+                onChange={(e) => updateMilestone(i, "date", e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => removeMilestone(i)}
+              className="text-[12px] text-[#a32d2d] underline mb-2.5"
+            >
+              Remove
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={addMilestone}
+          className="text-[13px] font-medium text-[var(--color-ink)] underline"
+        >
+          + Add milestone
+        </button>
       </Card>
 
       {/* --- Document content --- */}

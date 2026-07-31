@@ -8,6 +8,8 @@ export type TeamMember = {
   iconTextColor?: string | null;
 };
 
+export type Milestone = { label: string; date: string };
+
 export type EngagementData = {
   id: string;
   clientSlug: string;
@@ -32,6 +34,7 @@ export type EngagementData = {
   msaContentMarkdown: string | null;
   kickoffEarliestDate: string | null;
   scopeSummary: string | null;
+  milestones: Milestone[];
 };
 
 export async function listEngagements(): Promise<
@@ -88,6 +91,12 @@ export async function getEngagement(
     .eq("engagement_id", engagement.id)
     .order("sort_order", { ascending: true });
 
+  const { data: milestoneRows } = await supabase
+    .from("engagement_milestones")
+    .select("label, milestone_date")
+    .eq("engagement_id", engagement.id)
+    .order("milestone_date", { ascending: true });
+
   let clientLogoUrl: string | null = null;
   if (company?.logo_storage_path) {
     const { data } = supabase.storage
@@ -122,6 +131,10 @@ export async function getEngagement(
     msaContentMarkdown: msaDoc?.content_markdown ?? null,
     kickoffEarliestDate: engagement.kickoff_earliest_date,
     scopeSummary: engagement.scope_summary,
+    milestones: (milestoneRows ?? []).map((m) => ({
+      label: m.label,
+      date: m.milestone_date,
+    })),
     team: (teamRows ?? [])
       .map((row) => {
         const tm = Array.isArray(row.team_members) ? row.team_members[0] : row.team_members;
