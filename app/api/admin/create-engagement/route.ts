@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
         scope_summary: engagement.scopeSummary || null,
         sow_document_id: engagement.sowDocumentId || null,
         msa_document_id: engagement.msaDocumentId || null,
+        lock_portal_tabs: engagement.lockPortalTabs ?? true,
       },
       { onConflict: "client_slug" },
     )

@@ -35,6 +35,7 @@ export type EngagementData = {
   kickoffEarliestDate: string | null;
   scopeSummary: string | null;
   milestones: Milestone[];
+  lockPortalTabs: boolean;
 };
 
 export async function listEngagements(): Promise<
@@ -131,6 +132,7 @@ export async function getEngagement(
     msaContentMarkdown: msaDoc?.content_markdown ?? null,
     kickoffEarliestDate: engagement.kickoff_earliest_date,
     scopeSummary: engagement.scope_summary,
+    lockPortalTabs: engagement.lock_portal_tabs,
     milestones: (milestoneRows ?? []).map((m) => ({
       label: m.label,
       date: m.milestone_date,

@@ -1,44 +1,73 @@
-import { Card } from "@/components/Card";
+import { notFound } from "next/navigation";
+import { getEngagement } from "@/lib/get-engagement";
+import { getPortalCopy, renderTemplate } from "@/lib/portal-copy";
+import { WelcomeHero } from "@/components/WelcomeHero";
+import { EngagementOverview } from "@/components/EngagementOverview";
+import { TeamIntro } from "@/components/TeamIntro";
+import { WhatsNext } from "@/components/WhatsNext";
 
-export default function ClientAppHomePage() {
+export const dynamic = "force-dynamic";
+
+export default async function OnboardingTabPage({
+  params,
+}: {
+  params: Promise<{ client: string }>;
+}) {
+  const { client } = await params;
+  const [engagement, copy] = await Promise.all([
+    getEngagement(client),
+    getPortalCopy(),
+  ]);
+
+  if (!engagement) {
+    notFound();
+  }
+
+  const templateVars = {
+    engagementTitle: engagement.engagementTitle,
+    clientFirstName: engagement.clientSignatoryFirstName,
+    clientName: engagement.clientName,
+  };
+
   return (
     <div className="space-y-5">
-      <Card className="px-9 py-8">
-        <p className="text-[12px] font-semibold uppercase tracking-wide text-[var(--color-faint)] mb-2">
-          Coming soon
-        </p>
-        <h2 className="text-[17px] font-bold text-[var(--color-ink)] mb-1">
-          Action items
-        </h2>
-        <p className="text-[13.5px] text-[var(--color-muted)] leading-relaxed">
-          Anything that needs your attention — approvals, requested feedback, open questions —
-          will show up here.
-        </p>
-      </Card>
-
-      <Card className="px-9 py-8">
-        <p className="text-[12px] font-semibold uppercase tracking-wide text-[var(--color-faint)] mb-2">
-          Coming soon
-        </p>
-        <h2 className="text-[17px] font-bold text-[var(--color-ink)] mb-1">
-          Next touchpoint
-        </h2>
-        <p className="text-[13.5px] text-[var(--color-muted)] leading-relaxed">
-          Your next scheduled call or milestone check-in will be shown here.
-        </p>
-      </Card>
-
-      <Card className="px-9 py-8">
-        <p className="text-[12px] font-semibold uppercase tracking-wide text-[var(--color-faint)] mb-2">
-          Coming soon
-        </p>
-        <h2 className="text-[17px] font-bold text-[var(--color-ink)] mb-1">
-          Project status
-        </h2>
-        <p className="text-[13.5px] text-[var(--color-muted)] leading-relaxed">
-          Real-time updates on where things stand — no need to ask, you&apos;ll always know.
-        </p>
-      </Card>
+      <WelcomeHero
+        greeting={renderTemplate(copy.welcome_greeting, templateVars)}
+        clientName={engagement.clientName}
+        clientLogoUrl={engagement.clientLogoUrl}
+        subtitle={renderTemplate(copy.welcome_subtitle, templateVars)}
+      />
+      <EngagementOverview
+        heading={copy.overview_heading}
+        subheading={copy.overview_subheading}
+        scopeSummary={engagement.scopeSummary}
+        totalFee={engagement.totalFee}
+        finalDeliveryDate={engagement.finalDeliveryDate}
+        milestones={engagement.milestones}
+      />
+      <TeamIntro
+        team={engagement.team}
+        heading={copy.team_heading}
+        subheading={copy.team_subheading}
+      />
+      <WhatsNext
+        heading={copy.whats_next_heading}
+        subheading={copy.whats_next_subheading}
+        steps={[
+          { title: copy.whats_next_step_1_title, body: copy.whats_next_step_1_body },
+          { title: copy.whats_next_step_2_title, body: copy.whats_next_step_2_body },
+          { title: copy.whats_next_step_3_title, body: copy.whats_next_step_3_body },
+        ]}
+        clientSlug={engagement.clientSlug}
+        hasSow={Boolean(engagement.sowContentMarkdown)}
+        hasMsa={Boolean(engagement.msaContentMarkdown)}
+        sowLabel={copy.sow_label}
+        sowDescription={copy.sow_description}
+        msaLabel={copy.msa_label}
+        msaDescription={copy.msa_description}
+        calLink={process.env.CAL_COM_EVENT_LINK}
+        kickoffEarliestDate={engagement.kickoffEarliestDate}
+      />
     </div>
   );
 }

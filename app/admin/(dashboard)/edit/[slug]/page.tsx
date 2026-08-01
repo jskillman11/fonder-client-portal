@@ -41,6 +41,7 @@ export default async function EditClientPage({
           scopeSummary: engagement.scopeSummary ?? "",
           milestones: engagement.milestones,
           teamMemberIds,
+          lockPortalTabs: engagement.lockPortalTabs,
         }}
       />
     </main>

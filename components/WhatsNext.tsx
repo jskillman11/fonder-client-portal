@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { Card } from "./Card";
 import { KickoffScheduler } from "./KickoffScheduler";
 import { SignActionsList } from "./SignActionsList";
 import { PayInvoiceAction } from "./PayInvoiceAction";
+import { useAppUnlock } from "./portal-app/AppUnlockContext";
 
 export function WhatsNext({
   heading,
@@ -33,7 +33,7 @@ export function WhatsNext({
   calLink?: string;
   kickoffEarliestDate?: string | null;
 }) {
-  const [step1Done, setStep1Done] = useState(false);
+  const { docsSent, markDocsSent } = useAppUnlock();
 
   return (
     <Card className="px-9 py-9 md:px-12 md:py-10">
@@ -45,7 +45,7 @@ export function WhatsNext({
       </p>
       <div className="space-y-4">
         {steps.map((step, i) => {
-          const locked = i > 0 && !step1Done;
+          const locked = i > 0 && !docsSent;
 
           return (
             <div
@@ -77,7 +77,7 @@ export function WhatsNext({
                       sowDescription={sowDescription}
                       msaLabel={msaLabel}
                       msaDescription={msaDescription}
-                      onAllSent={() => setStep1Done(true)}
+                      onAllSent={markDocsSent}
                     />
                   )}
 
@@ -104,22 +104,6 @@ export function WhatsNext({
                           />
                         </div>
                       )
-                    ))}
-
-                  {i === 3 &&
-                    (locked ? (
-                      <p className="text-[12px] text-[var(--color-faint)] mt-3">
-                        Unlocks once your documents are sent for signature.
-                      </p>
-                    ) : (
-                      <div className="mt-3">
-                        <a
-                          href={`/portal/${clientSlug}/app`}
-                          className="inline-block rounded-[var(--radius-pill)] bg-[var(--color-ink)] text-white text-[13px] font-semibold px-5 py-2.5"
-                        >
-                          Open client portal
-                        </a>
-                      </div>
                     ))}
                 </div>
               </div>

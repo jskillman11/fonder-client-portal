@@ -22,6 +22,7 @@ export type EngagementFormValues = {
   scopeSummary: string;
   milestones: { label: string; date: string }[];
   teamMemberIds: string[];
+  lockPortalTabs: boolean;
 };
 
 const inputClass =
@@ -51,6 +52,7 @@ export function EngagementForm({
     scopeSummary: "",
     milestones: [],
     teamMemberIds: [],
+    lockPortalTabs: true,
   };
 
   const [values, setValues] = useState<EngagementFormValues>(defaults);
@@ -496,6 +498,29 @@ export function EngagementForm({
             })}
           </div>
         )}
+      </Card>
+
+      {/* --- Client portal --- */}
+      <Card className="px-9 py-9">
+        <h2 className="text-[16px] font-bold text-[var(--color-ink)] mb-1">
+          Client portal
+        </h2>
+        <p className="text-[13px] text-[var(--color-muted)] mb-4">
+          Controls whether the client portal app's tabs (Tasks, Chat,
+          Invoices, etc.) stay locked until both documents are sent for
+          signature.
+        </p>
+        <label className="flex items-center gap-3 rounded-[10px] border border-[var(--color-border)] px-4 py-2.5 cursor-pointer w-fit">
+          <input
+            type="checkbox"
+            checked={values.lockPortalTabs}
+            onChange={(e) => set("lockPortalTabs", e.target.checked)}
+            className="w-4 h-4"
+          />
+          <span className="text-[13.5px] font-medium text-[var(--color-ink)]">
+            Lock portal tabs until documents are sent
+          </span>
+        </label>
       </Card>
 
       {status === "error" && (
