@@ -1,8 +1,8 @@
-import { getAdminUser } from "@/lib/supabase/server";
+import { getAdminUser, isSuperAdminSession } from "@/lib/supabase/server";
 import { DashboardShell } from "@/components/shell/DashboardShell";
 import { AdminAccountMenu } from "@/components/admin/AdminAccountMenu";
 
-const ADMIN_NAV_ITEMS = [
+const BASE_ADMIN_NAV_ITEMS = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/companies", label: "Companies" },
   { href: "/admin/clients", label: "Clients" },
@@ -16,11 +16,15 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getAdminUser();
+  const [user, isSuperAdmin] = await Promise.all([getAdminUser(), isSuperAdminSession()]);
+
+  const navItems = isSuperAdmin
+    ? [...BASE_ADMIN_NAV_ITEMS, { href: "/admin/users", label: "Users" }]
+    : BASE_ADMIN_NAV_ITEMS;
 
   return (
     <DashboardShell
-      navItems={ADMIN_NAV_ITEMS}
+      navItems={navItems}
       accountSlot={<AdminAccountMenu email={user?.email ?? ""} />}
     >
       {children}

@@ -39,7 +39,7 @@ export function createServiceClient() {
 // there a session" is load-bearing now that clients also get real Supabase
 // Auth accounts (see lib/portal-access.ts) -- any authenticated user without
 // a staff profile row must NOT be treated as staff.
-async function getStaffUser(): Promise<{ email: string } | null> {
+async function getStaffUser(): Promise<{ id: string; email: string } | null> {
   const supabase = await createServerAuthClient();
   const {
     data: { user },
@@ -52,7 +52,7 @@ async function getStaffUser(): Promise<{ email: string } | null> {
     .eq("id", user.id)
     .single();
 
-  return profile?.role === "staff" ? { email: user.email } : null;
+  return profile?.role === "staff" ? { id: user.id, email: user.email } : null;
 }
 
 // Checks whether the current request has a logged-in Fonder staff session --
@@ -62,10 +62,11 @@ export async function isAdminSession(): Promise<boolean> {
   return Boolean(await getStaffUser());
 }
 
-// Returns the logged-in Fonder admin's email, for display in the dashboard
-// shell's account corner. Only meaningful under /admin, where middleware
-// already guarantees a logged-in staff user.
-export async function getAdminUser(): Promise<{ email: string } | null> {
+// Returns the logged-in Fonder admin's id + email, for display in the
+// dashboard shell's account corner and for self-action guards (e.g. "can't
+// remove your own staff account"). Only meaningful under /admin, where
+// middleware already guarantees a logged-in staff user.
+export async function getAdminUser(): Promise<{ id: string; email: string } | null> {
   return getStaffUser();
 }
 
@@ -74,12 +75,41 @@ export async function getAdminUser(): Promise<{ email: string } | null> {
 // copy-pasted onto a path the matcher doesn't cover, so each route also
 // checks for itself. Call at the top of every handler and return early if
 // the result is a NextResponse.
-export async function requireAdmin(): Promise<{ email: string } | NextResponse> {
+export async function requireAdmin(): Promise<{ id: string; email: string } | NextResponse> {
   const user = await getAdminUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   return user;
+}
+
+// A narrower tier on top of staff: only super-admins can invite, remove, or
+// promote other staff accounts (see lib/staff.ts and app/admin/users). Used
+// both as a render-time guard (the /admin/users page itself) and via
+// requireSuperAdmin for the staff-management API routes.
+export async function isSuperAdminSession(): Promise<boolean> {
+  const supabase = await createServerAuthClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, is_super_admin")
+    .eq("id", user.id)
+    .single();
+
+  return profile?.role === "staff" && profile.is_super_admin === true;
+}
+
+export async function requireSuperAdmin(): Promise<{ id: string; email: string } | NextResponse> {
+  const admin = await requireAdmin();
+  if (admin instanceof NextResponse) return admin;
+  if (!(await isSuperAdminSession())) {
+    return NextResponse.json({ error: "Super-admin access required" }, { status: 403 });
+  }
+  return admin;
 }
 
 // Single gate for every client-portal route: staff can preview any client's

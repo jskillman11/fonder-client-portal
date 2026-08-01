@@ -13,7 +13,7 @@ export async function middleware(request: NextRequest) {
   if (!isApiAdmin && !isAdminPage) {
     return NextResponse.next();
   }
-  if (pathname === "/admin/login") {
+  if (pathname === "/admin/login" || pathname.startsWith("/admin/invite/")) {
     return NextResponse.next();
   }
 
