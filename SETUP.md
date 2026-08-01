@@ -1,439 +1,274 @@
 # Fonder Client Portal — Project Status & Handoff
 
-Last updated: July 30, 2026
-Status: **Live and working** for Coros (first real client) — currently mid-rollout of
-embedded per-document signing (see below); Coros needs to be re-entered with
-Markdown content and re-tested against the new flow.
+Last updated: July 31, 2026
+Status: **Live for Coros** (first real client). Core signing flow works end to end
+(create, send, sign via email, Documenso completion). A large new area, the
+authenticated client portal app (tasks, chat, invoices, etc.), is scaffolded
+but intentionally not functional yet. See "What's built vs. stubbed" below.
 
-This document exists so anyone — including future-you — can pick this up without
-having to reconstruct decisions from scratch. Read this before touching the code.
+This document describes the **current state of the system**, not the history
+of how it got here. Read this before touching the code, especially in a fresh
+Claude Code session with no memory of this conversation.
 
 ---
 
 ## What this is
 
-A branded client onboarding + e-signature portal, replacing the old
-generate-a-PDF-and-email-it workflow. A new client gets a link
-(`/portal/[their-slug]`), sees a welcome page with their account team and what
-to expect next, then reviews and signs their SOW and MSA — as two separate
-documents, each with its own signing session.
+A branded client onboarding, e-signature, and (eventually) project-tracking
+portal for Fonder Studio, replacing the old generate-a-PDF-and-email-it
+workflow.
 
-## Architecture (six separate services, all necessary)
+A client gets a link (/portal/[slug]), unlocks it with a magic-link email (or
+an admin can preview it directly, no link needed), and sees: an overview of
+the engagement (scope, schedule, fee), their account team, and a 4-step
+action list: review and sign, pay a deposit, schedule kickoff, access an
+ongoing client portal. The SOW and MSA are two independent documents, each
+signed via its own Documenso session, triggered by email rather than an
+embedded widget (see "Signing flow" below for why).
+
+## Architecture
 
 | Service | What it does | Where it's hosted |
 |---|---|---|
-| **This Next.js app** | The branded portal + admin intake form | Vercel |
-| **Supabase** (`fonder-client-portal` project) | Stores engagement/client data, team members, and each client's SOW/MSA content as Markdown. Also provides real login for the admin pages. | Supabase (project ref `drkppwjcfxyeeuescwov`) |
-| **`fonder-pdf-renderer`** (separate small service, source lives alongside this project) | Takes HTML, returns a PDF. Its only job — generic and reusable, no SOW-specific logic lives here. Called at the moment someone starts signing a specific document, using freshly-generated HTML built from that client's stored Markdown. | Self-hosted on Railway (needs real Playwright/Chromium — doesn't run on Vercel) |
-| **Documenso** | The actual legal signing engine — creates documents, places signature fields, captures signatures | Self-hosted on Railway |
-| **Cloudflare R2** | File storage for Documenso | Cloudflare |
-| **Resend** | Sends Documenso's own emails | Already existed for other Fonder email needs |
+| This Next.js app | The branded client portal plus the full admin dashboard | Vercel |
+| Supabase (fonder-client-portal project, ref drkppwjcfxyeeuescwov) | All structured data plus file storage plus admin login | Supabase |
+| fonder-pdf-renderer (separate sibling repo) | Generic HTML to PDF service, called when a client clicks sign | Railway (needs real Chromium, not Vercel) |
+| Documenso | The actual e-signature engine | Self-hosted on Railway |
+| Cloudflare R2 | File storage for Documenso's own upload flow | Cloudflare |
+| Resend | Sends both Documenso's signing emails and this app's magic-link emails | Existing Fonder Resend account |
+| Cal.com | Real scheduling calendar for the kickoff step | Existing Fonder Cal.com account |
 
-## Major architecture change #1: content is Markdown, not an uploaded PDF
+None of these are optional. Missing any one breaks the create-and-sign flow.
 
-Originally, admins uploaded an already-finished SOW+MSA PDF. That's gone. Now:
+## Data model
 
-1. The admin form has two Markdown textareas (SOW content, MSA content) instead of a file upload.
-2. The portal page (and each document's own signing page) renders that Markdown **directly,
-   natively** — the client reads the actual document, no PDF viewer, no separate file.
-3. Only at the moment someone starts signing a specific document does a PDF get generated —
-   freshly, from that document's Markdown, via `fonder-pdf-renderer` — and sent to Documenso.
-   The client never sees or downloads a PDF until it's the final, fully-executed copy.
+- companies: a client organization (name, logo), reusable across engagements.
+- clients: a real person (first/last name, email), belonging to a company.
+- documents: SOW or MSA content in Markdown, scoped to a company, reusable.
+- team_members: Fonder's own staff roster, global, not scoped to a company.
+- engagements: the project record. Slug is the portal URL. Links to one
+  company, one client, one SOW document, one MSA document, plus title, fee,
+  final delivery date, kickoff earliest date, scope summary.
+- engagement_team_assignments: join table, which team members show on which
+  engagement's portal.
+- engagement_milestones: label plus date pairs shown in Overview's schedule.
+- portal_copy: every piece of client-facing text as editable key/value rows,
+  with hardcoded fallbacks in lib/portal-copy-constants.ts.
+- portal_access_tokens: magic-link tokens for client portal access.
 
-**Section numbering is automatic**, via CSS counters (`lib/pdf-template.ts`) — an admin just
-writes `## Section Title` in the Markdown and gets a numbered-heading look (01, 02, 03...) with
-zero per-section markup required.
+A few columns exist on engagements but are unused, left in place rather than
+destructively dropped across earlier refactors: client_name,
+client_signatory_name, client_signatory_email, document_storage_path
+(reserved for a future signed-PDF download feature), sow_content_markdown and
+msa_content_markdown (superseded by the documents table). Harmless to ignore.
 
-**A real consequence of dynamic-length content:** signature field placement can't be hardcoded to
-specific page numbers the way it could when every client shared one fixed-length static PDF.
-Content length now varies per client (and per document, since SOW and MSA are separate PDFs).
-The fix: each document's signature block sits at the very end of that document, and
-`app/api/sign/create-session/route.ts` uses `pdf-lib` to read the actual generated PDF's page
-count at request time, placing signature fields on whatever that real last page turns out to be
-— never a hardcoded number.
+## The client-facing portal (/portal/[slug])
 
-## Major architecture change #2: separate embedded signing, not one combined email flow
+Four sections, top to bottom:
 
-The SOW and MSA are two fully independent Documenso documents and signing events — not one
-combined session. Each has its own "Review & sign" entry point on the portal page
-(`components/ReviewAndSignList.tsx`), leading to its own dedicated page
-(`/portal/[client]/sign/sow` or `/sign/msa`, via `components/SigningSession.tsx`) that shows just
-that document's content, followed by **Documenso's real signing UI embedded directly in an
-iframe** — the client signs right there, no email required to complete it.
+1. Welcome: co-branded logo, templated greeting using the client's first name.
+2. Overview: scope summary, schedule list, total fee, final delivery date.
+3. Team: whichever team members are assigned.
+4. What's Next, four steps, each its own bordered block:
+   - Review and sign: real buttons, one per document. See "Signing flow" below.
+   - Invoice and deposit: a visibly disabled placeholder, no Quickbooks yet.
+   - Schedule kickoff: a real embedded Cal.com calendar.
+   - Access your client portal: links into /portal/[slug]/app (see below).
 
-**How the embedding actually works:** `/api/sign/create-session` creates a Documenso document
-(create → upload PDF → place signature fields), then returns the client recipient's `token`
-(already part of Documenso's own API response). That token builds
-`{DOCUMENSO_URL}/embed/sign/{token}` — Documenso's own dedicated embed route, which explicitly
-sets `frame-ancestors *` (confirmed by reading Documenso's source directly), meaning it's designed
-on purpose to be iframed from any site.
+Steps 2 through 4 grey out until step 1's documents are both marked sent.
+This lock is client-side React state only, not persisted. A page refresh
+resets it even if the client already triggered the sign emails. Fixing this
+properly means tracking real completion server-side. The Documenso webhook
+receiver exists for this but does not update anything yet.
 
-**On whether this needs a paid Documenso tier: it does not**, for a self-hosted instance like this
-one. The embedding feature is gated behind a paywall *only* when
-`NEXT_PUBLIC_FEATURE_BILLING_ENABLED=true` is set — Documenso's hosted-SaaS billing flag, which
-isn't (and has no reason to be) set on a self-hosted Railway deployment. Confirmed by reading the
-actual gating condition in Documenso's source, not assumed.
+## Signing flow: the actual current behavior
 
-**One thing that couldn't be fully verified** from a sandbox with no network access to the live
-Documenso instance: whether the embed route strictly requires the document to have been "sent"
-first. To be safe, `/send` is still called in the background after fields are placed — treated as
-non-fatal if it fails, since the embedded flow doesn't otherwise depend on it. Worst case, this
-means a redundant email goes out that the client can ignore, since they're already signing
-directly in the embedded page. Worth confirming this behaves as expected on the first real test.
+Clicking "Review and sign" calls /api/sign/create-session directly and
+changes the button to "Email sent." No page navigation happens. Under the
+hood: that route generates a PDF fresh from the document's Markdown via
+fonder-pdf-renderer, creates a Documenso document, uploads the PDF, places a
+signature field for both the client and Tom Abrams (using pdf-lib to find the
+actual last page, since content length varies per client and is never
+hardcoded), then sends it, which triggers Documenso's own signing email.
 
-**A real open question:** Tom Abrams' (Fonder's) own signature is still handled the old way —
-logging into Documenso directly, or via the email Documenso sends him — since the embed page is
-built for the client recipient specifically. This wasn't explicitly decided one way or the other;
-worth confirming this split (client embedded, Fonder via Documenso's own dashboard) is actually
-what's wanted.
+There is a separate, embedded-iframe signing page at
+/portal/[slug]/sign/[docType] (component SigningSession.tsx), built earlier
+using Documenso's real /embed/sign/{token} route (confirmed via their source
+to not require a paid tier on self-hosted instances). This page is currently
+orphaned. Nothing in the UI links to it, because the iframe approach wasn't
+confirmed reliably working in practice, while the email fallback demonstrably
+does. It's kept in place in case it's worth debugging later, not because
+it's part of the live flow.
 
-## Major architecture change #3: centralized portal copy + first-name greeting
+SOW and MSA are two fully independent Documenso documents and emails, not one
+combined signature.
 
-Two more things moved out of hardcoded component text:
+## Client-facing auth (magic links)
 
-- **The client signatory's name is now split into first/last name fields.** The portal greeting
-  uses just the first name ("Welcome to Fonder, Jamie") instead of the company name. The combined
-  full name is still computed and stored (`client_signatory_name`) for anything that needs it
-  (e.g. the Documenso recipient name).
-- **All portal copy — the welcome subtitle/closing paragraph, team section headings, what's-next
-  steps, review & sign labels — now lives in a `portal_copy` table**, edited once at
-  `/admin/content` and applied to every client's portal immediately. `lib/portal-copy-constants.ts`
-  holds the hardcoded defaults (used if a key is ever missing from the table); `lib/portal-copy.ts`
-  fetches the real values and merges them over the defaults. Template placeholders like
-  `{{engagementTitle}}` get substituted per client at render time in the portal page itself.
+The portal and the /app area require either:
 
-**Team member icons can now have custom colors** — `icon_bg_color` / `icon_text_color` per team
-member, set in the admin form (with a color picker), falling back to the default cream/ink look
-if left blank.
+- A valid magic-link session: the client enters their email on a gate screen,
+  or an admin triggers it via "Send access link" on the dashboard. A
+  30-minute link goes out via Resend; clicking it sets a 30-day session
+  cookie. The email only ever goes to the client's registered address.
+- An active admin session: logged into /admin lets you view any client's
+  portal directly, via isAdminSession() in lib/supabase/server.ts.
 
-**The "Reference material" section (transcript/notes) was removed from the admin form entirely.**
-The underlying database columns still exist (harmless, unused) — only the UI was removed.
+There's no revoke or resend admin action yet if a client loses their link;
+they just request a fresh one, which works fine, but there's no visibility
+into active sessions.
 
-**The admin form is now split into three sections** instead of one: Client & Company, Engagement
-Details, and Document Content — previously all mixed into a single card.
+## The client portal app (/portal/[slug]/app/*)
 
-## Major architecture change #4: companies and clients are real, reusable entities
+A separate authenticated area, linked from What's Next step 4. Real routes,
+real tab navigation, real auth protection, but every page's content is a
+placeholder:
 
-Company name and signatory info used to be typed fresh into every engagement. Now:
+- Home: three placeholder cards (Action items, Next touchpoint, Project
+  status), matching the requested structure, no real data.
+- Tasks, Project Resources, Chat, Invoices, Deliverables, Signed Documents:
+  each a single generic "coming soon" card.
+- Change Request: the most fleshed-out placeholder. Real but disabled
+  date-picker and priority-selector inputs, plus a description of the
+  intended full workflow (affected tasks, new timeline, budget impact,
+  accept or decline). Building this for real will need to integrate with the
+  existing ClickUp and Google Sheets scheduling sync, a separate already-built
+  system.
 
-- **`companies`** and **`clients`** are their own tables — a company can have multiple client
-  contacts, and (eventually) multiple engagements over time without re-entering anything.
-- **`/admin/companies`** and **`/admin/clients`** manage these directly — add a company (with
-  logo), add a client (person) tied to a company.
-- **The engagement form now uses dropdowns**, not free text — select an existing company, then a
-  client scoped to that company. Links to "+ New company" / "+ New client" open those pages in a
-  new tab for when the one you need doesn't exist yet (then refresh the engagement form to see it).
-- **The client logo now lives on the Company**, not the engagement — uploaded once on
-  `/admin/companies`, reused automatically for every engagement with that company.
-- **The welcome greeting is now also centralized and templated** (`welcome_greeting` in
-  `/admin/content`, default: `"Welcome to Fonder, {{clientFirstName}}"`) instead of hardcoded JSX.
-- **Team member icon colors are now hex-only, no native color-picker swatch** — a plain text
-  field expecting `#rrggbb`, removing any ambiguity from browser-native color picker UIs that
-  might expose RGB/HSL modes.
+## The admin dashboard (/admin/*)
 
-**Known limitation, not yet built:** there's no dropdown/edit flow for *updating* an existing
-company or client's details (name, logo, email) after creation — only adding new ones. If Coros's
-signatory email changes, for example, that would currently need a direct Supabase edit or a new
-client record. Worth building an edit flow on `/admin/companies` and `/admin/clients` if this comes
-up in practice.
+Protected by real Supabase login via middleware.ts. All pages except
+/admin/login share a persistent left sidebar via a Next.js route group
+(app/admin/(dashboard)/, which doesn't affect the URL).
 
-## Major architecture change #5: Documents as their own entity, company editing, sidebar dashboard
+- /admin: lists every engagement, view portal, edit, send access link.
+- /admin/companies and /admin/companies/[id]: add, edit, delete companies.
+- /admin/clients and /admin/clients/[id]: add, edit, delete clients.
+- /admin/documents and /admin/documents/[id]: add, edit, delete SOW/MSA content.
+- /admin/team and /admin/team/[id]: add, edit, delete team roster members.
+- /admin/content: edit every piece of client-facing copy, globally.
+- /admin/new-client and /admin/edit/[slug]: create or edit an engagement,
+  selecting company, client, SOW doc, MSA doc, and team via dropdowns.
 
-- **`documents` table**: SOW/MSA content, scoped to a company, managed on `/admin/documents`
-  independent of any single engagement. The engagement form now selects a SOW and MSA via dropdown
-  (scoped to the selected company) instead of pasting Markdown directly — matching the same
-  pattern as company/client selection.
-- **Company detail/edit page** (`/admin/companies/[id]`): edit name/logo, see every client and
-  document belonging to that company in one place. The companies list now links each row here
-  instead of being purely a flat list.
-- **Real sidebar dashboard layout**: all `/admin/*` pages (except `/admin/login`) now share a
-  persistent left sidebar (Dashboard, Companies, Clients, Documents, Portal content), via a Next.js
-  route group (`app/admin/(dashboard)/`) — the route group folder name doesn't affect URLs, so
-  `/admin/companies` still works exactly as before, just with a shared layout wrapping it now.
+Every page has a real back button using router.back().
 
-**Known limitation, not yet built:** no edit flow for an individual client (person) or document
-after creation — only companies have one so far. Same "add new, can't yet edit existing" gap as
-before, just narrowed slightly.
+Getting a login: no self-serve signup, create one directly in Supabase
+(Authentication, Users, Add User).
 
-## Known gotcha (already fixed on the primary project, worth knowing about)
+Known gap: delete works for companies, clients, documents, and team members,
+but if something is still referenced by an engagement, the delete fails with
+a translated error rather than corrupting data. It doesn't yet say which
+engagement is blocking it.
 
-**Old NOT NULL constraints from before the companies/clients restructuring caused real save
-failures.** `client_name`, `client_signatory_name`, and `client_signatory_email` were originally
-required fields; once the app stopped populating them (in favor of `company_id`/`client_id`),
-every engagement save failed with a not-null constraint violation. Fixed by dropping NOT NULL on
-those three columns — they remain in place, harmless and unused, going forward.
+## Adding a new client engagement (the real, current flow)
 
-## Major architecture change #6: edit/delete everywhere, color presets, back navigation
+This is not one form. It's four small steps, each reusable for future
+engagements:
 
-- **Full edit/delete now exists for companies, clients, and documents** — closing the gap flagged
-  in the previous update. `/admin/clients/[id]` and `/admin/documents/[id]` are new detail/edit
-  pages, matching the same pattern as the company detail page. Deleting a company cascades to its
-  clients and documents (enforced at the database level via `on delete cascade`); deleting
-  something still referenced by an engagement fails with a clear error rather than corrupting data
-  (Postgres foreign key protection — the delete routes translate the raw constraint error into a
-  readable message).
-- **Team member icon colors are now a fixed set of 4 presets**, not free-form hex input — clicking
-  a swatch sets background+text together as a pair, since they're designed to work as combinations,
-  not independently mixed. A ✕ option resets to the default cream/ink look.
-- **Every admin page now has a back button** (`components/admin/BackButton.tsx`), using
-  `router.back()` — real browser-history navigation rather than a hardcoded "back to X" link, so it
-  always goes to wherever the person actually came from.
+1. /admin/companies: add the company, if new.
+2. /admin/clients: add the signatory, scoped to that company, if new.
+3. /admin/documents: add the SOW and MSA content as Markdown, if new.
+4. /admin/new-client: create the engagement, picking company, client, SOW
+   doc, and MSA doc from dropdowns, plus slug, title, fee, dates, schedule,
+   team.
 
-**Known limitation, not yet built:** company/document/client deletion doesn't warn you *which*
-engagements are blocking it — just that something is. If this becomes a real workflow bottleneck,
-the next step would be showing the specific blocking engagement(s) by name in that error message.
+Steps 1 through 3 only need doing once per company, client, or document. A
+repeat engagement for an existing company reuses what's already there.
 
-## Major architecture change #7: team members as their own entity, magic-link access, color bug fix
+## Cal.com scheduling
 
-- **Team members are now a global, reusable roster** (`team_members` table), not typed fresh per
-  engagement. `/admin/team` manages the roster (with the same color-preset system as before); the
-  engagement form now has a **multi-select checklist** instead of free-text name/role/color rows.
-  Assignments live in a proper join table (`engagement_team_assignments`), not duplicated data.
-- **Real bug found and fixed: color presets silently discarded one of the two colors.** Clicking a
-  preset called `updateTeamMember` twice in the same click handler (once for background, once for
-  text) — both calls read from the same stale `values` snapshot, so the second call's computation
-  didn't include the first call's change, silently overwriting it. This is why colors "looked
-  correct on the backend" (one field actually saved) but didn't visibly apply as a pair. Fixed with
-  a new `updateTeamMemberFields` that updates both atomically in one state update — the same class
-  of bug is worth watching for anywhere multiple sequential `set()` calls happen in one handler.
-- **Magic-link portal access is real now**, not just an open link. New table
-  `portal_access_tokens`. Flow: client enters their email on a gate screen (or you trigger it from
-  the dashboard's "Send access link" button) → a 30-minute link is emailed via Resend → clicking it
-  sets a 30-day session cookie → both the welcome page and the sign pages check that cookie before
-  showing anything. The email only ever goes to the client's **registered** address — typing a
-  different email won't redirect the link elsewhere, even if someone tries.
-- **This app now sends its own email directly** (not just Documenso) — needs a `RESEND_API_KEY`
-  environment variable in Vercel, using the same Resend account already in use elsewhere.
+One shared event type for everyone, via the CAL_COM_EVENT_LINK env var, not
+per-engagement data. Each engagement's "kickoff earliest date" opens the
+embedded calendar to that month by default, via Cal.com's real month=YYYY-MM
+parameter, confirmed by reading their actual booking-page source. This is a
+soft default only. It does not hard-block earlier dates from being selected;
+that would need date-range limits set on the event type itself, inside
+Cal.com. In practice, real calendar availability handles this naturally.
 
-**Known limitation, not yet built:** there's no "resend" or "revoke access" action if a token gets
-lost or a client's device changes — they'd just request a fresh link via the gate screen, which
-works fine, but there's no admin visibility into active sessions or a way to force one out.
-
-## UX change: no reading step before signing
-
-Clicking "Review & sign" on the portal page now goes straight into the embedded Documenso signing
-iframe — the intermediate page that rendered the SOW/MSA content natively (via
-`components/DocumentContent.tsx`) for the client to read first has been removed, since that's no
-longer part of the flow. `SigningSession.tsx` now auto-starts the signing session on page load
-(via `useEffect`) instead of waiting for a second button click after reading. `DocumentContent.tsx`
-was deleted since nothing references it anymore — if a "read-only preview" experience is wanted
-again later (separate from the sign flow), that component's logic is straightforward to rebuild
-from the Markdown-rendering pattern already used elsewhere (`react-markdown` + `remark-gfm`, still
-installed as dependencies even though currently unused).
-
-## UX change: "Review & sign" acts in place, no navigation
-
-The button on the main portal page now calls `/api/sign/create-session` directly and changes its
-own text to "Email sent" on success — no navigation anywhere. This reflects reality more honestly:
-the embedded-iframe signing experience (`/portal/[client]/sign/[docType]`, built earlier) hasn't
-been confirmed reliably working in practice, while the email fallback (Documenso's own `/send`
-call, kept as a safety net when the embed flow was first built) demonstrably does work. Rather than
-show a broken embed, the button now just does the thing that's actually working.
-
-**This leaves `/portal/[client]/sign/[docType]` and `components/SigningSession.tsx` orphaned** —
-still present, still functional as routes, but nothing in the UI links to them anymore. Kept in
-place rather than deleted, in case the embedded-iframe approach is worth debugging and fixing
-later — but worth a deliberate decision (remove vs. revisit) rather than leaving them unnoticed.
-
-## Fix: admins can now preview any portal directly, no magic link needed
-
-Clicking "View portal" from the admin dashboard was hitting the client-facing magic-link gate,
-since admin auth (Supabase login for `/admin/*`) and portal access (magic-link session cookies)
-are two entirely separate systems — being logged into one didn't mean anything to the other.
-Fixed via `isAdminSession()` in `lib/supabase/server.ts`: both the portal welcome page and the
-sign page now check for a valid admin session as an alternative to the client's own magic-link
-cookie, granting access either way.
-
-## Cal.com scheduling integration
-
-The "Schedule your kickoff" step in What's Next now embeds a real Cal.com booking calendar
-(`components/KickoffScheduler.tsx`, using the official `@calcom/embed-react` package) instead of
-just text saying someone will reach out. One event type is shared across every client — set via
-the `CAL_COM_EVENT_LINK` environment variable (e.g. `tomabrams/kickoff-call`), not per-engagement
-data, since there's only ever one event type in use.
-
-**Per-engagement, admins set a "Kickoff earliest date"** (Engagement Details section of the form)
-— this opens the calendar to that month by default via Cal.com's `?month=YYYY-MM` parameter,
-confirmed by reading Cal.com's actual booking-page source rather than assumed. **Important
-nuance:** this is a soft default only — it does not prevent a client from scrolling back and
-picking an earlier date. A hard restriction would require date-range limits configured on the
-event type itself, inside Cal.com's own dashboard, which isn't something this integration
-controls dynamically per-client. In practice this is usually fine, since your own real calendar
-availability naturally limits what's actually bookable — but worth knowing the difference between
-"opens to the right month" and "can't select an earlier one" if it ever comes up.
-
-**New environment variable:** `CAL_COM_EVENT_LINK` — Vercel → Settings → Environment Variables.
-
-## Portal restructuring: Overview section, sign/pay/schedule flow
-
-- **New Overview section** (`components/EngagementOverview.tsx`), positioned between the welcome
-  header and the team section. Shows a short admin-written scope summary (new `scope_summary`
-  field, distinct from the full SOW), plus total fee and final delivery date — both **moved here**
-  from where they used to live (the old standalone Review & Sign section's summary bar).
-- **What's Next is now the real action center**, three steps: **Review & sign** (the actual
-  per-document sign buttons, moved here from the old standalone section —
-  `components/SignActionsList.tsx`), **Pay invoice** (a visibly disabled placeholder —
-  `components/PayInvoiceAction.tsx`, real Quickbooks integration not built yet), **Schedule
-  kickoff** (the Cal.com embed, unchanged, just moved from step 2 to step 3 in this new sequence).
-- **The old standalone "Review & Sign" section and its component (`ReviewAndSignList.tsx`) are
-  gone** — replaced entirely by the above. Its portal-copy keys (`review_sign_heading`,
-  `review_sign_subheading`) were removed too; the SOW/MSA label/description keys carried over
-  into the What's Next copy group instead, since that's genuinely where they're used now.
-- **No real payment gating exists yet** — the three steps are presented in order, but nothing
-  currently prevents scheduling a kickoff before an invoice is (theoretically) paid. That's
-  intentional for now, not an oversight: real enforcement would need the Quickbooks integration
-  to exist first, so there's something real to gate on.
-
-## Step-locking in What's Next: a real limitation worth knowing
-
-Each step is now its own visually distinct bordered block, and steps 2/3 (invoice, schedule) show
-greyed-out/locked until step 1's signing actions are triggered — implemented as local React state
-in `WhatsNext.tsx`, unlocked via a callback from `SignActionsList` once every present document
-shows "sent."
-
-**This lock state is client-side only, for the current page load — it is not persisted.** If the
-client refreshes the page (or leaves and comes back later), steps 2/3 will show locked again, even
-if they'd already triggered the sign emails earlier. This isn't a bug so much as a real product
-decision that was deferred: true persistence would mean tracking actual signing completion in the
-database, which is the same "live status tracking" gap already flagged earlier (the Documenso
-webhook receiver exists but doesn't update anything yet). If this refresh-resets-the-lock behavior
-turns out to matter in practice, that's the natural next thing to build — store a real
-"documents sent" (or better, "documents signed," via the webhook) flag on the engagement, and read
-it server-side instead of relying on in-page state.
-
-## Schedule/milestones in Overview
-
-Overview now shows a real schedule list (`engagement_milestones` table — label + date pairs,
-admin-managed as a dynamic add/remove list on the engagement form), not just the single final
-delivery date. Use it for start date, deliverable dates, or anything else worth surfacing.
-
-## Client portal app — structural scaffolding only, not functional yet
-
-A whole new authenticated area at `/portal/[client]/app/*` — Home, Tasks, Project Resources, Chat,
-Invoices, Deliverables, Signed Documents, Change Request. This is genuinely just scaffolding, as
-asked for: real routes, real tab navigation, real auth protection (same magic-link/admin-session
-check as the rest of the portal, applied once in `app/portal/[client]/app/layout.tsx`), but every
-page's actual content is a placeholder — no real tasks, chat, invoices, or deliverables exist yet.
-
-**Home** has three distinct placeholder sections (Action items, Next touchpoint, Project status)
-matching what was described, rather than one generic blank.
-
-**Change Request** has real (but disabled) form structure — a date picker and priority selector —
-plus a description of the intended full workflow (show affected tasks, new timeline, budget
-impact, accept/decline) as informational text. **Building this for real will need to integrate
-with the existing ClickUp↔Google Sheets scheduling sync** (built in an earlier, separate project) —
-worth keeping in mind when this gets picked up again, since that's real existing infrastructure to
-plug into, not something to build from scratch.
-
-**What's Next now has a 4th step** — "Access your client portal," linking into this new area,
-locked the same way as steps 2/3 (until step 1's documents are sent).
-
-## Framework note (not urgent)
-
-The build now prints a deprecation warning: Next.js is moving away from `middleware.ts` in favor
-of a `proxy.ts` convention. Nothing breaks today, but this is worth migrating before a future
-Next.js major version potentially removes the old convention entirely.
-
-## The admin flow
-
-`/admin` — dashboard listing every client, with a link to view their live portal or edit their
-info. `/admin/new-client` — create a new one. `/admin/edit/[slug]` — edit an existing one,
-pre-filled with current data (the portal slug can't be changed here — create a new client instead
-if that needs to change). All of this is protected by real Supabase login, not a shared password.
-
-Enter company name, client signatory name/email, account team, total fee, final delivery date, an
-optional client logo (shown co-branded next to the Fonder logo on the portal), transcript and
-notes (kept for reference only — the actual SOW/MSA drafting still happens via a Claude
-conversation using the `fonder-sow-builder` skill, not this form), and paste the finalized SOW and
-MSA content as Markdown. Submitting it writes directly to Supabase — no code editing, no GitHub, no
-redeploy needed to add or update a client, and no PDF to prepare beforehand.
-
-**Getting a login:** there's no self-serve signup — a team member's account has to be created
-directly in the Supabase dashboard (Authentication → Users → Add User), by someone who already has
-access to the Supabase project.
-
-## Where the secrets live (NOT in this repo, on purpose)
+## Where the secrets live, not in this repo, on purpose
 
 | Secret | Lives in |
 |---|---|
-| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Vercel → Settings → Environment Variables |
-| `SUPABASE_SERVICE_ROLE_KEY` | Vercel → Settings → Environment Variables (from Supabase → Settings → API — never commit it, it bypasses all row-level security) |
-| `DOCUMENSO_URL`, `DOCUMENSO_API_KEY` | Vercel → Settings → Environment Variables |
-| `PDF_RENDER_SERVICE_URL` | Vercel → Settings → Environment Variables (the Railway URL of `fonder-pdf-renderer`) |
-| `PDF_RENDER_API_KEY` | Vercel → Settings → Environment Variables (must match `RENDER_API_KEY` set on the `fonder-pdf-renderer` Railway service itself) |
-| `RESEND_API_KEY` | Vercel → Settings → Environment Variables (this app's own Resend key, for magic-link emails — separate from Documenso's own Resend config on Railway) |
-| `PORTAL_EMAIL_FROM` | Vercel → Settings → Environment Variables (optional — the "from" address for magic-link emails, e.g. `Fonder Studio <hello@send.fonder.studio>`. Must match a domain actually verified in whichever Resend account `RESEND_API_KEY` belongs to. Falls back to `hello@fonder.studio` if unset — set this explicitly if testing with a different domain, like `letsmesh.studio`, to avoid a "not authorized to send" error.) |
-| R2 credentials (`NEXT_PRIVATE_UPLOAD_*`) | Railway → documenso-web → Variables |
-| `NEXT_PRIVATE_RESEND_API_KEY` | Railway → documenso-web → Variables |
+| NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY | Vercel |
+| SUPABASE_SERVICE_ROLE_KEY | Vercel, bypasses all RLS, never commit it |
+| DOCUMENSO_URL, DOCUMENSO_API_KEY | Vercel |
+| PDF_RENDER_SERVICE_URL, PDF_RENDER_API_KEY | Vercel, must match RENDER_API_KEY on the fonder-pdf-renderer Railway service |
+| RESEND_API_KEY | Vercel, this app's own key, separate from Documenso's Resend config |
+| PORTAL_EMAIL_FROM | Vercel, optional, must match a domain verified for RESEND_API_KEY |
+| CAL_COM_EVENT_LINK | Vercel |
+| R2 credentials (NEXT_PRIVATE_UPLOAD_*) | Railway, documenso-web |
+| NEXT_PRIVATE_RESEND_API_KEY | Railway, documenso-web |
 
-**For a teammate to actually pick this up, code access alone is not enough.** They need to be
-added as a collaborator/member on:
-- GitHub (this repo, and `fonder-pdf-renderer`'s repo)
-- Vercel (the project)
-- Railway (the project — both Documenso and `fonder-pdf-renderer` live there)
-- Cloudflare (for the R2 bucket, if they'll ever need to touch storage config)
-- Documenso itself (its own login, separate from all of the above)
+For anyone else to actually work on this, code access alone isn't enough.
+They need adding as a collaborator on GitHub (both repos), Vercel, Railway
+(both services), Cloudflare if touching storage, and Documenso itself. If you
+can't add someone directly, put the real secret values in a shared password
+manager, never in GitHub.
 
-If you can't add someone directly to all of these, at minimum put the actual secret values
-somewhere secure (a password manager shared vault) — GitHub should never hold them.
+## Known gotchas, real, already happened
 
-## Known gotchas (things that broke during setup, and why)
-
-These aren't hypothetical — each of these actually happened and cost real debugging time:
-
-1. **Documenso (and `fonder-pdf-renderer`) won't deploy to Vercel.** Both are Docker-based.
-   Railway or Render only.
-2. **First deploy attempts can fail on healthcheck** even when build/deploy steps succeed —
-   usually a race condition with Postgres not being fully ready yet. A plain redeploy often
-   fixes it.
-3. **Documenso needs S3-compatible storage, not just a database**, because this integration uses
-   the presigned-upload-URL API flow. Without `NEXT_PUBLIC_UPLOAD_TRANSPORT=s3` and real R2/S3
-   credentials, document creation fails with `"Create document is not available without S3
-   transport."`
-4. **Signature fields are a separate API step.** Creating and uploading a document does NOT
-   automatically add signature fields — Documenso requires fields to be explicitly created via
-   `/api/v1/documents/:id/fields` before it will send, with `"Signers must have at least one
-   signature field"` otherwise.
-5. **Editing environment variables doesn't restart anything by itself** — on both Railway and
-   Vercel, you have to explicitly trigger a redeploy after changing variables.
-6. **Any client created before the Markdown/embedding changes needs to be re-entered.** Coros's
-   original data lived in a hardcoded code file (deleted), then briefly in an uploaded-PDF flow
-   (also replaced). Their SOW/MSA content needs to be pasted as Markdown via `/admin/edit/coros`
-   before their portal will show anything or allow signing.
-7. **Supabase's API layer can report "column not found" even when a column genuinely exists** —
-   this is a stale schema cache, not a real problem. Fix: run `NOTIFY pgrst, 'reload schema';` in
-   the SQL Editor.
-8. **Local testing quirk, not a real bug:** running `fonder-pdf-renderer` locally outside Docker
-   can hit a Playwright/Chromium version mismatch (a freshly-installed Playwright expects a newer
-   Chromium than what might be cached, and modern Chromium builds dropped old headless mode
-   entirely, needing the separate `chrome-headless-shell` binary). Doesn't affect the actual
-   deployed service, which uses the official versioned Playwright Docker image where the library
-   and browser are guaranteed to match.
+1. Documenso and fonder-pdf-renderer won't deploy to Vercel. Both are
+   Docker-based. Railway or Render only.
+2. First deploy attempts can fail on healthcheck even when build and deploy
+   succeed, usually Postgres not being fully ready yet. A plain redeploy
+   often fixes it.
+3. Documenso needs S3-compatible storage, not just a database, because this
+   integration's presigned-upload-URL flow requires it. Without
+   NEXT_PUBLIC_UPLOAD_TRANSPORT=s3 and real R2 credentials, document creation
+   fails with "Create document is not available without S3 transport."
+4. Signature fields are a separate API step. Uploading a document does not
+   automatically add signature fields. Documenso refuses to send without
+   them, with "Signers must have at least one signature field."
+5. Changing environment variables doesn't restart anything. On both Railway
+   and Vercel, you must explicitly trigger a redeploy afterward.
+6. Supabase's API layer can report "column not found" even when the column
+   genuinely exists. A stale schema cache, not a real problem. Fix: run
+   NOTIFY pgrst, 'reload schema'; in the SQL Editor.
+7. fonder-pdf-renderer's Playwright version must be pinned exactly to match
+   its Dockerfile's base image tag, no caret ranges. A caret range once let
+   npm install a newer Playwright than the pinned image's bundled Chromium,
+   causing every render to fail with a missing-executable error. Fixed with
+   an exact version pin, a committed lockfile, and npm ci instead of npm
+   install in the Dockerfile. If you bump one, bump both, together.
+8. Old NOT NULL constraints from an earlier schema version caused real save
+   failures after the companies and clients refactor stopped populating
+   client_name and similar fields. Fixed by dropping those constraints.
+   Already applied, just explaining why those columns are nullable now.
 
 ## What's built vs. what's intentionally stubbed
 
-**Fully working:**
-- Welcome page, team intro (real names), what's-next, per-document review & sign — all branded in
-  Fonder's real product design system (cream/near-black/warm-gray, rounded corners, pill buttons)
-- Native Markdown rendering with automatic section numbering
-- Real Documenso integration per document: creates it, places signature fields, embeds real
-  signing UI directly in the portal
+Fully real and working:
+- Companies, clients, documents, team members: full add, edit, delete, all
+  reusable entities selected via dropdown or multi-select on the engagement
+  form.
+- Native Markdown rendering with automatic section numbering via CSS counters.
+- Real Documenso signing per document, independently, with dynamic field
+  placement.
+- Magic-link client auth plus admin-session bypass.
+- Real Cal.com scheduling embed.
+- Centralized, globally-editable portal copy.
+- Full admin sidebar dashboard.
 
-**Deliberately NOT built (decided together, not forgotten):**
-- **Live status on the portal itself.** Revisiting `/portal/coros` won't show "already signed" —
-  no persistence layer or status check built yet.
-- **The webhook receiver** (`app/api/webhooks/documenso/route.ts`) exists and can be configured in
-  Documenso (Settings → Webhooks → "Document Completed"), but currently just logs the event and
-  does nothing else. Natural next step if live status ever becomes worth building: add a status
-  record per client/document in Supabase and have this route update it.
+Deliberately stubbed, not forgotten:
+- Live signing-status tracking. The Documenso webhook receiver exists and is
+  configured in Documenso, but only logs the event. Nothing persists or
+  displays it. This is also why the What's Next step-lock resets on refresh.
+- Quickbooks invoicing. Step 2 of What's Next is a disabled placeholder.
+- The entire client portal app's actual functionality (tasks, chat, invoices,
+  deliverables, signed documents, change requests). Real routes and
+  navigation exist, no real data or logic yet.
+- Editing an engagement's core links (which company, client, or documents it
+  points to) works by re-selecting them in the edit form, but isn't a
+  distinct guided flow. The slug itself can't be changed once created, by
+  design, since it's the live URL.
 
-## Adding a new client
+## Open items, unresolved on purpose, not bugs
 
-Go to `/admin/new-client` (requires being logged in), fill out the form — including pasting SOW
-and MSA content as Markdown — submit. No code changes, no GitHub, no redeploy needed.
-
-## Open items, unresolved on purpose (not bugs)
-
-- Coros's SOW still states an open scope question: 3 features are confirmed, but the engagement
-  allows for 3–5, and the identity of any 4th/5th feature was never pinned down with the client.
-  Worth resolving with Coros directly — not something to guess at in code.
+- Coros's SOW still states an open scope question: 3 features are confirmed,
+  the engagement allows for 3 to 5, and the identity of any 4th or 5th
+  feature was never pinned down with the client. Worth resolving directly
+  with Coros, not something to guess at in code.
+- Tom Abrams' own signature still goes through Documenso's normal dashboard
+  or email. The signing flow described above is written from the client's
+  perspective. This wasn't a deliberate design decision so much as where the
+  natural split landed; worth a second look if it ever matters.
