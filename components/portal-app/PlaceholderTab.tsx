@@ -8,8 +8,8 @@ export function PlaceholderTab({
   description: string;
 }) {
   return (
-    <div className="max-w-2xl mx-auto">
-      <Card className="px-9 py-14 text-center">
+    <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+      <Card className="px-9 py-14 text-center md:col-span-2 xl:col-span-3">
         <p className="text-[12px] font-semibold uppercase tracking-wide text-[var(--color-faint)] mb-2">
           Coming soon
         </p>

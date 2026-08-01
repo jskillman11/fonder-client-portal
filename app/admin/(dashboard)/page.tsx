@@ -13,11 +13,11 @@ export default async function AdminHomePage() {
     <main className="py-12 px-4">
       <div className="max-w-2xl mx-auto space-y-5">
         <BackButton />
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-[20px] font-bold text-[var(--color-ink)]">
             Clients
           </h1>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Link
               href="/admin/companies"
               className="rounded-[var(--radius-pill)] border border-[var(--color-border)] text-[var(--color-ink)] text-[13px] font-semibold px-5 py-2.5"

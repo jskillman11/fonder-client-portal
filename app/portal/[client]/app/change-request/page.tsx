@@ -2,7 +2,7 @@ import { Card } from "@/components/Card";
 
 export default function ChangeRequestPage() {
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
+    <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-5">
       <Card className="px-9 py-8">
         <p className="text-[12px] font-semibold uppercase tracking-wide text-[var(--color-faint)] mb-2">
           Coming soon

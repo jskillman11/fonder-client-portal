@@ -7,7 +7,6 @@ export const PORTAL_APP_TABS = [
   { key: "chat", href: "/chat", label: "Chat" },
   { key: "invoices", href: "/invoices", label: "Invoices" },
   { key: "deliverables", href: "/deliverables", label: "Deliverables" },
-  { key: "documents", href: "/documents", label: "Signed Documents" },
   { key: "change-request", href: "/change-request", label: "Change Request" },
 ] as const;
 

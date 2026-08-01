@@ -37,7 +37,7 @@ export function EngagementRow({
 
   return (
     <Card className="px-7 py-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-[15px] font-semibold text-[var(--color-ink)]">
             {clientName}
@@ -46,7 +46,7 @@ export function EngagementRow({
             {engagementTitle}
           </p>
         </div>
-        <div className="flex gap-4 items-center text-[13px]">
+        <div className="flex flex-wrap gap-4 items-center text-[13px]">
           <Link
             href={`/portal/${clientSlug}`}
             target="_blank"
