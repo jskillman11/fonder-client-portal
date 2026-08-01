@@ -8,6 +8,7 @@ import { PillButton } from "@/components/PillButton";
 import type { Company, Client } from "@/lib/companies-clients";
 import type { DocumentRecord } from "@/lib/documents";
 import type { TeamMemberRecord } from "@/lib/team-members";
+import { PORTAL_APP_TABS, type TabLockState } from "@/lib/portal-app-tabs";
 
 export type EngagementFormValues = {
   clientSlug: string;
@@ -23,6 +24,8 @@ export type EngagementFormValues = {
   milestones: { label: string; date: string }[];
   teamMemberIds: string[];
   lockPortalTabs: boolean;
+  sharedDriveUrl: string;
+  tabLockOverrides: Record<string, TabLockState>;
 };
 
 const inputClass =
@@ -53,6 +56,8 @@ export function EngagementForm({
     milestones: [],
     teamMemberIds: [],
     lockPortalTabs: true,
+    sharedDriveUrl: "",
+    tabLockOverrides: {},
   };
 
   const [values, setValues] = useState<EngagementFormValues>(defaults);
@@ -96,6 +101,16 @@ export function EngagementForm({
         ? values.teamMemberIds.filter((existing) => existing !== id)
         : [...values.teamMemberIds, id],
     );
+  }
+
+  function setTabOverride(tabKey: string, value: TabLockState | "default") {
+    const next = { ...values.tabLockOverrides };
+    if (value === "default") {
+      delete next[tabKey];
+    } else {
+      next[tabKey] = value;
+    }
+    set("tabLockOverrides", next);
   }
 
   function updateMilestone(index: number, field: "label" | "date", value: string) {
@@ -521,6 +536,48 @@ export function EngagementForm({
             Lock portal tabs until documents are sent
           </span>
         </label>
+
+        <div className="mt-5">
+          <label className={labelClass}>Shared Drive URL</label>
+          <input
+            type="url"
+            value={values.sharedDriveUrl}
+            onChange={(e) => set("sharedDriveUrl", e.target.value)}
+            className={inputClass}
+            placeholder="https://drive.google.com/drive/folders/..."
+          />
+        </div>
+
+        <div className="mt-5">
+          <p className={labelClass}>Per-tab overrides</p>
+          <p className="text-[11px] text-[var(--color-faint)] mt-1 mb-2">
+            Overrides the lock above for a specific tab, regardless of
+            whether documents have been sent yet.
+          </p>
+          <div className="space-y-2">
+            {PORTAL_APP_TABS.map((tab) => (
+              <div
+                key={tab.key}
+                className="flex items-center justify-between rounded-[10px] border border-[var(--color-border)] px-4 py-2.5"
+              >
+                <span className="text-[13.5px] font-medium text-[var(--color-ink)]">
+                  {tab.label}
+                </span>
+                <select
+                  value={values.tabLockOverrides[tab.key] ?? "default"}
+                  onChange={(e) =>
+                    setTabOverride(tab.key, e.target.value as TabLockState | "default")
+                  }
+                  className="rounded-[8px] border border-[var(--color-border)] text-[13px] px-2 py-1.5"
+                >
+                  <option value="default">Default (locked until signed)</option>
+                  <option value="locked">Always locked</option>
+                  <option value="unlocked">Always unlocked</option>
+                </select>
+              </div>
+            ))}
+          </div>
+        </div>
       </Card>
 
       {status === "error" && (

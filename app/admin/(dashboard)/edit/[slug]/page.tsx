@@ -42,6 +42,8 @@ export default async function EditClientPage({
           milestones: engagement.milestones,
           teamMemberIds,
           lockPortalTabs: engagement.lockPortalTabs,
+          sharedDriveUrl: engagement.sharedDriveUrl ?? "",
+          tabLockOverrides: engagement.tabLockOverrides,
         }}
       />
     </main>

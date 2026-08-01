@@ -27,6 +27,8 @@ export async function POST(req: NextRequest) {
         sow_document_id: engagement.sowDocumentId || null,
         msa_document_id: engagement.msaDocumentId || null,
         lock_portal_tabs: engagement.lockPortalTabs ?? true,
+        shared_drive_url: engagement.sharedDriveUrl || null,
+        tab_lock_overrides: engagement.tabLockOverrides || {},
       },
       { onConflict: "client_slug" },
     )

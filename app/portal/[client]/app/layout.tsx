@@ -37,6 +37,7 @@ export default async function ClientAppLayout({
       <ClientAppNav
         clientSlug={client}
         lockEnabled={engagement.lockPortalTabs}
+        tabLockOverrides={engagement.tabLockOverrides}
         accountSlot={
           <ClientAccountMenu
             clientSlug={client}

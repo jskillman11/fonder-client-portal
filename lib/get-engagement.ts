@@ -1,4 +1,5 @@
 import { createServiceClient } from "./supabase/server";
+import type { TabLockState } from "./portal-app-tabs";
 
 export type TeamMember = {
   name: string;
@@ -36,6 +37,8 @@ export type EngagementData = {
   scopeSummary: string | null;
   milestones: Milestone[];
   lockPortalTabs: boolean;
+  sharedDriveUrl: string | null;
+  tabLockOverrides: Record<string, TabLockState>;
 };
 
 export async function listEngagements(): Promise<
@@ -133,6 +136,8 @@ export async function getEngagement(
     kickoffEarliestDate: engagement.kickoff_earliest_date,
     scopeSummary: engagement.scope_summary,
     lockPortalTabs: engagement.lock_portal_tabs,
+    sharedDriveUrl: engagement.shared_drive_url,
+    tabLockOverrides: engagement.tab_lock_overrides ?? {},
     milestones: (milestoneRows ?? []).map((m) => ({
       label: m.label,
       date: m.milestone_date,

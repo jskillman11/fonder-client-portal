@@ -52,6 +52,8 @@ create table engagements (
   kickoff_earliest_date date, -- opens the Cal.com scheduling embed to this month by default
   scope_summary text, -- short admin-written scope description for the portal Overview section
   lock_portal_tabs boolean not null default true, -- locks client portal app tabs until docs are sent
+  shared_drive_url text, -- per-engagement Google Drive folder link for the Shared Drive tab
+  tab_lock_overrides jsonb not null default '{}'::jsonb, -- per-tab lock overrides, keyed by tab key ("locked"/"unlocked"); absent = follow lock_portal_tabs
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
