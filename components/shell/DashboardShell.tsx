@@ -23,7 +23,7 @@ export function DashboardShell({
 
   return (
     <div className="flex min-h-screen bg-[var(--color-cream)]">
-      <aside className="w-56 shrink-0 border-r border-[var(--color-border)] bg-white min-h-screen px-4 py-8">
+      <aside className="w-56 shrink-0 border-r border-[var(--color-border)] bg-white sticky top-0 h-screen overflow-y-auto px-4 py-8">
         <div className="mb-8 px-2">
           <Image
             src="/fonder-logo.png"
