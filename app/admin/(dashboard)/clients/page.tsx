@@ -1,14 +1,20 @@
-import Link from "next/link";
 import { listCompanies, listClients } from "@/lib/companies-clients";
+import { listClientAccess } from "@/lib/client-access";
 import { Card } from "@/components/Card";
 import { NewClientForm } from "@/components/admin/NewClientForm";
 import { BackButton } from "@/components/admin/BackButton";
+import { ClientRow } from "@/components/admin/ClientRow";
 
 export const dynamic = "force-dynamic";
 
 export default async function ClientsPage() {
-  const [companies, clients] = await Promise.all([listCompanies(), listClients()]);
+  const [companies, clients, accessRecords] = await Promise.all([
+    listCompanies(),
+    listClients(),
+    listClientAccess(),
+  ]);
   const companyById = Object.fromEntries(companies.map((c) => [c.id, c.name]));
+  const accessByClientId = new Map(accessRecords.map((a) => [a.clientId, a]));
 
   return (
     <main className="py-12 px-4">
@@ -29,18 +35,17 @@ export default async function ClientsPage() {
         ) : (
           <Card className="px-7 py-2">
             {clients.map((c) => (
-              <Link
+              <ClientRow
                 key={c.id}
-                href={`/admin/clients/${c.id}`}
-                className="block py-3 border-b border-[var(--color-border)] last:border-b-0 hover:bg-[var(--color-cream)] -mx-7 px-7"
-              >
-                <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">
-                  {c.firstName} {c.lastName}
-                </p>
-                <p className="text-[13px] text-[var(--color-muted)]">
-                  {companyById[c.companyId] ?? "Unknown company"} · {c.email}
-                </p>
-              </Link>
+                client={{
+                  id: c.id,
+                  firstName: c.firstName,
+                  lastName: c.lastName,
+                  email: c.email,
+                  companyName: companyById[c.companyId] ?? "Unknown company",
+                }}
+                access={accessByClientId.get(c.id)}
+              />
             ))}
           </Card>
         )}

@@ -15,7 +15,7 @@ export default async function AdminHomePage() {
         <BackButton />
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-[20px] font-bold text-[var(--color-ink)]">
-            Clients
+            Engagements
           </h1>
           <div className="flex flex-wrap items-center gap-3">
             <Link
@@ -48,7 +48,7 @@ export default async function AdminHomePage() {
         {engagements.length === 0 && (
           <Card className="px-9 py-9 text-center">
             <p className="text-[14px] text-[var(--color-muted)]">
-              No clients yet — create the first one.
+              No engagements yet — create the first one.
             </p>
           </Card>
         )}

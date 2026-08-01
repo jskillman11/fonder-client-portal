@@ -84,8 +84,8 @@ export async function requireAdmin(): Promise<{ id: string; email: string } | Ne
 }
 
 // A narrower tier on top of staff: only super-admins can invite, remove, or
-// promote other staff accounts (see lib/staff.ts and app/admin/users). Used
-// both as a render-time guard (the /admin/users page itself) and via
+// promote other staff accounts (see lib/staff.ts and app/admin/staff). Used
+// both as a render-time guard (the /admin/staff page itself) and via
 // requireSuperAdmin for the staff-management API routes.
 export async function isSuperAdminSession(): Promise<boolean> {
   const supabase = await createServerAuthClient();

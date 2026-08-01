@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -9,6 +9,9 @@ export type ShellNavItem = {
   href: string;
   label: string;
   locked?: boolean;
+  // Optional section header shown above this item when it differs from the
+  // previous item's section -- omit entirely for an ungrouped, flat nav.
+  section?: string;
 };
 
 export function DashboardShell({
@@ -23,10 +26,14 @@ export function DashboardShell({
   const pathname = usePathname();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
-  // Auto-close the mobile drawer whenever a navigation completes.
-  useEffect(() => {
+  // Auto-close the mobile drawer whenever a navigation completes -- adjusting
+  // state during render (rather than in an effect) on a prop/derived-value
+  // change, per React's recommended pattern for this.
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
     setMobileNavOpen(false);
-  }, [pathname]);
+  }
 
   return (
     <div className="flex min-h-screen bg-[var(--color-cream)]">
@@ -68,33 +75,37 @@ export function DashboardShell({
           </button>
         </div>
         <nav className="space-y-1">
-          {navItems.map((item) => {
+          {navItems.map((item, index) => {
             const isActive = pathname === item.href;
-
-            if (item.locked) {
-              return (
-                <span
-                  key={item.href}
-                  title="Unlocks once your documents are sent for signature."
-                  className="block rounded-[10px] px-3 py-2 text-[13.5px] font-medium text-[var(--color-faint)] opacity-45 cursor-not-allowed"
-                >
-                  {item.label}
-                </span>
-              );
-            }
+            const showSectionHeader = item.section && item.section !== navItems[index - 1]?.section;
 
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`block rounded-[10px] px-3 py-2 text-[13.5px] font-medium ${
-                  isActive
-                    ? "bg-[var(--color-cream)] text-[var(--color-ink)]"
-                    : "text-[var(--color-muted)] hover:bg-[var(--color-cream)]"
-                }`}
-              >
-                {item.label}
-              </Link>
+              <Fragment key={item.href}>
+                {showSectionHeader && (
+                  <p className="px-3 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-faint)] first:pt-0">
+                    {item.section}
+                  </p>
+                )}
+                {item.locked ? (
+                  <span
+                    title="Unlocks once your documents are sent for signature."
+                    className="block rounded-[10px] px-3 py-2 text-[13.5px] font-medium text-[var(--color-faint)] opacity-45 cursor-not-allowed"
+                  >
+                    {item.label}
+                  </span>
+                ) : (
+                  <Link
+                    href={item.href}
+                    className={`block rounded-[10px] px-3 py-2 text-[13.5px] font-medium ${
+                      isActive
+                        ? "bg-[var(--color-cream)] text-[var(--color-ink)]"
+                        : "text-[var(--color-muted)] hover:bg-[var(--color-cream)]"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                )}
+              </Fragment>
             );
           })}
         </nav>
