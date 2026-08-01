@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient, requireAdmin } from "@/lib/supabase/server";
 
 export async function POST(req: NextRequest) {
+  const admin = await requireAdmin();
+  if (admin instanceof NextResponse) return admin;
+
   const engagement = await req.json();
   const supabase = createServiceClient();
 

@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getEngagement } from "@/lib/get-engagement";
 import { createAndSendMagicLink } from "@/lib/portal-access";
+import { requireAdmin } from "@/lib/supabase/server";
 
 export async function POST(req: NextRequest) {
+  const admin = await requireAdmin();
+  if (admin instanceof NextResponse) return admin;
+
   const { clientSlug } = await req.json();
   if (!clientSlug) return NextResponse.json({ error: "clientSlug is required" }, { status: 400 });
 

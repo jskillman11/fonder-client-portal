@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createDocument } from "@/lib/documents";
+import { requireAdmin } from "@/lib/supabase/server";
 
 export async function POST(req: NextRequest) {
+  const admin = await requireAdmin();
+  if (admin instanceof NextResponse) return admin;
+
   const { companyId, docType, title, contentMarkdown } = await req.json();
 
   if (!companyId || !docType || !title?.trim() || !contentMarkdown?.trim()) {

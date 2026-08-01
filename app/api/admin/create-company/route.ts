@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createCompany } from "@/lib/companies-clients";
+import { requireAdmin } from "@/lib/supabase/server";
 
 export async function POST(req: NextRequest) {
+  const admin = await requireAdmin();
+  if (admin instanceof NextResponse) return admin;
+
   const formData = await req.formData();
   const name = formData.get("name") as string;
   const logo = formData.get("logo") as File | null;

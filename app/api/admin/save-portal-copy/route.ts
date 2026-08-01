@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServiceClient } from "@/lib/supabase/server";
+import { createServiceClient, requireAdmin } from "@/lib/supabase/server";
 import { PortalCopyKey } from "@/lib/portal-copy";
 
 export async function POST(req: NextRequest) {
+  const admin = await requireAdmin();
+  if (admin instanceof NextResponse) return admin;
+
   const body = (await req.json()) as Record<PortalCopyKey, string>;
   const supabase = createServiceClient();
 

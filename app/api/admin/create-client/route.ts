@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClientRecord } from "@/lib/companies-clients";
+import { requireAdmin } from "@/lib/supabase/server";
 
 export async function POST(req: NextRequest) {
+  const admin = await requireAdmin();
+  if (admin instanceof NextResponse) return admin;
+
   const { companyId, firstName, lastName, email } = await req.json();
 
   if (!companyId || !firstName?.trim() || !lastName?.trim() || !email?.trim()) {

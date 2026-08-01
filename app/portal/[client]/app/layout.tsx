@@ -1,8 +1,6 @@
 import { notFound } from "next/navigation";
-import { cookies } from "next/headers";
 import { getEngagement } from "@/lib/get-engagement";
-import { hasValidSession, getPortalCookieName } from "@/lib/portal-access";
-import { isAdminSession } from "@/lib/supabase/server";
+import { hasPortalAccess } from "@/lib/supabase/server";
 import { AccessGate } from "@/components/AccessGate";
 import { ClientAppNav } from "@/components/portal-app/ClientAppNav";
 import { ClientAccountMenu } from "@/components/portal-app/ClientAccountMenu";
@@ -21,14 +19,9 @@ export default async function ClientAppLayout({
   const engagement = await getEngagement(client);
   if (!engagement) notFound();
 
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get(getPortalCookieName(client))?.value;
-  const [hasSession, isAdmin] = await Promise.all([
-    hasValidSession(client, sessionCookie),
-    isAdminSession(),
-  ]);
+  const { authorized, isAdmin } = await hasPortalAccess(client);
 
-  if (!hasSession && !isAdmin) {
+  if (!authorized) {
     return <AccessGate clientSlug={client} />;
   }
 
@@ -41,7 +34,7 @@ export default async function ClientAppLayout({
         accountSlot={
           <ClientAccountMenu
             clientSlug={client}
-            hasSession={hasSession}
+            hasSession={!isAdmin}
             isAdmin={isAdmin}
             clientName={engagement.clientSignatoryName}
           />

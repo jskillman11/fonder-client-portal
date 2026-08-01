@@ -1,21 +1,47 @@
-import { randomBytes } from "crypto";
 import { Resend } from "resend";
 import { createServiceClient } from "./supabase/server";
 
-const LINK_EXPIRY_MINUTES = 30;
-export const SESSION_COOKIE_MAX_AGE_DAYS = 30;
+// Ensures a real Supabase Auth identity + client-role profile exists for the
+// given client, keyed off our own `profiles.client_id` rather than a
+// Supabase "get user by email" lookup (the admin API doesn't expose one).
+// Idempotent across repeated "send access link" clicks.
+async function ensureClientAuthUser(
+  supabase: ReturnType<typeof createServiceClient>,
+  clientId: string,
+  email: string,
+): Promise<{ error?: string }> {
+  const { data: existingProfile } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("client_id", clientId)
+    .maybeSingle();
 
-function cookieName(clientSlug: string) {
-  return `portal_access_${clientSlug}`;
+  if (existingProfile) return {};
+
+  const { data: created, error: createError } = await supabase.auth.admin.createUser({
+    email,
+    email_confirm: true,
+  });
+
+  if (createError || !created.user) {
+    return { error: createError?.message || "Failed to create client account" };
+  }
+
+  const { error: profileError } = await supabase.from("profiles").insert({
+    id: created.user.id,
+    role: "client",
+    client_id: clientId,
+  });
+
+  if (profileError) return { error: profileError.message };
+  return {};
 }
 
-export function getPortalCookieName(clientSlug: string) {
-  return cookieName(clientSlug);
-}
-
-// Creates a token and emails a magic link to the given address, but only if
-// it matches the engagement's registered client signatory email -- prevents
+// Creates and emails a magic link to the given address, but only if it
+// matches the engagement's registered client signatory email -- prevents
 // someone from redirecting the link to an email that isn't actually theirs.
+// The link itself is a real Supabase Auth magic link (see verify/[token]),
+// not a hand-rolled token -- Supabase enforces expiry and single-use on it.
 export async function createAndSendMagicLink(
   clientSlug: string,
   requestedEmail: string,
@@ -25,7 +51,7 @@ export async function createAndSendMagicLink(
 
   const { data: engagement } = await supabase
     .from("engagements")
-    .select("id, engagement_title, clients(email, first_name)")
+    .select("engagement_title, clients(id, email, first_name)")
     .eq("client_slug", clientSlug)
     .single();
 
@@ -34,23 +60,23 @@ export async function createAndSendMagicLink(
   const client = Array.isArray(engagement.clients) ? engagement.clients[0] : engagement.clients;
   const registeredEmail = client?.email?.toLowerCase().trim();
 
-  if (!registeredEmail || registeredEmail !== requestedEmail.toLowerCase().trim()) {
+  if (!client || !registeredEmail || registeredEmail !== requestedEmail.toLowerCase().trim()) {
     return { error: "That email doesn't match our records for this portal." };
   }
 
-  const token = randomBytes(24).toString("hex");
-  const expiresAt = new Date(Date.now() + LINK_EXPIRY_MINUTES * 60 * 1000);
+  const ensureResult = await ensureClientAuthUser(supabase, client.id, registeredEmail);
+  if (ensureResult.error) return { error: ensureResult.error };
 
-  const { error: insertError } = await supabase.from("portal_access_tokens").insert({
-    engagement_id: engagement.id,
+  const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+    type: "magiclink",
     email: registeredEmail,
-    token,
-    expires_at: expiresAt.toISOString(),
   });
 
-  if (insertError) return { error: insertError.message };
+  if (linkError || !linkData) {
+    return { error: linkError?.message || "Failed to generate access link" };
+  }
 
-  const link = `${appOrigin}/portal/${clientSlug}/verify/${token}`;
+  const link = `${appOrigin}/portal/${clientSlug}/verify/${linkData.properties.hashed_token}`;
 
   if (!process.env.RESEND_API_KEY) {
     return { error: "Email sending is not configured (missing RESEND_API_KEY)" };
@@ -81,7 +107,7 @@ export async function createAndSendMagicLink(
                   </tr>
                 </table>
                 <p style="font-size:12px;color:#6C6F76;line-height:1.6;margin:22px 0 0;">
-                  This link expires in ${LINK_EXPIRY_MINUTES} minutes and can only be used by you. If you didn't request it, you can safely ignore this email.
+                  This link can only be used by you. If you didn't request it, you can safely ignore this email.
                 </p>
               </td>
             </tr>
@@ -95,52 +121,4 @@ export async function createAndSendMagicLink(
 
   if (emailError) return { error: emailError.message };
   return { success: true };
-}
-
-// Validates a freshly-clicked magic link token (must be unexpired). Marks
-// used_at for auditing (not enforced as single-use, so re-clicking the same
-// emailed link -- e.g. from a second device -- still works within the window).
-export async function verifyMagicLinkToken(
-  token: string,
-): Promise<{ clientSlug: string } | null> {
-  const supabase = createServiceClient();
-  const { data } = await supabase
-    .from("portal_access_tokens")
-    .select("id, expires_at, used_at, engagements(client_slug)")
-    .eq("token", token)
-    .single();
-
-  if (!data) return null;
-  if (new Date(data.expires_at) < new Date()) return null;
-
-  if (!data.used_at) {
-    await supabase
-      .from("portal_access_tokens")
-      .update({ used_at: new Date().toISOString() })
-      .eq("id", data.id);
-  }
-
-  const engagement = Array.isArray(data.engagements) ? data.engagements[0] : data.engagements;
-  if (!engagement) return null;
-  return { clientSlug: engagement.client_slug };
-}
-
-// Checks whether a session cookie value corresponds to a real, previously-
-// verified token for this engagement -- no expiry check here, since the
-// cookie's own 30-day max-age is what bounds the session length.
-export async function hasValidSession(
-  clientSlug: string,
-  cookieValue: string | undefined,
-): Promise<boolean> {
-  if (!cookieValue) return false;
-  const supabase = createServiceClient();
-  const { data } = await supabase
-    .from("portal_access_tokens")
-    .select("id, used_at, engagements(client_slug)")
-    .eq("token", cookieValue)
-    .single();
-
-  if (!data || !data.used_at) return false;
-  const engagement = Array.isArray(data.engagements) ? data.engagements[0] : data.engagements;
-  return engagement?.client_slug === clientSlug;
 }

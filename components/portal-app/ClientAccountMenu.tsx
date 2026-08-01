@@ -16,11 +16,7 @@ export function ClientAccountMenu({
   const router = useRouter();
 
   async function handleSignOut() {
-    await fetch("/api/portal/sign-out", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ clientSlug }),
-    });
+    await fetch("/api/portal/sign-out", { method: "POST" });
     router.push(`/portal/${clientSlug}`);
   }
 
