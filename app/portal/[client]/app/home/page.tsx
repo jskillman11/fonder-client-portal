@@ -2,7 +2,7 @@ import { Card } from "@/components/Card";
 
 export default function ClientAppHomePage() {
   return (
-    <div className="space-y-5">
+    <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
       <Card className="px-9 py-8">
         <p className="text-[12px] font-semibold uppercase tracking-wide text-[var(--color-faint)] mb-2">
           Coming soon

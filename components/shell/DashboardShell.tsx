@@ -69,9 +69,7 @@ export function DashboardShell({
         <header className="flex justify-end items-center border-b border-[var(--color-border)] bg-white px-6 py-3">
           {accountSlot}
         </header>
-        <main className="flex-1 px-4 py-8">
-          <div className="max-w-2xl mx-auto">{children}</div>
-        </main>
+        <main className="flex-1 px-4 py-8">{children}</main>
       </div>
     </div>
   );
