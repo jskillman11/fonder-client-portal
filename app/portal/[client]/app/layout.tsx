@@ -5,6 +5,7 @@ import { hasValidSession, getPortalCookieName } from "@/lib/portal-access";
 import { isAdminSession } from "@/lib/supabase/server";
 import { AccessGate } from "@/components/AccessGate";
 import { ClientAppNav } from "@/components/portal-app/ClientAppNav";
+import { ClientAccountMenu } from "@/components/portal-app/ClientAccountMenu";
 import { AppUnlockProvider } from "@/components/portal-app/AppUnlockContext";
 
 export const dynamic = "force-dynamic";
@@ -32,13 +33,21 @@ export default async function ClientAppLayout({
   }
 
   return (
-    <main className="min-h-screen bg-[var(--color-cream)] py-8 px-4">
-      <div className="max-w-2xl mx-auto">
-        <AppUnlockProvider>
-          <ClientAppNav clientSlug={client} lockEnabled={engagement.lockPortalTabs} />
-          {children}
-        </AppUnlockProvider>
-      </div>
-    </main>
+    <AppUnlockProvider>
+      <ClientAppNav
+        clientSlug={client}
+        lockEnabled={engagement.lockPortalTabs}
+        accountSlot={
+          <ClientAccountMenu
+            clientSlug={client}
+            hasSession={hasSession}
+            isAdmin={isAdmin}
+            clientName={engagement.clientSignatoryName}
+          />
+        }
+      >
+        {children}
+      </ClientAppNav>
+    </AppUnlockProvider>
   );
 }

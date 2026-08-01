@@ -45,3 +45,14 @@ export async function isAdminSession(): Promise<boolean> {
   } = await supabase.auth.getUser();
   return Boolean(user);
 }
+
+// Returns the logged-in Fonder admin's email, for display in the dashboard
+// shell's account corner. Only meaningful under /admin, where middleware
+// already guarantees a logged-in user.
+export async function getAdminUser(): Promise<{ email: string } | null> {
+  const supabase = await createServerAuthClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user?.email ? { email: user.email } : null;
+}

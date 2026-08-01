@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { DashboardShell } from "@/components/shell/DashboardShell";
 import { useAppUnlock } from "./AppUnlockContext";
 
 const TABS = [
@@ -19,50 +18,29 @@ const TABS = [
 export function ClientAppNav({
   clientSlug,
   lockEnabled,
+  accountSlot,
+  children,
 }: {
   clientSlug: string;
   lockEnabled: boolean;
+  accountSlot: React.ReactNode;
+  children: React.ReactNode;
 }) {
-  const pathname = usePathname();
   const { docsSent } = useAppUnlock();
   const base = `/portal/${clientSlug}/app`;
 
+  const navItems = TABS.map((tab) => {
+    const isOnboarding = tab.href === "";
+    return {
+      href: `${base}${tab.href}`,
+      label: tab.label,
+      locked: !isOnboarding && lockEnabled && !docsSent,
+    };
+  });
+
   return (
-    <div className="overflow-x-auto -mx-4 px-4 mb-5">
-      <div className="flex gap-2 w-max">
-        {TABS.map((tab) => {
-          const href = `${base}${tab.href}`;
-          const isActive = pathname === href;
-          const isOnboarding = tab.href === "";
-          const isLocked = !isOnboarding && lockEnabled && !docsSent;
-
-          if (isLocked) {
-            return (
-              <span
-                key={tab.label}
-                title="Unlocks once your documents are sent for signature."
-                className="rounded-[var(--radius-pill)] px-4 py-2 text-[13px] font-medium whitespace-nowrap bg-white border border-[var(--color-border)] text-[var(--color-faint)] opacity-45 cursor-not-allowed"
-              >
-                {tab.label}
-              </span>
-            );
-          }
-
-          return (
-            <Link
-              key={tab.label}
-              href={href}
-              className={`rounded-[var(--radius-pill)] px-4 py-2 text-[13px] font-medium whitespace-nowrap ${
-                isActive
-                  ? "bg-[var(--color-ink)] text-white"
-                  : "bg-white border border-[var(--color-border)] text-[var(--color-muted)]"
-              }`}
-            >
-              {tab.label}
-            </Link>
-          );
-        })}
-      </div>
-    </div>
+    <DashboardShell navItems={navItems} accountSlot={accountSlot}>
+      {children}
+    </DashboardShell>
   );
 }
