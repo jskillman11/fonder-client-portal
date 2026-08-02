@@ -33,18 +33,18 @@ const inputClass =
 const labelClass = "text-[13px] font-medium text-[var(--color-muted)]";
 
 export function EngagementForm({
-  mode,
-  initialValues,
-  initialCompanyName,
+  lockedCompanyId,
+  lockedCompanyName,
+  backHref = "/admin/companies",
 }: {
-  mode: "create" | "edit";
-  initialValues?: EngagementFormValues;
-  initialCompanyName?: string;
+  lockedCompanyId?: string;
+  lockedCompanyName?: string;
+  backHref?: string;
 }) {
   const router = useRouter();
-  const defaults: EngagementFormValues = initialValues ?? {
+  const defaults: EngagementFormValues = {
     clientSlug: "",
-    companyId: "",
+    companyId: lockedCompanyId ?? "",
     clientId: "",
     sowDocumentId: "",
     msaDocumentId: "",
@@ -158,7 +158,7 @@ export function EngagementForm({
     return (
       <Card className="px-9 py-10 text-center max-w-lg mx-auto">
         <h1 className="text-[20px] font-bold text-[var(--color-ink)] mb-3">
-          {mode === "create" ? "Client created" : "Changes saved"}
+          Client created
         </h1>
         <p className="text-[14px] text-[var(--color-muted)] mb-5">
           Portal link:{" "}
@@ -173,7 +173,7 @@ export function EngagementForm({
         </p>
         <div className="flex justify-center gap-3">
           <button
-            onClick={() => router.push("/admin")}
+            onClick={() => router.push(backHref)}
             className="text-[13px] font-medium text-[var(--color-ink)] underline"
           >
             Back to all clients
@@ -194,9 +194,7 @@ export function EngagementForm({
   return (
     <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-5">
       <h1 className="text-[19px] font-bold text-[var(--color-ink)]">
-        {mode === "create"
-          ? "New client engagement"
-          : `Editing ${initialCompanyName || "client"}`}
+        New client engagement
       </h1>
 
       {/* --- Client & Company --- */}
@@ -206,10 +204,16 @@ export function EngagementForm({
             Client &amp; company
           </h2>
           <div className="flex gap-3 text-[12px]">
-            <Link href="/admin/companies" target="_blank" className="underline text-[var(--color-muted)]">
-              + New company
-            </Link>
-            <Link href="/admin/clients" target="_blank" className="underline text-[var(--color-muted)]">
+            {!lockedCompanyId && (
+              <Link href="/admin/companies" target="_blank" className="underline text-[var(--color-muted)]">
+                + New company
+              </Link>
+            )}
+            <Link
+              href={lockedCompanyId ? `/admin/companies/${lockedCompanyId}` : "/admin/companies"}
+              target="_blank"
+              className="underline text-[var(--color-muted)]"
+            >
               + New client
             </Link>
           </div>
@@ -219,30 +223,39 @@ export function EngagementForm({
           <p className="text-[13px] text-[var(--color-muted)]">Loading…</p>
         ) : (
           <>
-            <div className="mb-4">
-              <label className={labelClass}>Company</label>
-              <select
-                required
-                value={values.companyId}
-                onChange={(e) => set("companyId", e.target.value)}
-                className={inputClass}
-              >
-                <option value="" disabled>
-                  Select a company…
-                </option>
-                {companies.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-              {companies.length === 0 && (
-                <p className="text-[11px] text-[var(--color-faint)] mt-1">
-                  No companies yet — add one via the &quot;+ New company&quot; link above, then
-                  come back and refresh.
+            {lockedCompanyId ? (
+              <div className="mb-4">
+                <label className={labelClass}>Company</label>
+                <p className="text-[14px] font-semibold text-[var(--color-ink)] mt-1">
+                  {lockedCompanyName}
                 </p>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="mb-4">
+                <label className={labelClass}>Company</label>
+                <select
+                  required
+                  value={values.companyId}
+                  onChange={(e) => set("companyId", e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="" disabled>
+                    Select a company…
+                  </option>
+                  {companies.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                {companies.length === 0 && (
+                  <p className="text-[11px] text-[var(--color-faint)] mt-1">
+                    No companies yet — add one via the &quot;+ New company&quot; link above, then
+                    come back and refresh.
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="mb-4">
               <label className={labelClass}>Client (signatory)</label>
@@ -276,19 +289,11 @@ export function EngagementForm({
           <label className={labelClass}>Portal slug (used in the link)</label>
           <input
             required
-            disabled={mode === "edit"}
             value={values.clientSlug}
             onChange={(e) => set("clientSlug", e.target.value)}
-            className={`${inputClass} ${mode === "edit" ? "opacity-60" : ""}`}
+            className={inputClass}
             placeholder="coros"
           />
-          {mode === "edit" && (
-            <p className="text-[11px] text-[var(--color-faint)] mt-1">
-              Slug can&apos;t be changed after creation — it&apos;s the
-              client&apos;s live link. Create a new client instead if it
-              needs to change.
-            </p>
-          )}
         </div>
       </Card>
 
@@ -411,7 +416,11 @@ export function EngagementForm({
           <h2 className="text-[16px] font-bold text-[var(--color-ink)]">
             Documents
           </h2>
-          <Link href="/admin/documents" target="_blank" className="text-[12px] underline text-[var(--color-muted)]">
+          <Link
+            href={lockedCompanyId ? `/admin/companies/${lockedCompanyId}` : "/admin/companies"}
+            target="_blank"
+            className="text-[12px] underline text-[var(--color-muted)]"
+          >
             + New document
           </Link>
         </div>
@@ -422,7 +431,7 @@ export function EngagementForm({
         <div className="mb-4">
           <label className={labelClass}>SOW</label>
           <select
-            required={mode === "create"}
+            required
             value={values.sowDocumentId}
             onChange={(e) => set("sowDocumentId", e.target.value)}
             disabled={!values.companyId}
@@ -441,7 +450,7 @@ export function EngagementForm({
         <div>
           <label className={labelClass}>MSA</label>
           <select
-            required={mode === "create"}
+            required
             value={values.msaDocumentId}
             onChange={(e) => set("msaDocumentId", e.target.value)}
             disabled={!values.companyId}
@@ -465,7 +474,7 @@ export function EngagementForm({
           <h2 className="text-[16px] font-bold text-[var(--color-ink)]">
             Account team
           </h2>
-          <Link href="/admin/team" target="_blank" className="text-[12px] underline text-[var(--color-muted)]">
+          <Link href="/admin/settings/team" target="_blank" className="text-[12px] underline text-[var(--color-muted)]">
             + New team member
           </Link>
         </div>
@@ -521,7 +530,7 @@ export function EngagementForm({
           Client portal
         </h2>
         <p className="text-[13px] text-[var(--color-muted)] mb-4">
-          Controls whether the client portal app's tabs (Tasks, Chat,
+          Controls whether the client portal app&apos;s tabs (Tasks, Chat,
           Invoices, etc.) stay locked until both documents are sent for
           signature.
         </p>
@@ -588,11 +597,7 @@ export function EngagementForm({
 
       <div className="flex justify-center">
         <PillButton type="submit">
-          {status === "saving"
-            ? "Saving…"
-            : mode === "create"
-              ? "Create client"
-              : "Save changes"}
+          {status === "saving" ? "Saving…" : "Create client"}
         </PillButton>
       </div>
     </form>

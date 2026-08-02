@@ -13,9 +13,11 @@ const labelClass = "text-[13px] font-medium text-[var(--color-muted)]";
 export function EditClientForm({
   client,
   companyName,
+  backHref,
 }: {
   client: Client;
   companyName: string;
+  backHref: string;
 }) {
   const router = useRouter();
   const [firstName, setFirstName] = useState(client.firstName);
@@ -62,7 +64,7 @@ export function EditClientForm({
       setErrorDetail([data.error, data.detail].filter(Boolean).join(" — "));
       return;
     }
-    router.push("/admin/clients");
+    router.push(backHref);
   }
 
   return (

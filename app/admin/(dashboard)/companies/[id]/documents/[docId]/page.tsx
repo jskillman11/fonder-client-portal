@@ -6,22 +6,26 @@ import { EditDocumentForm } from "@/components/admin/EditDocumentForm";
 
 export const dynamic = "force-dynamic";
 
-export default async function DocumentDetailPage({
+export default async function CompanyDocumentDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string; docId: string }>;
 }) {
-  const { id } = await params;
-  const document = await getDocument(id);
-  if (!document) notFound();
+  const { id, docId } = await params;
+  const document = await getDocument(docId);
+  if (!document || document.companyId !== id) notFound();
 
-  const company = await getCompany(document.companyId);
+  const company = await getCompany(id);
 
   return (
     <main className="py-12 px-4">
       <div className="max-w-2xl mx-auto space-y-3">
         <BackButton />
-        <EditDocumentForm document={document} companyName={company?.name ?? "Unknown company"} />
+        <EditDocumentForm
+          document={document}
+          companyName={company?.name ?? "Unknown company"}
+          backHref={`/admin/companies/${id}`}
+        />
       </div>
     </main>
   );

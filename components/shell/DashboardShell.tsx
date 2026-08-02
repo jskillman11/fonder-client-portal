@@ -16,10 +16,12 @@ export type ShellNavItem = {
 
 export function DashboardShell({
   navItems,
+  sidebarTopSlot,
   accountSlot,
   children,
 }: {
   navItems: ShellNavItem[];
+  sidebarTopSlot?: React.ReactNode;
   accountSlot: React.ReactNode;
   children: React.ReactNode;
 }) {
@@ -74,6 +76,7 @@ export function DashboardShell({
             </svg>
           </button>
         </div>
+        {sidebarTopSlot && <div className="mb-4">{sidebarTopSlot}</div>}
         <nav className="space-y-1">
           {navItems.map((item, index) => {
             const isActive = pathname === item.href;

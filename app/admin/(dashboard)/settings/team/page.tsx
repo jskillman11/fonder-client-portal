@@ -17,7 +17,7 @@ export default async function TeamPage() {
           Team
         </h1>
         <p className="text-[13px] text-[var(--color-muted)]">
-          Fonder's own roster — select from these on the engagement setup
+          Fonder&apos;s own roster — select from these on the engagement setup
           screen instead of typing name/role fresh each time.
         </p>
 
@@ -34,7 +34,7 @@ export default async function TeamPage() {
             {teamMembers.map((t) => (
               <Link
                 key={t.id}
-                href={`/admin/team/${t.id}`}
+                href={`/admin/settings/team/${t.id}`}
                 className="flex items-center gap-3 py-3 border-b border-[var(--color-border)] last:border-b-0 hover:bg-[var(--color-cream)] -mx-7 px-7"
               >
                 <div

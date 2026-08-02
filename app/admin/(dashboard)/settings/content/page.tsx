@@ -103,7 +103,7 @@ export default function PortalContentPage() {
             Portal content
           </h1>
           <p className="text-[13px] text-[var(--color-muted)] mt-1">
-            Edit once — applies to every client's portal immediately.
+            Edit once — applies to every client&apos;s portal immediately.
           </p>
         </div>
 
@@ -143,7 +143,7 @@ export default function PortalContentPage() {
         )}
         {status === "saved" && (
           <p className="text-[13px] text-center text-[var(--color-ink)]">
-            Saved — every client's portal now uses this copy.
+            Saved — every client&apos;s portal now uses this copy.
           </p>
         )}
 

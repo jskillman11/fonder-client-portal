@@ -14,7 +14,7 @@ export default async function CompaniesPage() {
       <div className="max-w-2xl mx-auto space-y-5">
         <BackButton />
         <h1 className="text-[20px] font-bold text-[var(--color-ink)]">
-          Companies
+          All Clients
         </h1>
 
         <NewCompanyForm />

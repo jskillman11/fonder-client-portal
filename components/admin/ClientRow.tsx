@@ -6,9 +6,11 @@ import Link from "next/link";
 
 export function ClientRow({
   client,
+  companyId,
   access,
 }: {
   client: { id: string; firstName: string; lastName: string; email: string; companyName: string };
+  companyId: string;
   access?: { hasAccess: boolean; lastSignInAt: string | null };
 }) {
   const router = useRouter();
@@ -44,7 +46,7 @@ export function ClientRow({
   return (
     <div className="py-3 border-b border-[var(--color-border)] last:border-b-0 -mx-7 px-7 hover:bg-[var(--color-cream)]">
       <div className="flex items-center justify-between gap-4">
-        <Link href={`/admin/clients/${client.id}`} className="flex-1 min-w-0">
+        <Link href={`/admin/companies/${companyId}/clients/${client.id}`} className="flex-1 min-w-0">
           <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">
             {client.firstName} {client.lastName}
           </p>

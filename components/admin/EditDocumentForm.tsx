@@ -13,9 +13,11 @@ const labelClass = "text-[13px] font-medium text-[var(--color-muted)]";
 export function EditDocumentForm({
   document,
   companyName,
+  backHref,
 }: {
   document: DocumentRecord;
   companyName: string;
+  backHref: string;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(document.title);
@@ -61,7 +63,7 @@ export function EditDocumentForm({
       setErrorDetail([data.error, data.detail].filter(Boolean).join(" — "));
       return;
     }
-    router.push("/admin/documents");
+    router.push(backHref);
   }
 
   return (

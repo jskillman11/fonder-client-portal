@@ -5,10 +5,12 @@ import Link from "next/link";
 import { Card } from "@/components/Card";
 
 export function EngagementRow({
+  companyId,
   clientSlug,
   clientName,
   engagementTitle,
 }: {
+  companyId: string;
   clientSlug: string;
   clientName: string;
   engagementTitle: string;
@@ -55,7 +57,7 @@ export function EngagementRow({
             View portal
           </Link>
           <Link
-            href={`/admin/edit/${clientSlug}`}
+            href={`/admin/companies/${companyId}/engagements/${clientSlug}`}
             className="font-medium text-[var(--color-ink)] underline"
           >
             Edit

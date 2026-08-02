@@ -67,7 +67,7 @@ export function EditTeamMemberForm({ teamMember }: { teamMember: TeamMemberRecor
       setErrorDetail([data.error, data.detail].filter(Boolean).join(" — "));
       return;
     }
-    router.push("/admin/team");
+    router.push("/admin/settings/team");
   }
 
   return (

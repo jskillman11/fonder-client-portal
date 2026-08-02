@@ -41,22 +41,19 @@ export type EngagementData = {
   tabLockOverrides: Record<string, TabLockState>;
 };
 
-export async function listEngagements(): Promise<
-  { clientSlug: string; clientName: string; engagementTitle: string }[]
+export async function listEngagementsForCompany(companyId: string): Promise<
+  { id: string; clientSlug: string; engagementTitle: string }[]
 > {
   const supabase = createServiceClient();
   const { data } = await supabase
     .from("engagements")
-    .select("client_slug, engagement_title, companies(name)")
+    .select("id, client_slug, engagement_title")
+    .eq("company_id", companyId)
     .order("created_at", { ascending: false });
 
   return (data ?? []).map((row) => ({
+    id: row.id,
     clientSlug: row.client_slug,
-    // Supabase returns joined relations as an array or object depending on
-    // the relationship shape -- normalize defensively either way.
-    clientName: Array.isArray(row.companies)
-      ? (row.companies[0]?.name ?? "Unknown")
-      : ((row.companies as { name: string } | null)?.name ?? "Unknown"),
     engagementTitle: row.engagement_title,
   }));
 }
