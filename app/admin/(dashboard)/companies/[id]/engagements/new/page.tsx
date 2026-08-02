@@ -22,6 +22,8 @@ export default async function NewEngagementPage({
       <EngagementForm
         lockedCompanyId={id}
         lockedCompanyName={company.name}
+        hasCompanySlug={Boolean(company.clientSlug)}
+        existingClientSlug={company.clientSlug}
         backHref={`/admin/companies/${id}`}
       />
     </main>

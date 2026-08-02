@@ -41,55 +41,78 @@ export type EngagementData = {
   tabLockOverrides: Record<string, TabLockState>;
 };
 
+export type EngagementStatus = "active" | "completed";
+
+export type EngagementRecord = {
+  id: string;
+  companyId: string;
+  companyName: string;
+  clientId: string | null;
+  engagementTitle: string;
+  totalFee: string;
+  finalDeliveryDate: string;
+  kickoffEarliestDate: string | null;
+  scopeSummary: string | null;
+  status: EngagementStatus;
+  milestones: Milestone[];
+};
+
 export async function listEngagementsForCompany(companyId: string): Promise<
-  { id: string; clientSlug: string; engagementTitle: string }[]
+  { id: string; engagementTitle: string; status: EngagementStatus }[]
 > {
   const supabase = createServiceClient();
   const { data } = await supabase
     .from("engagements")
-    .select("id, client_slug, engagement_title")
+    .select("id, engagement_title, status")
     .eq("company_id", companyId)
     .order("created_at", { ascending: false });
 
   return (data ?? []).map((row) => ({
     id: row.id,
-    clientSlug: row.client_slug,
     engagementTitle: row.engagement_title,
+    status: row.status as EngagementStatus,
   }));
 }
 
+// Portal-facing lookup, keyed by the company's (stable) portal slug --
+// resolves the company, then its currently active engagement, and merges
+// company-level settings (docs in force, shared drive, portal locks, team)
+// into the same EngagementData shape every portal page already expects, so
+// none of those pages need to change.
 export async function getEngagement(
   clientSlug: string,
 ): Promise<EngagementData | null> {
   const supabase = createServiceClient();
 
-  const { data: engagement, error } = await supabase
-    .from("engagements")
+  const { data: company, error: companyError } = await supabase
+    .from("companies")
     .select(
-      "*, companies(id, name, logo_storage_path), clients(id, first_name, last_name, email), sow_doc:sow_document_id(content_markdown), msa_doc:msa_document_id(content_markdown)",
+      "id, name, logo_storage_path, sow_document_id, msa_document_id, lock_portal_tabs, shared_drive_url, tab_lock_overrides, sow_doc:sow_document_id(content_markdown), msa_doc:msa_document_id(content_markdown)",
     )
     .eq("client_slug", clientSlug)
     .single();
 
-  if (error || !engagement) return null;
+  if (companyError || !company) return null;
 
-  const company = Array.isArray(engagement.companies)
-    ? engagement.companies[0]
-    : engagement.companies;
+  const { data: engagement } = await supabase
+    .from("engagements")
+    .select("*, clients(id, first_name, last_name, email)")
+    .eq("company_id", company.id)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (!engagement) return null;
+
   const client = Array.isArray(engagement.clients)
     ? engagement.clients[0]
     : engagement.clients;
-  const sowDoc = Array.isArray(engagement.sow_doc)
-    ? engagement.sow_doc[0]
-    : engagement.sow_doc;
-  const msaDoc = Array.isArray(engagement.msa_doc)
-    ? engagement.msa_doc[0]
-    : engagement.msa_doc;
+  const sowDoc = Array.isArray(company.sow_doc) ? company.sow_doc[0] : company.sow_doc;
+  const msaDoc = Array.isArray(company.msa_doc) ? company.msa_doc[0] : company.msa_doc;
 
   const { data: teamRows } = await supabase
-    .from("engagement_team_assignments")
+    .from("company_team_assignments")
     .select("sort_order, team_members(name, role, icon_bg_color, icon_text_color)")
-    .eq("engagement_id", engagement.id)
+    .eq("company_id", company.id)
     .order("sort_order", { ascending: true });
 
   const { data: milestoneRows } = await supabase
@@ -99,7 +122,7 @@ export async function getEngagement(
     .order("milestone_date", { ascending: true });
 
   let clientLogoUrl: string | null = null;
-  if (company?.logo_storage_path) {
+  if (company.logo_storage_path) {
     const { data } = supabase.storage
       .from("engagement-logos")
       .getPublicUrl(company.logo_storage_path);
@@ -111,15 +134,15 @@ export async function getEngagement(
 
   return {
     id: engagement.id,
-    clientSlug: engagement.client_slug,
-    clientName: company?.name ?? "",
+    clientSlug,
+    clientName: company.name,
     engagementTitle: engagement.engagement_title,
     totalFee: engagement.total_fee,
     finalDeliveryDate: engagement.final_delivery_date,
-    companyId: engagement.company_id,
+    companyId: company.id,
     clientId: engagement.client_id,
-    sowDocumentId: engagement.sow_document_id,
-    msaDocumentId: engagement.msa_document_id,
+    sowDocumentId: company.sow_document_id,
+    msaDocumentId: company.msa_document_id,
     clientSignatoryName: `${firstName} ${lastName}`.trim(),
     clientSignatoryFirstName: firstName,
     clientSignatoryLastName: lastName,
@@ -132,9 +155,9 @@ export async function getEngagement(
     msaContentMarkdown: msaDoc?.content_markdown ?? null,
     kickoffEarliestDate: engagement.kickoff_earliest_date,
     scopeSummary: engagement.scope_summary,
-    lockPortalTabs: engagement.lock_portal_tabs,
-    sharedDriveUrl: engagement.shared_drive_url,
-    tabLockOverrides: engagement.tab_lock_overrides ?? {},
+    lockPortalTabs: company.lock_portal_tabs,
+    sharedDriveUrl: company.shared_drive_url,
+    tabLockOverrides: company.tab_lock_overrides ?? {},
     milestones: (milestoneRows ?? []).map((m) => ({
       label: m.label,
       date: m.milestone_date,
@@ -151,6 +174,47 @@ export async function getEngagement(
         };
       })
       .filter((t): t is NonNullable<typeof t> => t !== null),
+  };
+}
+
+// Admin-facing lookup, keyed by the engagement's own id -- a lean record,
+// since documents/team/shared-drive/portal-locks no longer live here.
+export async function getEngagementById(
+  engagementId: string,
+): Promise<EngagementRecord | null> {
+  const supabase = createServiceClient();
+  const { data: engagement, error } = await supabase
+    .from("engagements")
+    .select("*, companies(id, name)")
+    .eq("id", engagementId)
+    .single();
+
+  if (error || !engagement) return null;
+  const company = Array.isArray(engagement.companies)
+    ? engagement.companies[0]
+    : engagement.companies;
+
+  const { data: milestoneRows } = await supabase
+    .from("engagement_milestones")
+    .select("label, milestone_date")
+    .eq("engagement_id", engagementId)
+    .order("milestone_date", { ascending: true });
+
+  return {
+    id: engagement.id,
+    companyId: engagement.company_id,
+    companyName: company?.name ?? "",
+    clientId: engagement.client_id,
+    engagementTitle: engagement.engagement_title,
+    totalFee: engagement.total_fee,
+    finalDeliveryDate: engagement.final_delivery_date,
+    kickoffEarliestDate: engagement.kickoff_earliest_date,
+    scopeSummary: engagement.scope_summary,
+    status: engagement.status as EngagementStatus,
+    milestones: (milestoneRows ?? []).map((m) => ({
+      label: m.label,
+      date: m.milestone_date,
+    })),
   };
 }
 

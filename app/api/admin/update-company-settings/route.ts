@@ -1,18 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient, requireAdmin } from "@/lib/supabase/server";
 
-// Maps the camelCase body keys the engagement Overview form may send to
-// their snake_case columns -- only keys actually present in the body are
-// applied, so a save or a "mark completed" action can each write just their
-// own slice.
+// Maps the camelCase body keys the company page's Documents-in-force/
+// Shared Drive/Portal content sections may send to their snake_case
+// columns -- only keys actually present in the body are applied, so each
+// section can save its own slice without clobbering the others.
 const COLUMN_MAP: Record<string, string> = {
-  clientId: "client_id",
-  engagementTitle: "engagement_title",
-  totalFee: "total_fee",
-  finalDeliveryDate: "final_delivery_date",
-  kickoffEarliestDate: "kickoff_earliest_date",
-  scopeSummary: "scope_summary",
-  status: "status",
+  sowDocumentId: "sow_document_id",
+  msaDocumentId: "msa_document_id",
+  lockPortalTabs: "lock_portal_tabs",
+  sharedDriveUrl: "shared_drive_url",
+  tabLockOverrides: "tab_lock_overrides",
 };
 
 export async function POST(req: NextRequest) {
@@ -20,10 +18,10 @@ export async function POST(req: NextRequest) {
   if (admin instanceof NextResponse) return admin;
 
   const body = await req.json();
-  const { engagementId } = body;
+  const { companyId } = body;
 
-  if (!engagementId) {
-    return NextResponse.json({ error: "engagementId is required" }, { status: 400 });
+  if (!companyId) {
+    return NextResponse.json({ error: "companyId is required" }, { status: 400 });
   }
 
   const update: Record<string, unknown> = {};
@@ -39,18 +37,13 @@ export async function POST(req: NextRequest) {
 
   const supabase = createServiceClient();
   const { error } = await supabase
-    .from("engagements")
+    .from("companies")
     .update(update)
-    .eq("id", engagementId);
+    .eq("id", companyId);
 
   if (error) {
     return NextResponse.json(
-      {
-        error: "Failed to save engagement",
-        detail: error.message.includes("engagements_one_active_per_company")
-          ? "This company already has an active engagement — mark it completed first."
-          : error.message,
-      },
+      { error: "Failed to save company settings", detail: error.message },
       { status: 500 },
     );
   }

@@ -49,11 +49,19 @@ export async function createAndSendMagicLink(
 ): Promise<{ success: true } | { error: string }> {
   const supabase = createServiceClient();
 
+  const { data: company } = await supabase
+    .from("companies")
+    .select("id")
+    .eq("client_slug", clientSlug)
+    .single();
+  if (!company) return { error: "Unknown client" };
+
   const { data: engagement } = await supabase
     .from("engagements")
     .select("engagement_title, clients(id, email, first_name)")
-    .eq("client_slug", clientSlug)
-    .single();
+    .eq("company_id", company.id)
+    .eq("status", "active")
+    .maybeSingle();
 
   if (!engagement) return { error: "Unknown client" };
 

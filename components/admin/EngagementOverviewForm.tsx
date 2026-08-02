@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/Card";
 import { PillButton } from "@/components/PillButton";
 import type { Client } from "@/lib/companies-clients";
+import type { EngagementStatus } from "@/lib/get-engagement";
 
 const inputClass =
   "w-full mt-1 rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-[14px]";
@@ -18,6 +19,7 @@ export type EngagementOverviewValues = {
   kickoffEarliestDate: string;
   scopeSummary: string;
   milestones: { label: string; date: string }[];
+  status: EngagementStatus;
 };
 
 export function EngagementOverviewForm({
@@ -108,12 +110,48 @@ export function EngagementOverviewForm({
     router.refresh();
   }
 
+  async function handleMarkCompleted() {
+    if (!confirm("Mark this engagement as completed? This frees up the company to start a new one.")) {
+      return;
+    }
+    setStatus("saving");
+    setErrorDetail(null);
+
+    const res = await fetch("/api/admin/update-engagement", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ engagementId, status: "completed" }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      setStatus("error");
+      setErrorDetail([data.error, data.detail].filter(Boolean).join(" — "));
+      return;
+    }
+
+    set("status", "completed");
+    setStatus("saved");
+    router.refresh();
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <Card className="px-9 py-9">
-        <h2 className="text-[16px] font-bold text-[var(--color-ink)] mb-4">
-          Client &amp; details
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-[16px] font-bold text-[var(--color-ink)]">Client &amp; details</h2>
+          {values.status === "active" ? (
+            <button
+              type="button"
+              onClick={handleMarkCompleted}
+              className="text-[12px] underline text-[var(--color-muted)]"
+            >
+              Mark as completed
+            </button>
+          ) : (
+            <span className="text-[12px] text-[var(--color-muted)]">Completed</span>
+          )}
+        </div>
 
         <div className="mb-4">
           <label className={labelClass}>Client (signatory)</label>

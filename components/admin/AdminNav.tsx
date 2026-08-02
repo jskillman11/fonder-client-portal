@@ -6,21 +6,6 @@ import { CompanySwitcher } from "@/components/admin/CompanySwitcher";
 import type { Company } from "@/lib/companies-clients";
 
 function computeNavItems(pathname: string, isSuperAdmin: boolean): ShellNavItem[] {
-  const engagementMatch = pathname.match(/^\/admin\/companies\/([^/]+)\/engagements\/([^/]+)/);
-  if (engagementMatch && engagementMatch[2] !== "new") {
-    const [, companyId, slug] = engagementMatch;
-    const base = `/admin/companies/${companyId}/engagements/${slug}`;
-    return [
-      { href: `/admin/companies/${companyId}`, label: "← Engagements" },
-      { href: base, label: "Overview", section: "Engagement" },
-      { href: `${base}/team`, label: "Team", section: "Engagement" },
-      { href: `${base}/documents`, label: "Documents", section: "Engagement" },
-      { href: `${base}/portal-content`, label: "Portal content & locks", section: "Engagement" },
-      { href: `${base}/shared-drive`, label: "Shared Drive", section: "Engagement" },
-      { href: `${base}/payments`, label: "Payments", section: "Engagement" },
-    ];
-  }
-
   if (pathname.startsWith("/admin/settings")) {
     return [
       { href: "/admin/companies", label: "← All Clients" },

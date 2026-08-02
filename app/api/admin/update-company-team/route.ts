@@ -5,26 +5,26 @@ export async function POST(req: NextRequest) {
   const admin = await requireAdmin();
   if (admin instanceof NextResponse) return admin;
 
-  const { engagementId, teamMemberIds } = await req.json();
+  const { companyId, teamMemberIds } = await req.json();
 
-  if (!engagementId) {
-    return NextResponse.json({ error: "engagementId is required" }, { status: 400 });
+  if (!companyId) {
+    return NextResponse.json({ error: "companyId is required" }, { status: 400 });
   }
 
   const supabase = createServiceClient();
 
   // Replace cleanly rather than trying to diff/merge.
-  await supabase.from("engagement_team_assignments").delete().eq("engagement_id", engagementId);
+  await supabase.from("company_team_assignments").delete().eq("company_id", companyId);
 
   const ids: string[] = teamMemberIds || [];
   if (ids.length > 0) {
     const rows = ids.map((teamMemberId, i) => ({
-      engagement_id: engagementId,
+      company_id: companyId,
       team_member_id: teamMemberId,
       sort_order: i,
     }));
 
-    const { error } = await supabase.from("engagement_team_assignments").insert(rows);
+    const { error } = await supabase.from("company_team_assignments").insert(rows);
     if (error) {
       return NextResponse.json(
         { error: "Failed to save team assignments", detail: error.message },

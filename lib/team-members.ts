@@ -85,12 +85,12 @@ export async function deleteTeamMember(
   return { success: true };
 }
 
-export async function getAssignedTeamMemberIds(engagementId: string): Promise<string[]> {
+export async function getCompanyTeamMemberIds(companyId: string): Promise<string[]> {
   const supabase = createServiceClient();
   const { data } = await supabase
-    .from("engagement_team_assignments")
+    .from("company_team_assignments")
     .select("team_member_id")
-    .eq("engagement_id", engagementId)
+    .eq("company_id", companyId)
     .order("sort_order", { ascending: true });
 
   return (data ?? []).map((row) => row.team_member_id);

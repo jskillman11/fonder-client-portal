@@ -4,6 +4,7 @@ export type Company = {
   id: string;
   name: string;
   logoUrl: string | null;
+  clientSlug: string | null;
 };
 
 export type Client = {
@@ -18,7 +19,7 @@ export async function listCompanies(): Promise<Company[]> {
   const supabase = createServiceClient();
   const { data } = await supabase
     .from("companies")
-    .select("id, name, logo_storage_path")
+    .select("id, name, logo_storage_path, client_slug")
     .order("name", { ascending: true });
 
   return (data ?? []).map((c) => ({
@@ -27,6 +28,7 @@ export async function listCompanies(): Promise<Company[]> {
     logoUrl: c.logo_storage_path
       ? supabase.storage.from("engagement-logos").getPublicUrl(c.logo_storage_path).data.publicUrl
       : null,
+    clientSlug: c.client_slug,
   }));
 }
 
@@ -50,7 +52,7 @@ export async function getCompany(id: string): Promise<Company | null> {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("companies")
-    .select("id, name, logo_storage_path")
+    .select("id, name, logo_storage_path, client_slug")
     .eq("id", id)
     .single();
 
@@ -61,6 +63,26 @@ export async function getCompany(id: string): Promise<Company | null> {
     logoUrl: data.logo_storage_path
       ? supabase.storage.from("engagement-logos").getPublicUrl(data.logo_storage_path).data.publicUrl
       : null,
+    clientSlug: data.client_slug,
+  };
+}
+
+export async function getCompanyBySlug(clientSlug: string): Promise<Company | null> {
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from("companies")
+    .select("id, name, logo_storage_path, client_slug")
+    .eq("client_slug", clientSlug)
+    .single();
+
+  if (error || !data) return null;
+  return {
+    id: data.id,
+    name: data.name,
+    logoUrl: data.logo_storage_path
+      ? supabase.storage.from("engagement-logos").getPublicUrl(data.logo_storage_path).data.publicUrl
+      : null,
+    clientSlug: data.client_slug,
   };
 }
 

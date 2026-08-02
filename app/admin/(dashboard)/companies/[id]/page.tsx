@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getCompany, listClientsForCompany } from "@/lib/companies-clients";
+import { getCompanySettings } from "@/lib/company-settings";
+import { getCompanyTeamMemberIds } from "@/lib/team-members";
 import { listDocuments } from "@/lib/documents";
 import { listClientAccess } from "@/lib/client-access";
 import { listEngagementsForCompany } from "@/lib/get-engagement";
@@ -11,6 +13,10 @@ import { EngagementRow } from "@/components/admin/EngagementRow";
 import { ClientRow } from "@/components/admin/ClientRow";
 import { NewClientForm } from "@/components/admin/NewClientForm";
 import { NewDocumentForm } from "@/components/admin/NewDocumentForm";
+import { CompanyTeamForm } from "@/components/admin/company/CompanyTeamForm";
+import { CompanyDocumentsInForceForm } from "@/components/admin/company/CompanyDocumentsInForceForm";
+import { CompanySharedDriveForm } from "@/components/admin/company/CompanySharedDriveForm";
+import { CompanyPortalContentForm } from "@/components/admin/company/CompanyPortalContentForm";
 
 export const dynamic = "force-dynamic";
 
@@ -23,14 +29,18 @@ export default async function CompanyDetailPage({
   const company = await getCompany(id);
   if (!company) notFound();
 
-  const [engagements, clients, allDocuments, accessRecords] = await Promise.all([
-    listEngagementsForCompany(id),
-    listClientsForCompany(id),
-    listDocuments(),
-    listClientAccess(),
-  ]);
+  const [engagements, clients, allDocuments, accessRecords, settings, teamMemberIds] =
+    await Promise.all([
+      listEngagementsForCompany(id),
+      listClientsForCompany(id),
+      listDocuments(),
+      listClientAccess(),
+      getCompanySettings(id),
+      getCompanyTeamMemberIds(id),
+    ]);
   const documents = allDocuments.filter((d) => d.companyId === id);
   const accessByClientId = new Map(accessRecords.map((a) => [a.clientId, a]));
+  const hasActiveEngagement = engagements.some((e) => e.status === "active");
 
   return (
     <main className="py-12 px-4">
@@ -42,12 +52,18 @@ export default async function CompanyDetailPage({
         <Card className="px-9 py-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-[16px] font-bold text-[var(--color-ink)]">Engagements</h2>
-            <Link
-              href={`/admin/companies/${id}/engagements/new`}
-              className="text-[12px] underline text-[var(--color-muted)]"
-            >
-              + New engagement
-            </Link>
+            {hasActiveEngagement ? (
+              <span className="text-[12px] text-[var(--color-faint)]">
+                Mark the active engagement completed to start a new one
+              </span>
+            ) : (
+              <Link
+                href={`/admin/companies/${id}/engagements/new`}
+                className="text-[12px] underline text-[var(--color-muted)]"
+              >
+                + New engagement
+              </Link>
+            )}
           </div>
           {engagements.length === 0 ? (
             <p className="text-[13px] text-[var(--color-muted)]">
@@ -59,13 +75,20 @@ export default async function CompanyDetailPage({
                 <EngagementRow
                   key={e.id}
                   companyId={id}
-                  clientSlug={e.clientSlug}
+                  companyClientSlug={company.clientSlug}
+                  engagementId={e.id}
                   clientName={company.name}
                   engagementTitle={e.engagementTitle}
+                  status={e.status}
                 />
               ))}
             </div>
           )}
+        </Card>
+
+        <Card className="px-9 py-8">
+          <h2 className="text-[16px] font-bold text-[var(--color-ink)] mb-4">Account team</h2>
+          <CompanyTeamForm companyId={id} initialTeamMemberIds={teamMemberIds} />
         </Card>
 
         <Card className="px-9 py-8">
@@ -97,6 +120,14 @@ export default async function CompanyDetailPage({
 
         <Card className="px-9 py-8">
           <h2 className="text-[16px] font-bold text-[var(--color-ink)] mb-4">Documents</h2>
+          <div className="mb-5 pb-5 border-b border-[var(--color-border)]">
+            <CompanyDocumentsInForceForm
+              companyId={id}
+              documents={documents}
+              initialSowDocumentId={settings?.sowDocumentId ?? ""}
+              initialMsaDocumentId={settings?.msaDocumentId ?? ""}
+            />
+          </div>
           <div className="mb-4">
             <NewDocumentForm companies={[company]} />
           </div>
@@ -118,6 +149,32 @@ export default async function CompanyDetailPage({
               ))}
             </div>
           )}
+        </Card>
+
+        <Card className="px-9 py-8">
+          <h2 className="text-[16px] font-bold text-[var(--color-ink)] mb-4">Shared Drive</h2>
+          <CompanySharedDriveForm
+            companyId={id}
+            initialSharedDriveUrl={settings?.sharedDriveUrl ?? ""}
+          />
+        </Card>
+
+        <Card className="px-9 py-8">
+          <h2 className="text-[16px] font-bold text-[var(--color-ink)] mb-4">
+            Portal content &amp; locks
+          </h2>
+          <CompanyPortalContentForm
+            companyId={id}
+            initialLockPortalTabs={settings?.lockPortalTabs ?? true}
+            initialTabLockOverrides={settings?.tabLockOverrides ?? {}}
+          />
+        </Card>
+
+        <Card className="px-9 py-8">
+          <h2 className="text-[16px] font-bold text-[var(--color-ink)] mb-2">Payments</h2>
+          <p className="text-[13px] text-[var(--color-muted)]">
+            View and manage invoices/payments for this brand, once QuickBooks is connected.
+          </p>
         </Card>
       </div>
     </main>

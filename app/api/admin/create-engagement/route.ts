@@ -5,79 +5,69 @@ export async function POST(req: NextRequest) {
   const admin = await requireAdmin();
   if (admin instanceof NextResponse) return admin;
 
-  const engagement = await req.json();
-  const supabase = createServiceClient();
+  const body = await req.json();
+  const { companyId, clientId, clientSlug } = body;
 
-  if (!engagement.companyId || !engagement.clientId) {
+  if (!companyId || !clientId) {
     return NextResponse.json(
       { error: "A company and client must be selected" },
       { status: 400 },
     );
   }
 
-  const { data: engagementRow, error: insertError } = await supabase
-    .from("engagements")
-    .upsert(
-      {
-        client_slug: engagement.clientSlug,
-        company_id: engagement.companyId,
-        client_id: engagement.clientId,
-        engagement_title: engagement.engagementTitle,
-        total_fee: engagement.totalFee,
-        final_delivery_date: engagement.finalDeliveryDate,
-        kickoff_earliest_date: engagement.kickoffEarliestDate || null,
-        scope_summary: engagement.scopeSummary || null,
-        sow_document_id: engagement.sowDocumentId || null,
-        msa_document_id: engagement.msaDocumentId || null,
-        lock_portal_tabs: engagement.lockPortalTabs ?? true,
-        shared_drive_url: engagement.sharedDriveUrl || null,
-        tab_lock_overrides: engagement.tabLockOverrides || {},
-      },
-      { onConflict: "client_slug" },
-    )
-    .select()
-    .single();
+  const supabase = createServiceClient();
 
-  if (insertError) {
-    return NextResponse.json(
-      { error: "Failed to save engagement", detail: insertError.message },
-      { status: 500 },
-    );
-  }
+  // The portal slug is only ever collected once per company, on that
+  // company's very first engagement. Guarded with .is("client_slug", null)
+  // so an existing slug can never be silently overwritten even if one is
+  // sent again by mistake.
+  if (clientSlug) {
+    const { error: slugError } = await supabase
+      .from("companies")
+      .update({ client_slug: clientSlug })
+      .eq("id", companyId)
+      .is("client_slug", null);
 
-  // Replace team assignments cleanly rather than trying to diff/merge.
-  await supabase
-    .from("engagement_team_assignments")
-    .delete()
-    .eq("engagement_id", engagementRow.id);
-
-  const teamMemberIds: string[] = engagement.teamMemberIds || [];
-  if (teamMemberIds.length > 0) {
-    const assignmentRows = teamMemberIds.map((teamMemberId, i) => ({
-      engagement_id: engagementRow.id,
-      team_member_id: teamMemberId,
-      sort_order: i,
-    }));
-
-    const { error: teamError } = await supabase
-      .from("engagement_team_assignments")
-      .insert(assignmentRows);
-
-    if (teamError) {
+    if (slugError) {
       return NextResponse.json(
-        { error: "Saved engagement but failed to save team assignments", detail: teamError.message },
+        {
+          error: "Failed to save engagement",
+          detail: slugError.message.includes("duplicate key")
+            ? "That portal slug is already taken — choose another."
+            : slugError.message,
+        },
         { status: 500 },
       );
     }
   }
 
-  // Same replace-cleanly approach for the schedule/milestones list.
-  await supabase
-    .from("engagement_milestones")
-    .delete()
-    .eq("engagement_id", engagementRow.id);
+  const { data: engagementRow, error: insertError } = await supabase
+    .from("engagements")
+    .insert({
+      company_id: companyId,
+      client_id: clientId,
+      engagement_title: body.engagementTitle,
+      total_fee: body.totalFee,
+      final_delivery_date: body.finalDeliveryDate,
+      kickoff_earliest_date: body.kickoffEarliestDate || null,
+      scope_summary: body.scopeSummary || null,
+    })
+    .select()
+    .single();
 
-  const milestones: { label: string; date: string }[] = engagement.milestones || [];
+  if (insertError) {
+    return NextResponse.json(
+      {
+        error: "Failed to save engagement",
+        detail: insertError.message.includes("engagements_one_active_per_company")
+          ? "This company already has an active engagement — mark it completed first."
+          : insertError.message,
+      },
+      { status: 500 },
+    );
+  }
+
+  const milestones: { label: string; date: string }[] = body.milestones || [];
   const validMilestones = milestones.filter((m) => m.label?.trim() && m.date);
   if (validMilestones.length > 0) {
     const milestoneRows = validMilestones.map((m, i) => ({
@@ -99,5 +89,5 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ success: true, clientSlug: engagement.clientSlug });
+  return NextResponse.json({ success: true, engagementId: engagementRow.id });
 }

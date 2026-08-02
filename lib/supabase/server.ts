@@ -134,13 +134,24 @@ export async function hasPortalAccess(
 
   if (profile?.role === "client" && profile.client_id) {
     // Service-role read: an integrity check the app fully controls, so no
-    // new client-facing RLS policy on `engagements` is needed.
+    // new client-facing RLS policy on `engagements` is needed. The portal
+    // slug now lives on `companies`, so this resolves company-by-slug first,
+    // then checks that profile.client_id is the stakeholder on that
+    // company's currently active engagement.
     const service = createServiceClient();
+    const { data: company } = await service
+      .from("companies")
+      .select("id")
+      .eq("client_slug", clientSlug)
+      .maybeSingle();
+    if (!company) return { authorized: false, isAdmin: false };
+
     const { data: match } = await service
       .from("engagements")
       .select("id")
-      .eq("client_slug", clientSlug)
+      .eq("company_id", company.id)
       .eq("client_id", profile.client_id)
+      .eq("status", "active")
       .maybeSingle();
     return { authorized: Boolean(match), isAdmin: false };
   }
