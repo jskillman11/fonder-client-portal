@@ -5,7 +5,7 @@ import { NextResponse, type NextRequest } from "next/server";
 // requires a real, logged-in Supabase user. The public /portal/[client]
 // routes are untouched by this and stay open, since that's what clients
 // themselves need to access without any login.
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isApiAdmin = pathname.startsWith("/api/admin");
   const isAdminPage = pathname.startsWith("/admin");
