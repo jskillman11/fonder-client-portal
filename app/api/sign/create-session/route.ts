@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PDFDocument } from "pdf-lib";
 import { getEngagement } from "@/lib/get-engagement";
 import { buildSingleDocumentHtml } from "@/lib/pdf-template";
 import { createServiceClient } from "@/lib/supabase/server";
 
-// Creates a SEPARATE Documenso document for just one of {sow, msa} -- these
-// are now two fully independent signing events, not one combined session.
-// Returns the client recipient's embed token, used to render Documenso's
-// real signing UI directly inside our own page via an iframe
-// (`{DOCUMENSO_URL}/embed/sign/{token}`) -- no email required for the client
-// to actually sign, though Fonder's own send still fires in the background
-// as a safe fallback in case the embed route expects the document to be in
-// a "sent" state.
+// Creates a SEPARATE DocuSeal submission for just one of {sow, msa} -- these
+// are two fully independent signing events. Returns the client submitter's
+// embed_src, used to render DocuSeal's real signing UI directly inside our
+// own page via @docuseal/react's <DocusealForm> -- no email required for
+// the client to actually sign; Fonder's own signatory still gets DocuSeal's
+// default email invite to sign their part.
+//
+// No PDF rendering or coordinate placement needed here (unlike the old
+// Documenso integration) -- DocuSeal converts the HTML to a PDF itself, and
+// signature/date fields are placed via inline tags in the HTML (see
+// lib/pdf-template.ts's signatureBlockHtml).
 
 export async function POST(req: NextRequest) {
   const { clientSlug, docType } = await req.json();
@@ -24,6 +26,9 @@ export async function POST(req: NextRequest) {
   if (!engagement) {
     return NextResponse.json({ error: "Unknown client" }, { status: 404 });
   }
+  if (!engagement.companyId) {
+    return NextResponse.json({ error: "This client isn't linked to a company" }, { status: 400 });
+  }
 
   const markdown =
     docType === "sow" ? engagement.sowContentMarkdown : engagement.msaContentMarkdown;
@@ -34,20 +39,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const documensoUrl = process.env.DOCUMENSO_URL;
-  const apiKey = process.env.DOCUMENSO_API_KEY;
-  const renderServiceUrl = process.env.PDF_RENDER_SERVICE_URL;
-  const renderApiKey = process.env.PDF_RENDER_API_KEY;
+  const apiKey = process.env.DOCUSEAL_API_KEY;
+  const apiUrl = (process.env.DOCUSEAL_API_URL || "https://api.docuseal.com").replace(/\/$/, "");
 
-  if (!documensoUrl || !apiKey) {
-    return NextResponse.json({ error: "Documenso is not configured" }, { status: 500 });
-  }
-  if (!renderServiceUrl || !renderApiKey) {
-    return NextResponse.json({ error: "PDF render service is not configured" }, { status: 500 });
+  if (!apiKey) {
+    return NextResponse.json({ error: "DocuSeal is not configured" }, { status: 500 });
   }
 
-  const authHeader = { Authorization: `Bearer ${apiKey}` };
-  const base = documensoUrl.replace(/\/$/, "");
   const docLabel = docType === "sow" ? "Statement of Work" : "Master Services Agreement";
 
   try {
@@ -60,134 +58,75 @@ export async function POST(req: NextRequest) {
       fonderSignatoryName: engagement.fonderSignatoryName,
     });
 
-    const renderRes = await fetch(`${renderServiceUrl.replace(/\/$/, "")}/render`, {
+    // A new session always supersedes any prior signature for this doc type.
+    const supabase = createServiceClient();
+    const signedColumn = docType === "sow" ? "sow_signed_at" : "msa_signed_at";
+    await supabase
+      .from("companies")
+      .update({ [signedColumn]: null })
+      .eq("id", engagement.companyId);
+
+    // Encodes which company/doc type this submission is for -- echoed back
+    // verbatim on every submitter in the completion webhook, so matching it
+    // back to a company needs no stored id-mapping column or DB lookup.
+    const externalId = `${engagement.companyId}:${docType}`;
+
+    const createRes = await fetch(`${apiUrl}/submissions/html`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": renderApiKey },
-      body: JSON.stringify({ html, headerHtml, footerHtml }),
-    });
-
-    if (!renderRes.ok) {
-      const detail = await renderRes.text();
-      return NextResponse.json({ error: "Failed to render the PDF", detail }, { status: 502 });
-    }
-
-    const pdfBytes = Buffer.from(await renderRes.arrayBuffer());
-    const pdfDoc = await PDFDocument.load(pdfBytes);
-    const lastPageNumber = pdfDoc.getPageCount();
-
-    const createRes = await fetch(`${base}/api/v1/documents`, {
-      method: "POST",
-      headers: { ...authHeader, "Content-Type": "application/json" },
+      headers: { "X-Auth-Token": apiKey, "Content-Type": "application/json" },
       body: JSON.stringify({
-        title: `${engagement.clientName} x Fonder — ${engagement.engagementTitle} (${docLabel})`,
-        recipients: [
+        documents: [
           {
-            name: engagement.clientSignatoryName,
-            email: engagement.clientSignatoryEmail,
-            role: "SIGNER",
-          },
-          {
-            name: engagement.fonderSignatoryName,
-            email: engagement.fonderSignatoryEmail,
-            role: "SIGNER",
+            name: `${engagement.clientName} x Fonder — ${engagement.engagementTitle} (${docLabel})`,
+            html,
+            html_header: headerHtml,
+            html_footer: footerHtml,
           },
         ],
-        meta: {
-          subject: `Please sign: ${docLabel} — ${engagement.engagementTitle}`,
-          message: `Hi {signer.name}, please review and sign the ${docLabel} for ${engagement.engagementTitle}.`,
-        },
+        submitters: [
+          {
+            role: "Client",
+            name: engagement.clientSignatoryName,
+            email: engagement.clientSignatoryEmail,
+            external_id: externalId,
+            send_email: false,
+          },
+          {
+            role: "Fonder",
+            name: engagement.fonderSignatoryName,
+            email: engagement.fonderSignatoryEmail,
+            external_id: externalId,
+          },
+        ],
+        order: "random",
       }),
     });
 
     if (!createRes.ok) {
       const detail = await createRes.text();
       return NextResponse.json(
-        { error: "Failed to create document in Documenso", detail },
+        { error: "Failed to create submission in DocuSeal", detail },
         { status: 502 },
       );
     }
 
-    const { uploadUrl, documentId, recipients } = await createRes.json();
-
-    // Persist which Documenso document backs this doc type for this company,
-    // and reset any prior signature -- a new session always supersedes it.
-    // The completion webhook (app/api/webhooks/documenso) looks up by this
-    // id to know which company/doc type actually finished signing.
-    if (engagement.companyId) {
-      const supabase = createServiceClient();
-      const idColumn = docType === "sow" ? "sow_documenso_document_id" : "msa_documenso_document_id";
-      const signedColumn = docType === "sow" ? "sow_signed_at" : "msa_signed_at";
-      await supabase
-        .from("companies")
-        .update({ [idColumn]: String(documentId), [signedColumn]: null })
-        .eq("id", engagement.companyId);
-    }
-
-    const uploadRes = await fetch(uploadUrl, {
-      method: "PUT",
-      headers: { "Content-Type": "application/octet-stream" },
-      body: new Uint8Array(pdfBytes),
-    });
-
-    if (!uploadRes.ok) {
-      return NextResponse.json({ error: "Failed to upload PDF to Documenso" }, { status: 502 });
-    }
-
-    type CreatedRecipient = { recipientId: number; email: string; name: string; token: string };
-    const clientRecipient = (recipients as CreatedRecipient[]).find(
-      (r) => r.email === engagement.clientSignatoryEmail,
-    );
-    const fonderRecipient = (recipients as CreatedRecipient[]).find(
-      (r) => r.email === engagement.fonderSignatoryEmail,
+    const created = await createRes.json();
+    type CreatedSubmitter = { role: string; email: string; embed_src: string };
+    const clientSubmitter = (created.submitters as CreatedSubmitter[]).find(
+      (s) => s.role === "Client",
     );
 
-    if (!clientRecipient || !fonderRecipient) {
+    if (!clientSubmitter) {
       return NextResponse.json(
-        { error: "Could not match recipients returned by Documenso" },
+        { error: "Could not find the client submitter in DocuSeal's response" },
         { status: 502 },
       );
     }
-
-    const fieldPlacements = [
-      { recipientId: clientRecipient.recipientId, pageY: 60 },
-      { recipientId: fonderRecipient.recipientId, pageY: 78 },
-    ];
-
-    for (const placement of fieldPlacements) {
-      const fieldRes = await fetch(`${base}/api/v1/documents/${documentId}/fields`, {
-        method: "POST",
-        headers: { ...authHeader, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          recipientId: placement.recipientId,
-          type: "SIGNATURE",
-          pageNumber: lastPageNumber,
-          pageX: 10,
-          pageY: placement.pageY,
-          pageWidth: 25,
-          pageHeight: 4,
-        }),
-      });
-
-      if (!fieldRes.ok) {
-        const detail = await fieldRes.text();
-        return NextResponse.json(
-          { error: "Failed to place a signature field", detail },
-          { status: 502 },
-        );
-      }
-    }
-
-    // Safe-fallback send -- see file header comment. Not treated as fatal if
-    // it fails, since the embedded signing flow below doesn't depend on it.
-    await fetch(`${base}/api/v1/documents/${documentId}/send`, {
-      method: "POST",
-      headers: authHeader,
-    }).catch(() => null);
 
     return NextResponse.json({
       success: true,
-      embedToken: clientRecipient.token,
-      documensoUrl: base,
+      embedSrc: clientSubmitter.embed_src,
+      submitterEmail: clientSubmitter.email,
     });
   } catch (err) {
     return NextResponse.json(

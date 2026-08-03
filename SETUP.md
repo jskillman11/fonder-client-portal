@@ -1,9 +1,10 @@
 # Fonder Client Portal — Project Status & Handoff
 
-Last updated: July 31, 2026
-Status: **Live for Coros** (first real client). Core signing flow works end to end
-(create, send, sign via email, Documenso completion). A large new area, the
-authenticated client portal app (tasks, chat, invoices, etc.), is scaffolded
+Last updated: August 3, 2026
+Status: **Live for Coros** (first real client). Core signing flow is mid-migration
+from Documenso to DocuSeal (see "Signing flow" below — code is done, DocuSeal
+account/webhook setup and a real end-to-end test are still pending). The
+authenticated client portal app (tasks, chat, invoices, etc.) is scaffolded
 but intentionally not functional yet. See "What's built vs. stubbed" below.
 
 This document describes the **current state of the system**, not the history
@@ -18,172 +19,229 @@ A branded client onboarding, e-signature, and (eventually) project-tracking
 portal for Fonder Studio, replacing the old generate-a-PDF-and-email-it
 workflow.
 
-A client gets a link (/portal/[slug]), unlocks it with a magic-link email (or
-an admin can preview it directly, no link needed), and sees: an overview of
-the engagement (scope, schedule, fee), their account team, and a 4-step
+A client gets a link (`/portal/[slug]`), unlocks it with a magic-link email
+(or an admin can preview it directly, no link needed), and sees: an overview
+of the engagement (scope, schedule, fee), their account team, and a 4-step
 action list: review and sign, pay a deposit, schedule kickoff, access an
-ongoing client portal. The SOW and MSA are two independent documents, each
-signed via its own Documenso session, triggered by email rather than an
-embedded widget (see "Signing flow" below for why).
+ongoing client portal. The SOW and MSA are two fully independent signing
+events, signed directly inside the portal via an embedded DocuSeal form —
+no email round-trip required for the client.
+
+The `[slug]` is stable **per brand/company**, not per engagement — a company
+keeps the same portal link across multiple engagements over time (see "Data
+model" below).
 
 ## Architecture
 
 | Service | What it does | Where it's hosted |
 |---|---|---|
 | This Next.js app | The branded client portal plus the full admin dashboard | Vercel |
-| Supabase (fonder-client-portal project, ref drkppwjcfxyeeuescwov) | All structured data plus file storage plus admin login | Supabase |
-| fonder-pdf-renderer (separate sibling repo) | Generic HTML to PDF service, called when a client clicks sign | Railway (needs real Chromium, not Vercel) |
-| Documenso | The actual e-signature engine | Self-hosted on Railway |
-| Cloudflare R2 | File storage for Documenso's own upload flow | Cloudflare |
-| Resend | Sends both Documenso's signing emails and this app's magic-link emails | Existing Fonder Resend account |
+| Supabase (project ref `ifddezqyozounhilkfgp`) | All structured data, file storage, and auth (staff + client) | Supabase — **this is the live ref; ignore any older docs/env files pointing at a different ref, they're stale** |
+| DocuSeal | The e-signature engine — HTML-in, PDF-out, inline field tags, no coordinate placement | Cloud (`api.docuseal.com`) or self-hosted, your choice — see "Signing flow" |
+| Resend | Sends this app's magic-link and staff-invite emails | Existing Fonder Resend account |
 | Cal.com | Real scheduling calendar for the kickoff step | Existing Fonder Cal.com account |
 
-None of these are optional. Missing any one breaks the create-and-sign flow.
+The previous architecture (Documenso self-hosted on Railway, a separate
+`fonder-pdf-renderer` HTML-to-PDF Railway service, Cloudflare R2 for
+Documenso's uploads, `pdf-lib` for signature-field coordinate placement) has
+been **fully removed** — DocuSeal accepts HTML directly and places fields via
+inline tags, so none of that infrastructure is needed anymore. If Railway
+services for these still exist, they're safe to decommission.
 
 ## Data model
 
-- companies: a client organization (name, logo), reusable across engagements.
-- clients: a real person (first/last name, email), belonging to a company.
-- documents: SOW or MSA content in Markdown, scoped to a company, reusable.
-- team_members: Fonder's own staff roster, global, not scoped to a company.
-- engagements: the project record. Slug is the portal URL. Links to one
-  company, one client, one SOW document, one MSA document, plus title, fee,
-  final delivery date, kickoff earliest date, scope summary.
-- engagement_team_assignments: join table, which team members show on which
-  engagement's portal.
-- engagement_milestones: label plus date pairs shown in Overview's schedule.
-- portal_copy: every piece of client-facing text as editable key/value rows,
-  with hardcoded fallbacks in lib/portal-copy-constants.ts.
-- portal_access_tokens: magic-link tokens for client portal access.
+- `companies`: a brand/organization. Holds `name`, `logo_storage_path`, the
+  stable portal `client_slug`, and everything that's a property of the
+  ongoing brand relationship rather than a specific contract: which
+  SOW/MSA document is currently in force (`sow_document_id`/`msa_document_id`,
+  FKs into `documents`), `lock_portal_tabs`, `shared_drive_url`,
+  `tab_lock_overrides`, and real signing completion (`sow_signed_at`/
+  `msa_signed_at`, set by the DocuSeal webhook).
+- `clients`: a real person, belonging to one company. A company can have
+  multiple clients; one is picked as the signatory per engagement.
+- `documents`: SOW or MSA content in Markdown, scoped to a company, reusable
+  across engagements.
+- `team_members`: Fonder's own staff roster, global.
+- `company_team_assignments`: join table, which team members are the
+  standing "account team" for a company. **Not scoped per engagement** —
+  no history of who was staffed on a past engagement is kept, by design.
+- `engagements`: a lean historical record of one contract period — `company_id`,
+  `client_id` (stakeholder), title, fee, dates, scope summary, `status`
+  (`'active'|'completed'`), enforced **one active engagement per company** via
+  a DB-level partial unique index. Does NOT hold the slug, documents,
+  team, shared drive, or portal-lock settings anymore — those all live on
+  `companies` (see above).
+- `engagement_milestones`: label/date pairs shown in the portal Overview's
+  schedule, scoped per engagement (this one thing does stay per-contract).
+- `profiles`: `id` references `auth.users.id`, `role: 'staff'|'client'`,
+  nullable `client_id`, `is_super_admin`. This is the single source of truth
+  for both staff and client auth (see "Auth" below) — both roles are real
+  Supabase Auth users, not two parallel systems.
+- `portal_copy`: every piece of client-facing text as editable key/value
+  rows, with hardcoded fallbacks in `lib/portal-copy-constants.ts`.
+- `portal_access_tokens`: **dead table, unused** — an early hand-rolled
+  magic-link mechanism, superseded by real Supabase Auth
+  (`auth.admin.generateLink`/`verifyOtp`). Kept as a rollback path; safe to
+  drop in a future cleanup pass.
 
-A few columns exist on engagements but are unused, left in place rather than
-destructively dropped across earlier refactors: client_name,
-client_signatory_name, client_signatory_email, document_storage_path
-(reserved for a future signed-PDF download feature), sow_content_markdown and
-msa_content_markdown (superseded by the documents table). Harmless to ignore.
+A few now-orphaned columns on `engagements` from earlier schema iterations
+were already cleaned up as part of the company-level restructure — if you
+see references to `sow_content_markdown`/`msa_content_markdown` or
+`client_name` directly on `engagements` in old docs/commits, those are gone.
 
-## The client-facing portal (/portal/[slug])
+## The client-facing portal (`/portal/[slug]`)
 
 Four sections, top to bottom:
 
 1. Welcome: co-branded logo, templated greeting using the client's first name.
 2. Overview: scope summary, schedule list, total fee, final delivery date.
-3. Team: whichever team members are assigned.
+3. Team: the company's standing account team.
 4. What's Next, four steps, each its own bordered block:
-   - Review and sign: real buttons, one per document. See "Signing flow" below.
-   - Invoice and deposit: a visibly disabled placeholder, no Quickbooks yet.
+   - Review and sign: real buttons, one per document, linking into the
+     embedded DocuSeal signing page. See "Signing flow" below.
+   - Invoice and deposit: a visibly disabled placeholder, no QuickBooks yet.
    - Schedule kickoff: a real embedded Cal.com calendar.
-   - Access your client portal: links into /portal/[slug]/app (see below).
+   - Access your client portal: links into `/portal/[slug]/app` (see below).
 
-Steps 2 through 4 grey out until step 1's documents are both marked sent.
-This lock is client-side React state only, not persisted. A page refresh
-resets it even if the client already triggered the sign emails. Fixing this
-properly means tracking real completion server-side. The Documenso webhook
-receiver exists for this but does not update anything yet.
+Steps 2 through 4 unlock once both applicable documents are **actually
+signed** (real, DB-persisted state — `companies.sow_signed_at`/
+`msa_signed_at`, computed fresh from the database on every page load), not
+just "session started." This used to be ephemeral client-side-only state
+that reset on refresh; that's fixed.
 
 ## Signing flow: the actual current behavior
 
-Clicking "Review and sign" calls /api/sign/create-session directly and
-changes the button to "Email sent." No page navigation happens. Under the
-hood: that route generates a PDF fresh from the document's Markdown via
-fonder-pdf-renderer, creates a Documenso document, uploads the PDF, places a
-signature field for both the client and Tom Abrams (using pdf-lib to find the
-actual last page, since content length varies per client and is never
-hardcoded), then sends it, which triggers Documenso's own signing email.
+Clicking "Review and sign" navigates to `/portal/[slug]/sign/[docType]`
+(component `SigningSession.tsx`), which calls `/api/sign/create-session` and
+renders DocuSeal's real signing form directly in the page via
+`@docuseal/react`'s `<DocusealForm>` — no email required for the client to
+sign, no PDF pre-rendering, no coordinate placement.
 
-There is a separate, embedded-iframe signing page at
-/portal/[slug]/sign/[docType] (component SigningSession.tsx), built earlier
-using Documenso's real /embed/sign/{token} route (confirmed via their source
-to not require a paid tier on self-hosted instances). This page is currently
-orphaned. Nothing in the UI links to it, because the iframe approach wasn't
-confirmed reliably working in practice, while the email fallback demonstrably
-does. It's kept in place in case it's worth debugging later, not because
-it's part of the live flow.
+Under the hood: `create-session` builds the document HTML fresh from the
+company's SOW/MSA Markdown (`lib/pdf-template.ts`, still using `marked` for
+Markdown → HTML), with signature/date fields as inline `<signature-field>`/
+`<date-field>` tags (auto-detected by DocuSeal — no page-count/coordinate
+math needed, unlike the old Documenso integration). It POSTs that HTML
+straight to DocuSeal's `/submissions/html` with two submitters (`role:
+"Client"` and `role: "Fonder"`), each carrying `external_id:
+"{companyId}:{docType}"` so the completion webhook can identify which
+company/doc type finished signing without any stored id-mapping column.
 
-SOW and MSA are two fully independent Documenso documents and emails, not one
-combined signature.
+`rememberSignature`/`reuseSignature` are enabled on the embed, so a returning
+signer gets a real one-click signature experience (DocuSeal stores it in
+their browser).
 
-## Client-facing auth (magic links)
+The completion webhook (`app/api/webhooks/docuseal/route.ts`) verifies
+DocuSeal's HMAC signature (`X-Docuseal-Signature` header, over the *raw*
+request body) and, on a `submission.completed` event (fires once, after
+*all* signers finish), sets `companies.sow_signed_at`/`msa_signed_at`.
 
-The portal and the /app area require either:
+SOW and MSA are two fully independent DocuSeal submissions, not one combined
+signature.
 
-- A valid magic-link session: the client enters their email on a gate screen,
-  or an admin triggers it via "Send access link" on the dashboard. A
-  30-minute link goes out via Resend; clicking it sets a 30-day session
-  cookie. The email only ever goes to the client's registered address.
-- An active admin session: logged into /admin lets you view any client's
-  portal directly, via isAdminSession() in lib/supabase/server.ts.
+**Still pending, not yet done**: a DocuSeal account needs to be set up
+(cloud or self-hosted), `DOCUSEAL_API_KEY`/`DOCUSEAL_API_URL` set, a webhook
+registered with `DOCUSEAL_WEBHOOK_SECRET`, and a real end-to-end signing
+test run — the payload shape used in the webhook handler is implemented per
+DocuSeal's documented format but hasn't been verified against a live account
+yet.
 
-There's no revoke or resend admin action yet if a client loses their link;
-they just request a fresh one, which works fine, but there's no visibility
-into active sessions.
+## Client-facing auth (magic links + real Supabase Auth)
 
-## The client portal app (/portal/[slug]/app/*)
+Both staff and clients are real Supabase Auth users, distinguished by
+`profiles.role`. The portal and the `/app` area require either:
+
+- A valid client session: the client enters their email on a gate screen, or
+  an admin triggers it via "Send access link" on the admin dashboard. This
+  sends a real Supabase magic link (`auth.admin.generateLink`); clicking it
+  sets a session cookie. The email only ever goes to the client's registered
+  address, checked against `clients.email`.
+- An active staff session: logged into `/admin` lets you preview any
+  client's portal directly, via `hasPortalAccess()` in
+  `lib/supabase/server.ts` (staff are always authorized).
+
+Client access is checked against the **company's currently active
+engagement's** stakeholder (`profiles.client_id` must match that
+engagement's `client_id`) — if the stakeholder changes when a new engagement
+goes active for a company, portal access transfers to the new stakeholder.
+There's a revoke-access action on the admin Clients section
+(`lib/client-access.ts`), available to any staff member.
+
+## The client portal app (`/portal/[slug]/app/*`)
 
 A separate authenticated area, linked from What's Next step 4. Real routes,
-real tab navigation, real auth protection, but every page's content is a
-placeholder:
+real tab navigation (`lib/portal-app-tabs.ts`: Home, Tasks, Shared Drive,
+Chat, Invoices, Deliverables, Change Request), real auth protection and
+per-tab lock overrides — but only two tabs have real content:
 
-- Home: three placeholder cards (Action items, Next touchpoint, Project
-  status), matching the requested structure, no real data.
-- Tasks, Project Resources, Chat, Invoices, Deliverables, Signed Documents:
-  each a single generic "coming soon" card.
-- Change Request: the most fleshed-out placeholder. Real but disabled
-  date-picker and priority-selector inputs, plus a description of the
-  intended full workflow (affected tasks, new timeline, budget impact,
-  accept or decline). Building this for real will need to integrate with the
-  existing ClickUp and Google Sheets scheduling sync, a separate already-built
-  system.
+- **Onboarding** (the portal's root/landing content, described above): fully
+  real.
+- **Shared Drive**: real — redirects to `companies.shared_drive_url` if set,
+  otherwise a placeholder.
+- Everything else (Home, Tasks, Chat, Invoices, Deliverables, Change
+  Request): still a generic "coming soon" card each. Change Request has the
+  most fleshed-out placeholder (disabled date-picker/priority-selector,
+  description of the intended full workflow) but no real logic.
 
-## The admin dashboard (/admin/*)
+## The admin dashboard (`/admin/*`)
 
-Protected by real Supabase login via middleware.ts. All pages except
-/admin/login share a persistent left sidebar via a Next.js route group
-(app/admin/(dashboard)/, which doesn't affect the URL).
+Protected by real Supabase staff-session auth via `proxy.ts` (Next.js 16
+renamed `middleware.ts` → `proxy.ts`). All pages share a persistent left
+sidebar via `components/admin/AdminNav.tsx` + `DashboardShell`.
 
-- /admin: lists every engagement, view portal, edit, send access link.
-- /admin/companies and /admin/companies/[id]: add, edit, delete companies.
-- /admin/clients and /admin/clients/[id]: add, edit, delete clients.
-- /admin/documents and /admin/documents/[id]: add, edit, delete SOW/MSA content.
-- /admin/team and /admin/team/[id]: add, edit, delete team roster members.
-- /admin/content: edit every piece of client-facing copy, globally.
-- /admin/new-client and /admin/edit/[slug]: create or edit an engagement,
-  selecting company, client, SOW doc, MSA doc, and team via dropdowns.
+Nav is **company-scoped**, not a flat list:
 
-Every page has a real back button using router.back().
+- A company picker (`CompanySwitcher`) sits above the nav — "All Clients"
+  (`/admin/companies`, the oversight list) or a specific company
+  (`/admin/companies/[id]`).
+- Picking a company shows that company's Engagements, Account team,
+  Clients, Documents (including which SOW/MSA is currently in force), Shared
+  Drive, Portal content & locks, and a Payments placeholder — all as
+  sections on one page, not separate nested routes/tabs.
+- Opening an engagement (`/admin/companies/[id]/engagements/[engagementId]`)
+  is a lean Overview form (title/fee/dates/scope/milestones/stakeholder) with
+  a "Mark as completed" action — completing one frees the company up to
+  start a new active engagement (enforced at the DB level, not just the UI).
+- Team roster CRUD, Portal content (global copy), and Staff account
+  management (super-admin only) live under **Settings**
+  (`/admin/settings/*`), reached only via the account-menu dropdown (also
+  has Help) — not the primary nav.
 
-Getting a login: no self-serve signup, create one directly in Supabase
-(Authentication, Users, Add User).
+Getting a login: no self-serve signup — a super-admin invites staff from
+`/admin/settings/staff` (branded email, same magic-link pattern as clients,
+landing on a set-password page).
 
 Known gap: delete works for companies, clients, documents, and team members,
-but if something is still referenced by an engagement, the delete fails with
-a translated error rather than corrupting data. It doesn't yet say which
-engagement is blocking it.
+but if something is still referenced, the delete fails with a translated
+error rather than corrupting data — it doesn't yet say exactly what's
+blocking it.
 
 ## Adding a new client engagement (the real, current flow)
 
-This is not one form. It's four small steps, each reusable for future
-engagements:
+1. `/admin/companies`: add the company, if new.
+2. On that company's page: add the client (signatory) and the SOW/MSA
+   document content, if new — both live as sections on the company page now,
+   not separate top-level admin pages.
+3. `/admin/companies/[id]/engagements/new`: create the engagement (client,
+   title, fee, dates, schedule). The portal slug is only asked for on a
+   company's **first-ever** engagement — every engagement after that reuses
+   the existing slug automatically.
+4. On the company page: assign the account team, pick which SOW/MSA is
+   currently in force, set the Shared Drive URL and portal tab-lock
+   behavior — all standing settings for the brand, not re-entered per
+   engagement.
 
-1. /admin/companies: add the company, if new.
-2. /admin/clients: add the signatory, scoped to that company, if new.
-3. /admin/documents: add the SOW and MSA content as Markdown, if new.
-4. /admin/new-client: create the engagement, picking company, client, SOW
-   doc, and MSA doc from dropdowns, plus slug, title, fee, dates, schedule,
-   team.
-
-Steps 1 through 3 only need doing once per company, client, or document. A
-repeat engagement for an existing company reuses what's already there.
+A repeat engagement for an existing company reuses everything already set
+up — only the lean engagement-specific fields (title/fee/dates/scope) are
+new.
 
 ## Cal.com scheduling
 
-One shared event type for everyone, via the CAL_COM_EVENT_LINK env var, not
-per-engagement data. Each engagement's "kickoff earliest date" opens the
-embedded calendar to that month by default, via Cal.com's real month=YYYY-MM
-parameter, confirmed by reading their actual booking-page source. This is a
-soft default only. It does not hard-block earlier dates from being selected;
-that would need date-range limits set on the event type itself, inside
-Cal.com. In practice, real calendar availability handles this naturally.
+One shared event type for everyone, via the `CAL_COM_EVENT_LINK` env var,
+not per-engagement data. Each engagement's "kickoff earliest date" opens the
+embedded calendar to that month by default via Cal.com's `month=YYYY-MM`
+parameter. Soft default only — doesn't hard-block earlier dates; real
+calendar availability handles that naturally.
 
 ## Where the secrets live, not in this repo, on purpose
 
@@ -191,76 +249,67 @@ Cal.com. In practice, real calendar availability handles this naturally.
 |---|---|
 | NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY | Vercel |
 | SUPABASE_SERVICE_ROLE_KEY | Vercel, bypasses all RLS, never commit it |
-| DOCUMENSO_URL, DOCUMENSO_API_KEY | Vercel |
-| PDF_RENDER_SERVICE_URL, PDF_RENDER_API_KEY | Vercel, must match RENDER_API_KEY on the fonder-pdf-renderer Railway service |
-| RESEND_API_KEY | Vercel, this app's own key, separate from Documenso's Resend config |
+| DOCUSEAL_API_KEY, DOCUSEAL_API_URL | Vercel — API_URL optional, defaults to `https://api.docuseal.com` if unset |
+| DOCUSEAL_WEBHOOK_SECRET | Vercel, the HMAC secret from DocuSeal's console Security tab — verifies `/api/webhooks/docuseal` is really DocuSeal calling |
+| RESEND_API_KEY | Vercel, this app's own key |
 | PORTAL_EMAIL_FROM | Vercel, optional, must match a domain verified for RESEND_API_KEY |
 | CAL_COM_EVENT_LINK | Vercel |
-| R2 credentials (NEXT_PRIVATE_UPLOAD_*) | Railway, documenso-web |
-| NEXT_PRIVATE_RESEND_API_KEY | Railway, documenso-web |
 
 For anyone else to actually work on this, code access alone isn't enough.
-They need adding as a collaborator on GitHub (both repos), Vercel, Railway
-(both services), Cloudflare if touching storage, and Documenso itself. If you
-can't add someone directly, put the real secret values in a shared password
-manager, never in GitHub.
+They need adding as a collaborator on GitHub, Vercel, Supabase, and DocuSeal.
+If you can't add someone directly, put real secret values in a shared
+password manager, never in GitHub.
 
 ## Known gotchas, real, already happened
 
-1. Documenso and fonder-pdf-renderer won't deploy to Vercel. Both are
-   Docker-based. Railway or Render only.
-2. First deploy attempts can fail on healthcheck even when build and deploy
-   succeed, usually Postgres not being fully ready yet. A plain redeploy
-   often fixes it.
-3. Documenso needs S3-compatible storage, not just a database, because this
-   integration's presigned-upload-URL flow requires it. Without
-   NEXT_PUBLIC_UPLOAD_TRANSPORT=s3 and real R2 credentials, document creation
-   fails with "Create document is not available without S3 transport."
-4. Signature fields are a separate API step. Uploading a document does not
-   automatically add signature fields. Documenso refuses to send without
-   them, with "Signers must have at least one signature field."
-5. Changing environment variables doesn't restart anything. On both Railway
-   and Vercel, you must explicitly trigger a redeploy afterward.
-6. Supabase's API layer can report "column not found" even when the column
+1. Supabase's MCP tooling (used by AI coding assistants) cannot reach the
+   live project (`ifddezqyozounhilkfgp`) — only unrelated/stale projects are
+   visible to it. Schema changes ship as numbered SQL files at the repo root
+   (`supabase-setup.sql`, `-stage2-` through `-stage6-` and beyond), run
+   manually in the Supabase SQL editor — there's no `supabase/migrations/`
+   directory convention here.
+2. Changing environment variables doesn't restart anything on Vercel — you
+   must explicitly trigger a redeploy afterward.
+3. Supabase's API layer can report "column not found" even when the column
    genuinely exists. A stale schema cache, not a real problem. Fix: run
-   NOTIFY pgrst, 'reload schema'; in the SQL Editor.
-7. fonder-pdf-renderer's Playwright version must be pinned exactly to match
-   its Dockerfile's base image tag, no caret ranges. A caret range once let
-   npm install a newer Playwright than the pinned image's bundled Chromium,
-   causing every render to fail with a missing-executable error. Fixed with
-   an exact version pin, a committed lockfile, and npm ci instead of npm
-   install in the Dockerfile. If you bump one, bump both, together.
-8. Old NOT NULL constraints from an earlier schema version caused real save
-   failures after the companies and clients refactor stopped populating
-   client_name and similar fields. Fixed by dropping those constraints.
-   Already applied, just explaining why those columns are nullable now.
+   `NOTIFY pgrst, 'reload schema';` in the SQL Editor.
+4. DocuSeal's webhook signature must be verified against the **raw request
+   body bytes**, not a re-parsed/re-serialized JSON object — the webhook
+   handler reads `req.text()` before `JSON.parse`, deliberately in that
+   order.
+
+The Documenso/Railway/R2-specific gotchas from before this migration (S3
+transport requirements, Playwright/Chromium version pinning, Docker-only
+deploys) no longer apply — that infrastructure is gone.
 
 ## What's built vs. what's intentionally stubbed
 
 Fully real and working:
-- Companies, clients, documents, team members: full add, edit, delete, all
-  reusable entities selected via dropdown or multi-select on the engagement
-  form.
-- Native Markdown rendering with automatic section numbering via CSS counters.
-- Real Documenso signing per document, independently, with dynamic field
-  placement.
-- Magic-link client auth plus admin-session bypass.
+- Companies, clients, documents, team members: full add/edit/delete,
+  reusable entities, now organized as company-scoped sections rather than
+  flat top-level admin pages.
+- One active engagement per company, enforced at the DB level.
+- Native Markdown rendering with automatic section numbering via CSS
+  counters.
+- Embedded DocuSeal signing per document, independently, with inline
+  auto-detected field placement and one-click remembered signatures
+  (pending the account/webhook setup noted above).
+- Real, DB-persisted signing-completion tracking, driving real tab-unlock
+  state (no longer resets on refresh).
+- Unified staff/client Supabase Auth, magic-link client access, staff
+  invite flow, super-admin-gated staff management.
 - Real Cal.com scheduling embed.
 - Centralized, globally-editable portal copy.
-- Full admin sidebar dashboard.
+- Company-scoped admin dashboard with a brand picker.
 
 Deliberately stubbed, not forgotten:
-- Live signing-status tracking. The Documenso webhook receiver exists and is
-  configured in Documenso, but only logs the event. Nothing persists or
-  displays it. This is also why the What's Next step-lock resets on refresh.
-- Quickbooks invoicing. Step 2 of What's Next is a disabled placeholder.
-- The entire client portal app's actual functionality (tasks, chat, invoices,
-  deliverables, signed documents, change requests). Real routes and
-  navigation exist, no real data or logic yet.
-- Editing an engagement's core links (which company, client, or documents it
-  points to) works by re-selecting them in the edit form, but isn't a
-  distinct guided flow. The slug itself can't be changed once created, by
-  design, since it's the live URL.
+- QuickBooks invoicing. Step 2 of What's Next is a disabled placeholder;
+  Payments is a placeholder card on the admin company page too.
+- The client portal app's actual functionality beyond Onboarding/Shared
+  Drive (Tasks, Chat, Invoices, Deliverables, Change Request). Real routes,
+  nav, and lock behavior exist; no real data or logic yet.
+- "Brand HQ" — discussed as a future admin/portal nav concept, explicitly
+  deferred, not built anywhere yet.
 
 ## Open items, unresolved on purpose, not bugs
 
@@ -268,7 +317,8 @@ Deliberately stubbed, not forgotten:
   the engagement allows for 3 to 5, and the identity of any 4th or 5th
   feature was never pinned down with the client. Worth resolving directly
   with Coros, not something to guess at in code.
-- Tom Abrams' own signature still goes through Documenso's normal dashboard
-  or email. The signing flow described above is written from the client's
-  perspective. This wasn't a deliberate design decision so much as where the
-  natural split landed; worth a second look if it ever matters.
+- Fonder's own signatory (Tom Abrams) still signs via whatever DocuSeal
+  invite flow their "Fonder" submitter role triggers (default email invite,
+  not the embedded client flow). This wasn't a deliberate design decision so
+  much as where the natural split landed; worth a second look if it ever
+  matters.

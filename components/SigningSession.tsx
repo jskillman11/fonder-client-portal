@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { DocusealForm } from "@docuseal/react";
 import { Card } from "@/components/Card";
 
 export function SigningSession({
@@ -12,10 +13,11 @@ export function SigningSession({
   docType: "sow" | "msa";
   docLabel: string;
 }) {
-  const [status, setStatus] = useState<"loading" | "ready" | "error">(
+  const [status, setStatus] = useState<"loading" | "ready" | "complete" | "error">(
     "loading",
   );
-  const [embedUrl, setEmbedUrl] = useState<string | null>(null);
+  const [embedSrc, setEmbedSrc] = useState<string | null>(null);
+  const [submitterEmail, setSubmitterEmail] = useState<string | null>(null);
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
 
   useEffect(() => {
@@ -40,7 +42,8 @@ export function SigningSession({
           return;
         }
 
-        setEmbedUrl(`${data.documensoUrl}/embed/sign/${data.embedToken}`);
+        setEmbedSrc(data.embedSrc);
+        setSubmitterEmail(data.submitterEmail);
         setStatus("ready");
       } catch {
         if (!cancelled) {
@@ -57,14 +60,28 @@ export function SigningSession({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (status === "ready" && embedUrl) {
+  if (status === "complete") {
+    return (
+      <Card className="px-9 py-16 text-center">
+        <p className="text-[14px] text-[var(--color-ink)] font-semibold">
+          You&apos;re all signed.
+        </p>
+        <p className="text-[13px] text-[var(--color-muted)] mt-1">
+          Head back to the portal whenever you&apos;re ready.
+        </p>
+      </Card>
+    );
+  }
+
+  if (status === "ready" && embedSrc) {
     return (
       <Card className="overflow-hidden">
-        <iframe
-          src={embedUrl}
-          className="w-full"
-          style={{ height: "80vh", border: "none" }}
-          title={`Sign ${docLabel}`}
+        <DocusealForm
+          src={embedSrc}
+          email={submitterEmail ?? undefined}
+          rememberSignature
+          reuseSignature
+          onComplete={() => setStatus("complete")}
         />
       </Card>
     );

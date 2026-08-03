@@ -76,11 +76,14 @@ hr { border: none; border-top: 1pt solid var(--warm-border); margin: 12pt 0; }
 .sig-block { break-before: column; }
 .sig-row { margin-top: 14pt; }
 .sig-name { font-weight: 600; color: var(--near-black); }
-.sig-line { border-bottom: 1pt solid var(--near-black); height: 26pt; margin-top: 14pt; }
 .sig-caption { font-size: 8.3pt; color: var(--warm-600); margin-top: 3pt; text-transform: uppercase; letter-spacing: 0.04em; }
 `;
 }
 
+// DocuSeal auto-detects signature/date fields from these inline custom
+// tags -- role must match a submitter's role in the /submissions/html
+// request (see app/api/sign/create-session/route.ts). No coordinate
+// placement needed, unlike the old Documenso integration.
 function signatureBlockHtml(
   clientName: string,
   clientSignatoryName: string,
@@ -92,17 +95,17 @@ function signatureBlockHtml(
       <div class="sig-row">
         <p class="sig-name">${clientName}</p>
         <p>${clientSignatoryName || "&nbsp;"}</p>
-        <div class="sig-line"></div>
+        <signature-field name="Client Signature" role="Client" style="width:160px;height:60px;display:inline-block;margin-top:14pt;"></signature-field>
         <p class="sig-caption">Signature</p>
-        <div class="sig-line"></div>
+        <date-field name="Client Date" role="Client" style="width:120px;height:30px;display:inline-block;margin-top:10pt;"></date-field>
         <p class="sig-caption">Date</p>
       </div>
       <div class="sig-row">
         <p class="sig-name">Fonder Studio</p>
         <p>${fonderSignatoryName}</p>
-        <div class="sig-line"></div>
+        <signature-field name="Fonder Signature" role="Fonder" style="width:160px;height:60px;display:inline-block;margin-top:14pt;"></signature-field>
         <p class="sig-caption">Signature</p>
-        <div class="sig-line"></div>
+        <date-field name="Fonder Date" role="Fonder" style="width:120px;height:30px;display:inline-block;margin-top:10pt;"></date-field>
         <p class="sig-caption">Date</p>
       </div>
     </div>
