@@ -4,7 +4,6 @@ import { hasPortalAccess } from "@/lib/supabase/server";
 import { AccessGate } from "@/components/AccessGate";
 import { ClientAppNav } from "@/components/portal-app/ClientAppNav";
 import { ClientAccountMenu } from "@/components/portal-app/ClientAccountMenu";
-import { AppUnlockProvider } from "@/components/portal-app/AppUnlockContext";
 
 export const dynamic = "force-dynamic";
 
@@ -25,23 +24,26 @@ export default async function ClientAppLayout({
     return <AccessGate clientSlug={client} />;
   }
 
+  const docsSigned =
+    (!engagement.sowContentMarkdown || engagement.sowSigned) &&
+    (!engagement.msaContentMarkdown || engagement.msaSigned);
+
   return (
-    <AppUnlockProvider>
-      <ClientAppNav
-        clientSlug={client}
-        lockEnabled={engagement.lockPortalTabs}
-        tabLockOverrides={engagement.tabLockOverrides}
-        accountSlot={
-          <ClientAccountMenu
-            clientSlug={client}
-            hasSession={!isAdmin}
-            isAdmin={isAdmin}
-            clientName={engagement.clientSignatoryName}
-          />
-        }
-      >
-        {children}
-      </ClientAppNav>
-    </AppUnlockProvider>
+    <ClientAppNav
+      clientSlug={client}
+      lockEnabled={engagement.lockPortalTabs}
+      tabLockOverrides={engagement.tabLockOverrides}
+      docsSigned={docsSigned}
+      accountSlot={
+        <ClientAccountMenu
+          clientSlug={client}
+          hasSession={!isAdmin}
+          isAdmin={isAdmin}
+          clientName={engagement.clientSignatoryName}
+        />
+      }
+    >
+      {children}
+    </ClientAppNav>
   );
 }

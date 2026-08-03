@@ -23,6 +23,10 @@ export default async function OnboardingTabPage({
     notFound();
   }
 
+  const docsSigned =
+    (!engagement.sowContentMarkdown || engagement.sowSigned) &&
+    (!engagement.msaContentMarkdown || engagement.msaSigned);
+
   const templateVars = {
     engagementTitle: engagement.engagementTitle,
     clientFirstName: engagement.clientSignatoryFirstName,
@@ -63,6 +67,9 @@ export default async function OnboardingTabPage({
         clientSlug={engagement.clientSlug}
         hasSow={Boolean(engagement.sowContentMarkdown)}
         hasMsa={Boolean(engagement.msaContentMarkdown)}
+        sowSigned={engagement.sowSigned}
+        msaSigned={engagement.msaSigned}
+        docsSigned={docsSigned}
         sowLabel={copy.sow_label}
         sowDescription={copy.sow_description}
         msaLabel={copy.msa_label}

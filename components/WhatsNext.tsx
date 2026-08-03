@@ -4,7 +4,6 @@ import { Card } from "./Card";
 import { KickoffScheduler } from "./KickoffScheduler";
 import { SignActionsList } from "./SignActionsList";
 import { PayInvoiceAction } from "./PayInvoiceAction";
-import { useAppUnlock } from "./portal-app/AppUnlockContext";
 
 export function WhatsNext({
   heading,
@@ -13,6 +12,9 @@ export function WhatsNext({
   clientSlug,
   hasSow,
   hasMsa,
+  sowSigned,
+  msaSigned,
+  docsSigned,
   sowLabel,
   sowDescription,
   msaLabel,
@@ -26,6 +28,9 @@ export function WhatsNext({
   clientSlug: string;
   hasSow: boolean;
   hasMsa: boolean;
+  sowSigned: boolean;
+  msaSigned: boolean;
+  docsSigned: boolean;
   sowLabel: string;
   sowDescription: string;
   msaLabel: string;
@@ -33,8 +38,6 @@ export function WhatsNext({
   calLink?: string;
   kickoffEarliestDate?: string | null;
 }) {
-  const { docsSent, markDocsSent } = useAppUnlock();
-
   return (
     <Card className="px-9 py-9 md:px-12 md:py-10">
       <h2 className="text-[19px] font-bold text-[var(--color-ink)] mb-1">
@@ -45,7 +48,7 @@ export function WhatsNext({
       </p>
       <div className="space-y-4">
         {steps.map((step, i) => {
-          const locked = i > 0 && !docsSent;
+          const locked = i > 0 && !docsSigned;
 
           return (
             <div
@@ -73,11 +76,12 @@ export function WhatsNext({
                       clientSlug={clientSlug}
                       hasSow={hasSow}
                       hasMsa={hasMsa}
+                      sowSigned={sowSigned}
+                      msaSigned={msaSigned}
                       sowLabel={sowLabel}
                       sowDescription={sowDescription}
                       msaLabel={msaLabel}
                       msaDescription={msaDescription}
-                      onAllSent={markDocsSent}
                     />
                   )}
 

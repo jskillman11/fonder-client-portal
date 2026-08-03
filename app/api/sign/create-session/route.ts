@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { PDFDocument } from "pdf-lib";
 import { getEngagement } from "@/lib/get-engagement";
 import { buildSingleDocumentHtml } from "@/lib/pdf-template";
+import { createServiceClient } from "@/lib/supabase/server";
 
 // Creates a SEPARATE Documenso document for just one of {sow, msa} -- these
 // are now two fully independent signing events, not one combined session.
@@ -107,6 +108,20 @@ export async function POST(req: NextRequest) {
     }
 
     const { uploadUrl, documentId, recipients } = await createRes.json();
+
+    // Persist which Documenso document backs this doc type for this company,
+    // and reset any prior signature -- a new session always supersedes it.
+    // The completion webhook (app/api/webhooks/documenso) looks up by this
+    // id to know which company/doc type actually finished signing.
+    if (engagement.companyId) {
+      const supabase = createServiceClient();
+      const idColumn = docType === "sow" ? "sow_documenso_document_id" : "msa_documenso_document_id";
+      const signedColumn = docType === "sow" ? "sow_signed_at" : "msa_signed_at";
+      await supabase
+        .from("companies")
+        .update({ [idColumn]: String(documentId), [signedColumn]: null })
+        .eq("id", engagement.companyId);
+    }
 
     const uploadRes = await fetch(uploadUrl, {
       method: "PUT",
