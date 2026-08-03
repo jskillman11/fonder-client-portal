@@ -2,16 +2,23 @@ import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createServiceClient } from "@/lib/supabase/server";
 
-// Receives events from DocuSeal when a submission is fully completed (all
-// signers finished). Register this URL in DocuSeal's console under
-// Webhooks: https://[your-vercel-domain]/api/webhooks/docuseal -- generate
-// an HMAC secret from the Security tab and set it as
-// DOCUSEAL_WEBHOOK_SECRET.
+// Receives events from DocuSeal when an individual signer completes their
+// part. Register this URL in DocuSeal's console under Webhooks:
+// https://[your-vercel-domain]/api/webhooks/docuseal -- generate an HMAC
+// secret from the Security tab and set it as DOCUSEAL_WEBHOOK_SECRET.
+//
+// Deliberately listens for form.completed (fires once per signer), not
+// submission.completed (fires only once BOTH the client and Fonder's own
+// signatory have finished) -- the client's own portal tabs should unlock as
+// soon as the CLIENT has signed, not be blocked on whether Fonder's
+// internal signatory has gotten around to countersigning yet. Filtered to
+// role === "Client" so Fonder's own completion doesn't (redundantly, but
+// harmlessly) re-trigger the same update.
 //
 // Correlating an event back to a company needs no DB lookup: the
 // external_id set at submission-creation time ("companyId:docType", see
-// app/api/sign/create-session/route.ts) is echoed back verbatim on every
-// submitter here.
+// app/api/sign/create-session/route.ts) is echoed back verbatim on
+// `data.external_id`.
 //
 // Signature verification per DocuSeal's docs: header X-Docuseal-Signature
 // is "{timestamp}.{signature}", where signature = HMAC-SHA256(secret,
@@ -52,19 +59,20 @@ export async function POST(req: NextRequest) {
   const eventType = payload?.event_type;
 
   // Always ack 200 once past signature verification, even for events we
-  // don't act on -- avoids DocuSeal retry storms. form.completed fires per
-  // signer; submission.completed fires once, after ALL signers finish,
-  // which is the real "fully signed" signal.
-  if (eventType !== "submission.completed") {
+  // don't act on -- avoids DocuSeal retry storms.
+  if (eventType !== "form.completed") {
     return NextResponse.json({ received: true });
   }
 
-  const submitters = payload?.data?.submitters;
-  const externalId: string | undefined = submitters?.[0]?.external_id;
+  const data = payload?.data;
+  if (data?.role !== "Client") {
+    return NextResponse.json({ received: true });
+  }
 
+  const externalId: string | undefined = data?.external_id;
   if (!externalId || !externalId.includes(":")) {
     console.log(
-      "DocuSeal webhook: submission.completed with no usable external_id",
+      "DocuSeal webhook: form.completed (Client) with no usable external_id",
       { payload },
     );
     return NextResponse.json({ received: true });
