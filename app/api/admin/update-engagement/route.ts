@@ -9,6 +9,7 @@ const COLUMN_MAP: Record<string, string> = {
   clientId: "client_id",
   engagementTitle: "engagement_title",
   totalFee: "total_fee",
+  totalFeeAmount: "total_fee_amount",
   finalDeliveryDate: "final_delivery_date",
   kickoffEarliestDate: "kickoff_earliest_date",
   scopeSummary: "scope_summary",
@@ -35,6 +36,12 @@ export async function POST(req: NextRequest) {
 
   if (Object.keys(update).length === 0) {
     return NextResponse.json({ error: "No fields to update" }, { status: 400 });
+  }
+
+  // total_fee_amount is a numeric column -- coerce the form's string input
+  // (or clear it to null) rather than passing the raw string through.
+  if ("total_fee_amount" in update) {
+    update.total_fee_amount = update.total_fee_amount ? Number(update.total_fee_amount) : null;
   }
 
   const supabase = createServiceClient();

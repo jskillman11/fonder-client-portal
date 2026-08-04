@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
       client_id: clientId,
       engagement_title: body.engagementTitle,
       total_fee: body.totalFee,
+      total_fee_amount: body.totalFeeAmount ? Number(body.totalFeeAmount) : null,
       final_delivery_date: body.finalDeliveryDate,
       kickoff_earliest_date: body.kickoffEarliestDate || null,
       scope_summary: body.scopeSummary || null,

@@ -173,7 +173,12 @@ export default async function CompanyDetailPage({
         <Card className="px-9 py-8">
           <h2 className="text-[16px] font-bold text-[var(--color-ink)] mb-2">Payments</h2>
           <p className="text-[13px] text-[var(--color-muted)]">
-            View and manage invoices/payments for this brand, once QuickBooks is connected.
+            Invoices are created per engagement — open an engagement below to create and send
+            one. Manage the QuickBooks connection itself in{" "}
+            <Link href="/admin/settings/quickbooks" className="underline text-[var(--color-ink)]">
+              Settings
+            </Link>
+            .
           </p>
         </Card>
       </div>

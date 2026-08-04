@@ -2,7 +2,7 @@
 -- Run this once, in the SQL Editor of a fresh Supabase project.
 --
 -- This file is kept CURRENT — it reproduces the full schema as it stands
--- today (post stage2 through stage8), not just the original v1 schema.
+-- today (post stage2 through stage9), not just the original v1 schema.
 -- The individual supabase-stage*.sql files remain in the repo as the
 -- historical record of how the live project got here incrementally (each
 -- already ran against production); this file is what you'd run instead if
@@ -32,6 +32,7 @@ create table companies (
   msa_signed_at timestamptz, -- set by the DocuSeal completion webhook once the client actually signs the MSA
   kickoff_booked_at timestamptz, -- set once a real Cal.com kickoff booking completes
   kickoff_start_time timestamptz, -- the booked meeting's start time, for display
+  qb_customer_id text, -- this company's QuickBooks Customer id, reusable across engagements
   created_at timestamptz not null default now()
 );
 
@@ -73,6 +74,7 @@ create table engagements (
   client_id uuid references clients(id), -- the stakeholder/signatory for this engagement
   engagement_title text not null,
   total_fee text not null,
+  total_fee_amount numeric(12, 2), -- structured numeric fee, alongside the free-text display string above -- feeds real QuickBooks invoice creation
   final_delivery_date text not null,
   fonder_signatory_name text not null default 'Tom Abrams',
   fonder_signatory_email text not null default 'tom@fonder.studio',
@@ -80,6 +82,10 @@ create table engagements (
   kickoff_earliest_date date, -- opens the Cal.com scheduling embed to this month by default
   scope_summary text, -- short admin-written scope description for the portal Overview section
   status text not null default 'active' check (status in ('active', 'completed')),
+  qb_invoice_id text, -- this engagement's QuickBooks Invoice id, once created
+  qb_invoice_link text, -- QuickBooks' own hosted pay-page URL for that invoice
+  invoice_sent_at timestamptz, -- set when an admin creates/sends the invoice
+  invoice_paid_at timestamptz, -- set by the QuickBooks webhook once Invoice.Balance === 0
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -158,6 +164,24 @@ create table portal_copy (
   updated_at timestamptz not null default now()
 );
 
+-- Singleton: exactly one QuickBooks connection for the whole app (Fonder's
+-- own company, not one per client -- doesn't fit lib/company-settings.ts's
+-- per-company pattern). Service-role only; RLS is enabled with NO policies
+-- at all (see the RLS block below), same trust boundary as profiles/
+-- portal_access_tokens -- never read via the anon/publishable key.
+create table quickbooks_connection (
+  id boolean primary key default true check (id), -- singleton trick: only one row can ever exist
+  environment text not null default 'sandbox' check (environment in ('sandbox', 'production')),
+  realm_id text not null,
+  access_token text not null,
+  refresh_token text not null,
+  access_token_expires_at timestamptz not null,
+  refresh_token_expires_at timestamptz not null,
+  connected_by_email text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 alter table companies enable row level security;
 alter table clients enable row level security;
 alter table documents enable row level security;
@@ -168,6 +192,7 @@ alter table company_team_assignments enable row level security;
 alter table portal_copy enable row level security;
 alter table portal_access_tokens enable row level security;
 alter table profiles enable row level security;
+alter table quickbooks_connection enable row level security; -- deliberately no policies -- service-role only
 
 -- Only real staff (profiles.role = 'staff') can read/write these tables.
 -- The public-facing portal reads through the Next.js server using the

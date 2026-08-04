@@ -255,6 +255,80 @@ embedded calendar to that month by default via Cal.com's `month=YYYY-MM`
 parameter. Soft default only — doesn't hard-block earlier dates; real
 calendar availability handles that naturally.
 
+## QuickBooks invoicing: the actual current behavior
+
+Single-tenant integration — there is exactly one QuickBooks connection for
+the whole app (Fonder's own company, `quickbooks_connection` singleton
+table), not one per client. An admin creates a real invoice per engagement
+from the engagement detail page (`CreateInvoiceForm.tsx` →
+`/api/admin/quickbooks/create-invoice`), which looks up/creates a QuickBooks
+Customer for the company (`companies.qb_customer_id`), creates a real
+Invoice for `engagements.total_fee_amount` (a structured numeric field,
+separate from the free-text `total_fee` display string), and requests a
+hosted `InvoiceLink` (`?include=invoiceLink&minorversion=65`) — the client
+pays on QuickBooks' own page, no card data ever touches this app.
+
+Two things confirmed only by live testing against the sandbox, not from
+docs (docs actively suggested otherwise or said nothing):
+- **`InvoiceLink` stays null unless the invoice itself has `BillEmail` set**
+  (not just the customer's `PrimaryEmailAddr`, which alone was NOT
+  sufficient). `findOrCreateCustomer`/`createInvoice` in `lib/quickbooks.ts`
+  both set an email now. Setting `BillEmail` does **not** trigger an actual
+  email send — QuickBooks only emails on an explicit call to its `/send`
+  endpoint, which this app deliberately never calls (portal-only delivery).
+- **The `InvoiceLink` QuickBooks returns 404s as given.** It points at
+  `https://developer.intuit.com/comingSoonview/{hash}`; the real working
+  page is the same hash at `https://connect.intuit.com/t/{hash}`.
+  `createInvoice()`'s `toWorkingInvoiceLink()` rewrites it automatically —
+  confirmed both by a raw sandbox API call and by community reports that
+  the same swap is needed in production too.
+
+The OAuth connect flow (`/admin/settings/quickbooks`, super-admin only) runs
+through `/api/admin/quickbooks/{connect,callback,disconnect}`. Access tokens
+refresh transparently via `lib/quickbooks.ts`'s `getValidAccessToken()` —
+critical gotcha: QuickBooks **rotates the refresh_token value itself** on
+every refresh call, so the newest one must always be persisted or the next
+refresh breaks.
+
+The completion webhook (`app/api/webhooks/quickbooks/route.ts`) verifies the
+`intuit-signature` header (HMAC-SHA256 over the raw body, keyed with
+`QUICKBOOKS_WEBHOOK_VERIFIER_TOKEN` — a distinct credential from the OAuth
+Client Secret) and parses QuickBooks' CloudEvents payload format (a JSON
+array of envelopes — the legacy `eventNotifications` shape is retired as of
+a mandatory migration deadline that has already passed). On a Payment
+event, it fetches the Payment, walks `Line[].LinkedTxn[]` back to the
+invoice(s) it applied to, and sets `engagements.invoice_paid_at` once that
+Invoice's `Balance === 0`.
+
+Paid status only updates on the client's next portal page load (no live
+polling) — payment happens off-site on QuickBooks' hosted page, so unlike
+Cal.com's embedded booking event, there's no trustworthy client-side signal
+to hook.
+
+**Verified end-to-end against the live sandbox** (connect → create invoice
+→ get a working hosted link → record a payment → confirm the webhook
+handler correctly sets `invoice_paid_at`). One piece is NOT verifiable this
+way, by QuickBooks' own design: **the sandbox does not actually process
+card payments through the hosted invoice page** — the documented mock test
+card numbers (4111... etc.) are for the direct Payments API, not the
+customer-facing checkout UI, which just declines every card regardless.
+Confirmed by clicking through it directly ("Your payment method was
+declined") and corroborated by multiple Intuit community threads asking the
+same thing. To get past this for a real completion test, a Payment was
+recorded directly via `POST /v3/company/{realmId}/payment` (a legitimate
+accounting entry, not a card charge) to zero out the Invoice's `Balance`,
+then the webhook handler was driven directly with a correctly-signed
+CloudEvents payload referencing that real Payment/Invoice pair — this
+proved every piece of *our* code (signature verification, CloudEvents
+parsing, Payment→Invoice lookup, DB update) works correctly; only the
+actual "swipe a card and have QuickBooks' processor approve it" step is
+untestable before going live with production keys and real QuickBooks
+Payments. Note also: the exact webhook `type` string for Payment events
+(`qbo.payment.*.v1`) is still pattern-inferred rather than verbatim-confirmed
+from Intuit's docs — the handler matches loosely (`type.includes("payment")`)
+and logs every event type seen, so tighten it once a real webhook delivery
+(not simulated) shows the actual string.
+
 ## Where the secrets live, not in this repo, on purpose
 
 | Secret | Lives in |
@@ -266,6 +340,12 @@ calendar availability handles that naturally.
 | RESEND_API_KEY | Vercel, this app's own key |
 | PORTAL_EMAIL_FROM | Vercel, optional, must match a domain verified for RESEND_API_KEY |
 | CAL_COM_EVENT_LINK | Vercel |
+| QUICKBOOKS_CLIENT_ID, QUICKBOOKS_CLIENT_SECRET | Vercel — Intuit developer dashboard, currently sandbox/Development keys only |
+| QUICKBOOKS_REDIRECT_URI | Vercel, must exactly match the OAuth redirect URI registered in the Intuit dashboard |
+| QUICKBOOKS_ENVIRONMENT | Vercel, `sandbox` or `production` — controls which QuickBooks API base URL is used |
+| QUICKBOOKS_ITEM_ID | Vercel, the id of a one-time generic service Item created in the QuickBooks company, used as every invoice's line item |
+| QUICKBOOKS_WEBHOOK_VERIFIER_TOKEN | Vercel, from the Intuit dashboard's Webhooks tab — a distinct credential from the OAuth Client Secret, verifies `/api/webhooks/quickbooks` is really QuickBooks calling |
+| QUICKBOOKS_SANDBOX_REALM_ID | Local only, informational — the actual connected realm id lives in the `quickbooks_connection` DB row, set via the OAuth flow, not this env var |
 
 For anyone else to actually work on this, code access alone isn't enough.
 They need adding as a collaborator on GitHub, Vercel, Supabase, and DocuSeal.
@@ -289,6 +369,25 @@ password manager, never in GitHub.
    body bytes**, not a re-parsed/re-serialized JSON object — the webhook
    handler reads `req.text()` before `JSON.parse`, deliberately in that
    order.
+5. QuickBooks' refresh_token value rotates on every refresh call (not just
+   the access token) — always persist the newest refresh_token returned, or
+   the next refresh call fails even though the ~100-day validity window
+   hasn't actually expired.
+6. QuickBooks webhooks moved to a CloudEvents payload format (a JSON array
+   of envelopes) as of a mandatory migration deadline that has already
+   passed — the legacy `eventNotifications`/`dataChangeEvent` shape is not
+   what ships today; `app/api/webhooks/quickbooks/route.ts` is written
+   against the new format.
+7. QuickBooks' `InvoiceLink` field is null unless the invoice has `BillEmail`
+   set (customer-level email alone isn't enough), and the URL it returns
+   404s as-is — swap `developer.intuit.com/comingSoonview/` for
+   `connect.intuit.com/t/` (same hash) to get the real page. Both handled in
+   `lib/quickbooks.ts`'s `createInvoice()`.
+8. QuickBooks' sandbox does not actually process card payments through the
+   hosted invoice page — the documented mock test cards are for the direct
+   Payments API only; clicking through the checkout UI always declines. Not
+   fixable from this app's side; only testable for real once live with
+   production keys.
 
 The Documenso/Railway/R2-specific gotchas from before this migration (S3
 transport requirements, Playwright/Chromium version pinning, Docker-only
@@ -313,12 +412,13 @@ Fully real and working:
 - Real Cal.com scheduling embed.
 - Centralized, globally-editable portal copy.
 - Company-scoped admin dashboard with a brand picker.
+- QuickBooks invoicing: real single-tenant OAuth connection, real invoice
+  creation with a hosted QuickBooks pay link, real webhook-driven payment
+  tracking (pending the account/webhook setup noted above).
 
 Deliberately stubbed, not forgotten:
-- QuickBooks invoicing. Step 2 of What's Next is a disabled placeholder;
-  Payments is a placeholder card on the admin company page too.
 - The client portal app's actual functionality beyond Onboarding/Shared
-  Drive (Tasks, Chat, Invoices, Deliverables, Change Request). Real routes,
+  Drive/Invoices (Tasks, Chat, Deliverables, Change Request). Real routes,
   nav, and lock behavior exist; no real data or logic yet.
 - "Brand HQ" — discussed as a future admin/portal nav concept, explicitly
   deferred, not built anywhere yet.

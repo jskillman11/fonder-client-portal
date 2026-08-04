@@ -43,6 +43,8 @@ export type EngagementData = {
   lockPortalTabs: boolean;
   sharedDriveUrl: string | null;
   tabLockOverrides: Record<string, TabLockState>;
+  qbInvoiceLink: string | null;
+  invoicePaid: boolean;
 };
 
 export type EngagementStatus = "active" | "completed";
@@ -54,11 +56,16 @@ export type EngagementRecord = {
   clientId: string | null;
   engagementTitle: string;
   totalFee: string;
+  totalFeeAmount: number | null;
   finalDeliveryDate: string;
   kickoffEarliestDate: string | null;
   scopeSummary: string | null;
   status: EngagementStatus;
   milestones: Milestone[];
+  qbInvoiceId: string | null;
+  qbInvoiceLink: string | null;
+  invoiceSentAt: string | null;
+  invoicePaidAt: string | null;
 };
 
 export async function listEngagementsForCompany(companyId: string): Promise<
@@ -166,6 +173,8 @@ export async function getEngagement(
     lockPortalTabs: company.lock_portal_tabs,
     sharedDriveUrl: company.shared_drive_url,
     tabLockOverrides: company.tab_lock_overrides ?? {},
+    qbInvoiceLink: engagement.qb_invoice_link,
+    invoicePaid: Boolean(engagement.invoice_paid_at),
     milestones: (milestoneRows ?? []).map((m) => ({
       label: m.label,
       date: m.milestone_date,
@@ -215,6 +224,7 @@ export async function getEngagementById(
     clientId: engagement.client_id,
     engagementTitle: engagement.engagement_title,
     totalFee: engagement.total_fee,
+    totalFeeAmount: engagement.total_fee_amount,
     finalDeliveryDate: engagement.final_delivery_date,
     kickoffEarliestDate: engagement.kickoff_earliest_date,
     scopeSummary: engagement.scope_summary,
@@ -223,6 +233,10 @@ export async function getEngagementById(
       label: m.label,
       date: m.milestone_date,
     })),
+    qbInvoiceId: engagement.qb_invoice_id,
+    qbInvoiceLink: engagement.qb_invoice_link,
+    invoiceSentAt: engagement.invoice_sent_at,
+    invoicePaidAt: engagement.invoice_paid_at,
   };
 }
 

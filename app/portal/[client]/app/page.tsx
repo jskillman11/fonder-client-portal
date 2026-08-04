@@ -78,6 +78,8 @@ export default async function OnboardingTabPage({
         kickoffEarliestDate={engagement.kickoffEarliestDate}
         kickoffBooked={engagement.kickoffBooked}
         kickoffStartTime={engagement.kickoffStartTime}
+        qbInvoiceLink={engagement.qbInvoiceLink}
+        invoicePaid={engagement.invoicePaid}
       />
     </div>
   );

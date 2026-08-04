@@ -12,6 +12,7 @@ export type EngagementFormValues = {
   clientSlug: string;
   engagementTitle: string;
   totalFee: string;
+  totalFeeAmount: string;
   finalDeliveryDate: string;
   kickoffEarliestDate: string;
   scopeSummary: string;
@@ -41,6 +42,7 @@ export function EngagementForm({
     clientSlug: "",
     engagementTitle: "",
     totalFee: "",
+    totalFeeAmount: "",
     finalDeliveryDate: "",
     kickoffEarliestDate: "",
     scopeSummary: "",
@@ -103,6 +105,7 @@ export function EngagementForm({
         clientId: values.clientId,
         engagementTitle: values.engagementTitle,
         totalFee: values.totalFee,
+        totalFeeAmount: values.totalFeeAmount,
         finalDeliveryDate: values.finalDeliveryDate,
         kickoffEarliestDate: values.kickoffEarliestDate,
         scopeSummary: values.scopeSummary,
@@ -267,6 +270,22 @@ export function EngagementForm({
               placeholder="August 30, 2026"
             />
           </div>
+        </div>
+
+        <div className="mt-4">
+          <label className={labelClass}>Total fee (numeric, for invoicing)</label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            value={values.totalFeeAmount}
+            onChange={(e) => set("totalFeeAmount", e.target.value)}
+            className={inputClass}
+            placeholder="12000.00"
+          />
+          <p className="text-[11px] text-[var(--color-faint)] mt-1">
+            Used to create the real QuickBooks invoice — separate from the display text above.
+          </p>
         </div>
 
         <div className="mt-4">

@@ -24,6 +24,8 @@ export function WhatsNext({
   kickoffEarliestDate,
   kickoffBooked,
   kickoffStartTime,
+  qbInvoiceLink,
+  invoicePaid,
 }: {
   heading: string;
   subheading: string;
@@ -42,9 +44,11 @@ export function WhatsNext({
   kickoffEarliestDate?: string | null;
   kickoffBooked: boolean;
   kickoffStartTime: string | null;
+  qbInvoiceLink: string | null;
+  invoicePaid: boolean;
 }) {
   const [booked, setBooked] = useState(kickoffBooked);
-  const allStepsComplete = docsSigned && booked;
+  const allStepsComplete = docsSigned && booked && invoicePaid;
 
   return (
     <Card className="px-9 py-9 md:px-12 md:py-10">
@@ -99,7 +103,7 @@ export function WhatsNext({
                         Unlocks once your documents are sent for signature.
                       </p>
                     ) : (
-                      <PayInvoiceAction />
+                      <PayInvoiceAction invoiceLink={qbInvoiceLink} invoicePaid={invoicePaid} />
                     ))}
 
                   {i === 2 &&

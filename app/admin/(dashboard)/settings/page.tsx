@@ -26,9 +26,7 @@ export default async function SettingsPage() {
           </Link>
           <Link
             href="/admin/settings/content"
-            className={`block py-3 -mx-7 px-7 hover:bg-[var(--color-cream)] ${
-              isSuperAdmin ? "border-b border-[var(--color-border)]" : ""
-            }`}
+            className="block py-3 border-b border-[var(--color-border)] -mx-7 px-7 hover:bg-[var(--color-cream)]"
           >
             <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">Portal content</p>
             <p className="text-[13px] text-[var(--color-muted)]">
@@ -38,11 +36,22 @@ export default async function SettingsPage() {
           {isSuperAdmin && (
             <Link
               href="/admin/settings/staff"
-              className="block py-3 -mx-7 px-7 hover:bg-[var(--color-cream)]"
+              className="block py-3 border-b border-[var(--color-border)] -mx-7 px-7 hover:bg-[var(--color-cream)]"
             >
               <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">Staff</p>
               <p className="text-[13px] text-[var(--color-muted)]">
                 Fonder staff accounts and roles
+              </p>
+            </Link>
+          )}
+          {isSuperAdmin && (
+            <Link
+              href="/admin/settings/quickbooks"
+              className="block py-3 -mx-7 px-7 hover:bg-[var(--color-cream)]"
+            >
+              <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">QuickBooks</p>
+              <p className="text-[13px] text-[var(--color-muted)]">
+                Connect Fonder&apos;s QuickBooks company for invoicing
               </p>
             </Link>
           )}
