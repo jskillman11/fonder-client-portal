@@ -76,6 +76,8 @@ export default async function OnboardingTabPage({
         msaDescription={copy.msa_description}
         calLink={process.env.CAL_COM_EVENT_LINK}
         kickoffEarliestDate={engagement.kickoffEarliestDate}
+        kickoffBooked={engagement.kickoffBooked}
+        kickoffStartTime={engagement.kickoffStartTime}
       />
     </div>
   );

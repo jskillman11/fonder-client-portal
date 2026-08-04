@@ -7,7 +7,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 // the global portal tab unlock survives a refresh, same reasoning as
 // sow_signed_at/msa_signed_at.
 export async function POST(req: NextRequest) {
-  const { clientSlug } = await req.json();
+  const { clientSlug, startTime } = await req.json();
   if (!clientSlug) {
     return NextResponse.json({ error: "clientSlug is required" }, { status: 400 });
   }
@@ -20,7 +20,10 @@ export async function POST(req: NextRequest) {
   const supabase = createServiceClient();
   await supabase
     .from("companies")
-    .update({ kickoff_booked_at: new Date().toISOString() })
+    .update({
+      kickoff_booked_at: new Date().toISOString(),
+      kickoff_start_time: startTime || null,
+    })
     .eq("id", engagement.companyId);
 
   return NextResponse.json({ success: true });

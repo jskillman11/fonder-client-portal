@@ -113,9 +113,13 @@ nothing of its own to complete yet (no QuickBooks), so it's a pass-through.
 The **other portal tabs** (`/app/*` — Tasks, Chat, Invoices, Deliverables,
 etc.) unlock on a *separate*, later signal: a real Cal.com booking, not just
 signing. `components/KickoffScheduler.tsx` listens for Cal.com's
-`bookingSuccessfulV2` embed event and persists `companies.kickoff_booked_at`;
-the global unlock requires both documents signed **and** a kickoff actually
-booked (`app/portal/[client]/app/layout.tsx`'s `onboardingComplete`).
+`bookingSuccessfulV2` embed event and persists `companies.kickoff_booked_at`/
+`kickoff_start_time`; the global unlock requires both documents signed
+**and** a kickoff actually booked (`app/portal/[client]/app/layout.tsx`'s
+`onboardingComplete`). Once booked, the calendar embed is replaced with a
+"Meeting booked for [date/time]" summary (no reschedule/cancel UI yet — out
+of scope for now); once every step is done, `WhatsNext` shows an "Onboarding
+completed" message.
 
 ## Signing flow: the actual current behavior
 

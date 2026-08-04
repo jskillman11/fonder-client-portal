@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Card } from "./Card";
 import { KickoffScheduler } from "./KickoffScheduler";
 import { SignActionsList } from "./SignActionsList";
@@ -21,6 +22,8 @@ export function WhatsNext({
   msaDescription,
   calLink,
   kickoffEarliestDate,
+  kickoffBooked,
+  kickoffStartTime,
 }: {
   heading: string;
   subheading: string;
@@ -37,7 +40,12 @@ export function WhatsNext({
   msaDescription: string;
   calLink?: string;
   kickoffEarliestDate?: string | null;
+  kickoffBooked: boolean;
+  kickoffStartTime: string | null;
 }) {
+  const [booked, setBooked] = useState(kickoffBooked);
+  const allStepsComplete = docsSigned && booked;
+
   return (
     <Card className="px-9 py-9 md:px-12 md:py-10">
       <h2 className="text-[19px] font-bold text-[var(--color-ink)] mb-1">
@@ -106,6 +114,9 @@ export function WhatsNext({
                             clientSlug={clientSlug}
                             calLink={calLink}
                             kickoffEarliestDate={kickoffEarliestDate ?? null}
+                            kickoffBooked={booked}
+                            kickoffStartTime={kickoffStartTime}
+                            onBooked={() => setBooked(true)}
                           />
                         </div>
                       )
@@ -116,6 +127,17 @@ export function WhatsNext({
           );
         })}
       </div>
+
+      {allStepsComplete && (
+        <div className="mt-4 rounded-[14px] border border-[var(--color-border)] bg-[var(--color-cream)] px-5 py-4 text-center">
+          <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">
+            Onboarding completed
+          </p>
+          <p className="text-[13px] text-[var(--color-muted)] mt-0.5">
+            You&apos;re all set — explore the rest of your portal using the tabs above.
+          </p>
+        </div>
+      )}
     </Card>
   );
 }
