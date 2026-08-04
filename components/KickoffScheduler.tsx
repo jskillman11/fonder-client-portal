@@ -75,7 +75,7 @@ export function KickoffScheduler({
         <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">
           Meeting booked
         </p>
-        <p className="text-[13.5px] text-[var(--color-muted)] mt-0.5">
+        <p className="text-[13.5px] text-[var(--color-muted-text)] mt-0.5">
           {startTime ? formatStartTime(startTime) : "Check your email for the details."}
         </p>
       </Card>

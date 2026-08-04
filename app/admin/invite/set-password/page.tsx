@@ -46,12 +46,12 @@ export default function SetPasswordPage() {
         <h1 className="text-[20px] font-bold text-[var(--color-ink)] mb-2 text-center">
           Set your password
         </h1>
-        <p className="text-[13px] text-[var(--color-muted)] mb-6 text-center">
+        <p className="text-[13px] text-[var(--color-muted-text)] mb-6 text-center">
           Choose a password to finish setting up your Fonder admin account.
         </p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-[13px] font-medium text-[var(--color-muted)]">
+            <label className="text-[13px] font-medium text-[var(--color-muted-text)]">
               Password
             </label>
             <input
@@ -63,7 +63,7 @@ export default function SetPasswordPage() {
             />
           </div>
           <div>
-            <label className="text-[13px] font-medium text-[var(--color-muted)]">
+            <label className="text-[13px] font-medium text-[var(--color-muted-text)]">
               Confirm password
             </label>
             <input

@@ -9,7 +9,7 @@ import type { EngagementStatus } from "@/lib/get-engagement";
 
 const inputClass =
   "w-full mt-1 rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-[14px]";
-const labelClass = "text-[13px] font-medium text-[var(--color-muted)]";
+const labelClass = "text-[13px] font-medium text-[var(--color-muted-text)]";
 
 export type EngagementOverviewValues = {
   clientId: string;
@@ -146,19 +146,19 @@ export function EngagementOverviewForm({
             <button
               type="button"
               onClick={handleMarkCompleted}
-              className="text-[12px] underline text-[var(--color-muted)]"
+              className="text-[12px] underline text-[var(--color-muted-text)]"
             >
               Mark as completed
             </button>
           ) : (
-            <span className="text-[12px] text-[var(--color-muted)]">Completed</span>
+            <span className="text-[12px] text-[var(--color-muted-text)]">Completed</span>
           )}
         </div>
 
         <div className="mb-4">
           <label className={labelClass}>Client (signatory)</label>
           {loadingOptions ? (
-            <p className="text-[13px] text-[var(--color-muted)] mt-1">Loading…</p>
+            <p className="text-[13px] text-[var(--color-muted-text)] mt-1">Loading…</p>
           ) : (
             <select
               required
@@ -248,7 +248,7 @@ export function EngagementOverviewForm({
 
       <Card className="px-9 py-9">
         <h2 className="text-[16px] font-bold text-[var(--color-ink)] mb-1">Schedule</h2>
-        <p className="text-[13px] text-[var(--color-muted)] mb-4">
+        <p className="text-[13px] text-[var(--color-muted-text)] mb-4">
           Start date, deliverable dates, and any other milestones — shown in the portal&apos;s
           Overview section.
         </p>

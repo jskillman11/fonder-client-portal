@@ -6,10 +6,11 @@ import { toast } from "sonner";
 import { Card } from "@/components/Card";
 import { PillButton } from "@/components/PillButton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { initialsFromName } from "@/lib/initials";
 
 const inputClass =
   "w-full mt-1 rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-[14px]";
-const labelClass = "text-[13px] font-medium text-[var(--color-muted)]";
+const labelClass = "text-[13px] font-medium text-[var(--color-muted-text)]";
 
 export function EditProfileForm({
   email,
@@ -58,7 +59,7 @@ export function EditProfileForm({
           <div className="flex items-center gap-3 mt-2">
             <Avatar className="h-12 w-12 rounded-lg after:rounded-lg">
               {avatarUrl && <AvatarImage src={avatarUrl} alt={name || email} className="rounded-lg object-cover" />}
-              <AvatarFallback className="rounded-lg">{(name || email).charAt(0).toUpperCase()}</AvatarFallback>
+              <AvatarFallback className="rounded-lg">{initialsFromName(name || email)}</AvatarFallback>
             </Avatar>
             <input
               type="file"
@@ -89,7 +90,7 @@ export function EditProfileForm({
         </div>
         <div>
           <label className={labelClass}>Email</label>
-          <p className="text-[14px] text-[var(--color-muted)] mt-1">{email}</p>
+          <p className="text-[14px] text-[var(--color-muted-text)] mt-1">{email}</p>
         </div>
         <div className="flex justify-end pt-2">
           <PillButton type="submit">{status === "saving" ? "Saving…" : "Save"}</PillButton>

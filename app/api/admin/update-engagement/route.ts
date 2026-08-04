@@ -44,6 +44,14 @@ export async function POST(req: NextRequest) {
     update.total_fee_amount = update.total_fee_amount ? Number(update.total_fee_amount) : null;
   }
 
+  // kickoff_earliest_date is a real Postgres `date` column (nullable) -- an
+  // untouched, empty <input type="date"> sends "" rather than omitting the
+  // key, which Postgres rejects outright ("invalid input syntax for type
+  // date"). Empty string means "cleared", so treat it the same as null.
+  if ("kickoff_earliest_date" in update) {
+    update.kickoff_earliest_date = update.kickoff_earliest_date || null;
+  }
+
   const supabase = createServiceClient();
   const { error } = await supabase
     .from("engagements")

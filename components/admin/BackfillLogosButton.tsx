@@ -35,7 +35,7 @@ export function BackfillLogosButton() {
     <button
       type="button"
       onClick={handleClick}
-      className="text-[12px] underline text-[var(--color-muted)]"
+      className="text-[12px] underline text-[var(--color-muted-text)]"
     >
       {running ? "Normalizing…" : "One-time: normalize all existing logos"}
     </button>

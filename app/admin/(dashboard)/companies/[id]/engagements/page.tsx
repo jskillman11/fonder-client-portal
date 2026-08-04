@@ -30,14 +30,14 @@ export default async function CompanyEngagementsPage({
         ) : (
           <Link
             href={`/admin/companies/${id}/engagements/new`}
-            className="text-[12px] underline text-[var(--color-muted)]"
+            className="text-[12px] underline text-[var(--color-muted-text)]"
           >
             + New engagement
           </Link>
         )}
       </div>
       {engagements.length === 0 ? (
-        <p className="text-[13px] text-[var(--color-muted)]">No engagements yet for this company.</p>
+        <p className="text-[13px] text-[var(--color-muted-text)]">No engagements yet for this company.</p>
       ) : (
         <div className="space-y-3">
           {engagements.map((e) => (

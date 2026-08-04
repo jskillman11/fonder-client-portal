@@ -16,7 +16,7 @@ export default async function TeamPage() {
         <h1 className="text-[20px] font-bold text-[var(--color-ink)]">
           Team
         </h1>
-        <p className="text-[13px] text-[var(--color-muted)]">
+        <p className="text-[13px] text-[var(--color-muted-text)]">
           Fonder&apos;s own roster — select from these on the engagement setup
           screen instead of typing name/role fresh each time.
         </p>
@@ -25,7 +25,7 @@ export default async function TeamPage() {
 
         {teamMembers.length === 0 ? (
           <Card className="px-9 py-9 text-center">
-            <p className="text-[14px] text-[var(--color-muted)]">
+            <p className="text-[14px] text-[var(--color-muted-text)]">
               No team members yet — add the first one above.
             </p>
           </Card>
@@ -50,7 +50,7 @@ export default async function TeamPage() {
                   <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">
                     {t.name}
                   </p>
-                  <p className="text-[13px] text-[var(--color-muted)]">{t.role}</p>
+                  <p className="text-[13px] text-[var(--color-muted-text)]">{t.role}</p>
                 </div>
               </Link>
             ))}

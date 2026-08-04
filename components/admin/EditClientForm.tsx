@@ -20,7 +20,7 @@ import type { Client } from "@/lib/companies-clients";
 
 const inputClass =
   "w-full mt-1 rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-[14px]";
-const labelClass = "text-[13px] font-medium text-[var(--color-muted)]";
+const labelClass = "text-[13px] font-medium text-[var(--color-muted-text)]";
 
 export function EditClientForm({
   client,
@@ -81,7 +81,7 @@ export function EditClientForm({
       <h1 className="text-[18px] font-bold text-[var(--color-ink)] mb-1">
         {client.firstName} {client.lastName}
       </h1>
-      <p className="text-[13px] text-[var(--color-muted)] mb-4">{companyName}</p>
+      <p className="text-[13px] text-[var(--color-muted-text)] mb-4">{companyName}</p>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div>

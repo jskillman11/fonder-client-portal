@@ -42,7 +42,7 @@ export default function AdminLoginPage() {
         </h1>
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="text-[13px] font-medium text-[var(--color-muted)]">
+            <label className="text-[13px] font-medium text-[var(--color-muted-text)]">
               Email
             </label>
             <input
@@ -54,7 +54,7 @@ export default function AdminLoginPage() {
             />
           </div>
           <div>
-            <label className="text-[13px] font-medium text-[var(--color-muted)]">
+            <label className="text-[13px] font-medium text-[var(--color-muted-text)]">
               Password
             </label>
             <input

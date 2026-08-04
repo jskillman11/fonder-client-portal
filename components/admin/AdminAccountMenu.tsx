@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
+import { initialsFromName } from "@/lib/initials";
 
 // Falls back to something readable derived from the email's local part when
 // a staff member hasn't set a display name yet.
@@ -24,12 +25,6 @@ function displayNameFromEmail(email: string): string {
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
-}
-
-function initialsFromName(name: string): string {
-  const words = name.split(" ").filter(Boolean);
-  const initials = words.slice(0, 2).map((w) => w.charAt(0).toUpperCase());
-  return initials.join("") || "?";
 }
 
 export function AdminAccountMenu({

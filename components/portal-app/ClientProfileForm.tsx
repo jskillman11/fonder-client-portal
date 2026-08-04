@@ -6,11 +6,12 @@ import { toast } from "sonner";
 import { Card } from "@/components/Card";
 import { PillButton } from "@/components/PillButton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { initialsFromName } from "@/lib/initials";
 import type { Client } from "@/lib/companies-clients";
 
 const inputClass =
   "w-full mt-1 rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-[14px]";
-const labelClass = "text-[13px] font-medium text-[var(--color-muted)]";
+const labelClass = "text-[13px] font-medium text-[var(--color-muted-text)]";
 
 export function ClientProfileForm({ client }: { client: Client }) {
   const router = useRouter();
@@ -57,7 +58,7 @@ export function ClientProfileForm({ client }: { client: Client }) {
               {client.avatarUrl && (
                 <AvatarImage src={client.avatarUrl} alt={displayName} className="rounded-lg object-cover" />
               )}
-              <AvatarFallback className="rounded-lg">{displayName.charAt(0).toUpperCase()}</AvatarFallback>
+              <AvatarFallback className="rounded-lg">{initialsFromName(displayName)}</AvatarFallback>
             </Avatar>
             <input
               type="file"

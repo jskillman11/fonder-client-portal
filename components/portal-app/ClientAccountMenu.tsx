@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 import { AdminAccountMenu } from "@/components/admin/AdminAccountMenu";
+import { initialsFromName } from "@/lib/initials";
 
 // Shared by the real client session AND a staff member's "View as client"
 // preview -- same menu either way, just a different sign-out behavior and
@@ -49,7 +50,7 @@ function ClientStyleMenu({
             >
               <Avatar className="h-8 w-8 rounded-lg after:rounded-lg">
                 {avatarUrl && <AvatarImage src={avatarUrl} alt={name} className="rounded-lg object-cover" />}
-                <AvatarFallback className="rounded-lg">{name.charAt(0).toUpperCase()}</AvatarFallback>
+                <AvatarFallback className="rounded-lg">{initialsFromName(name)}</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{name}</span>

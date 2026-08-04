@@ -59,14 +59,14 @@ export function EngagementRow({
               {engagementStatus}
             </span>
           </div>
-          <p className="text-[13px] text-[var(--color-muted)]">{engagementTitle}</p>
+          <p className="text-[13px] text-[var(--color-muted-text)]">{engagementTitle}</p>
         </div>
         <div className="flex flex-wrap gap-4 items-center text-[13px]">
           {companyClientSlug && (
             <Link
               href={`/portal/${companyClientSlug}`}
               target="_blank"
-              className="text-[var(--color-muted)] underline"
+              className="text-[var(--color-muted-text)] underline"
             >
               View portal
             </Link>
@@ -88,7 +88,7 @@ export function EngagementRow({
         </div>
       </div>
       {status === "sent" && (
-        <p className="text-[12px] text-[var(--color-muted)] mt-2">
+        <p className="text-[12px] text-[var(--color-muted-text)] mt-2">
           Sent to the client&apos;s registered email.
         </p>
       )}

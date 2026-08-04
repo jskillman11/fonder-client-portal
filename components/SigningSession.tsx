@@ -70,7 +70,7 @@ export function SigningSession({
         <p className="text-[14px] text-[var(--color-ink)] font-semibold">
           You&apos;re all signed.
         </p>
-        <p className="text-[13px] text-[var(--color-muted)] mt-1">
+        <p className="text-[13px] text-[var(--color-muted-text)] mt-1">
           Head back to the portal whenever you&apos;re ready.
         </p>
       </Card>
@@ -96,7 +96,7 @@ export function SigningSession({
       {status === "error" ? (
         <p className="text-[13px] text-[#a32d2d]">{errorDetail}</p>
       ) : (
-        <p className="text-[14px] text-[var(--color-muted)]">
+        <p className="text-[14px] text-[var(--color-muted-text)]">
           Preparing your {docLabel}…
         </p>
       )}

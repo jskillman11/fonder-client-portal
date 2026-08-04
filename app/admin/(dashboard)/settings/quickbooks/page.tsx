@@ -15,7 +15,7 @@ export default async function QuickBooksSettingsPage() {
         <div className="max-w-2xl mx-auto space-y-5">
           <BackButton />
           <Card className="px-9 py-9 text-center">
-            <p className="text-[14px] text-[var(--color-muted)]">
+            <p className="text-[14px] text-[var(--color-muted-text)]">
               Only super-admins can manage the QuickBooks connection.
             </p>
           </Card>
@@ -38,14 +38,14 @@ export default async function QuickBooksSettingsPage() {
               <p className="text-[14.5px] font-semibold text-[var(--color-ink)] mb-1">
                 Connected
               </p>
-              <p className="text-[13px] text-[var(--color-muted)]">
+              <p className="text-[13px] text-[var(--color-muted-text)]">
                 Environment: {status.environment}
               </p>
-              <p className="text-[13px] text-[var(--color-muted)]">
+              <p className="text-[13px] text-[var(--color-muted-text)]">
                 Company (realm) ID: {status.realmId}
               </p>
               {status.connectedByEmail && (
-                <p className="text-[13px] text-[var(--color-muted)] mb-4">
+                <p className="text-[13px] text-[var(--color-muted-text)] mb-4">
                   Connected by {status.connectedByEmail}
                 </p>
               )}
@@ -55,7 +55,7 @@ export default async function QuickBooksSettingsPage() {
             </>
           ) : (
             <>
-              <p className="text-[14px] text-[var(--color-muted)] mb-4">
+              <p className="text-[14px] text-[var(--color-muted-text)] mb-4">
                 Connect Fonder&apos;s QuickBooks company to enable creating and tracking real
                 invoices for client engagements.
               </p>

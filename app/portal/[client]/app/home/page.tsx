@@ -44,8 +44,6 @@ export default async function HomeTabPage({
     <div className="max-w-5xl mx-auto space-y-5">
       <WelcomeHero
         greeting={renderTemplate(copy.welcome_greeting, templateVars)}
-        clientName={engagement.clientName}
-        clientLogoUrl={engagement.clientLogoUrl}
         subtitle={renderTemplate(copy.welcome_subtitle, templateVars)}
       />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

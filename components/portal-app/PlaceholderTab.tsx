@@ -16,7 +16,7 @@ export function PlaceholderTab({
         <h1 className="text-[19px] font-bold text-[var(--color-ink)] mb-2">
           {title}
         </h1>
-        <p className="text-[14px] text-[var(--color-muted)] max-w-sm mx-auto leading-relaxed">
+        <p className="text-[14px] text-[var(--color-muted-text)] max-w-sm mx-auto leading-relaxed">
           {description}
         </p>
       </Card>

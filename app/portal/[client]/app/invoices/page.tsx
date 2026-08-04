@@ -43,9 +43,9 @@ export default async function InvoicesPage({
           <Card key={e.id} className="px-9 py-9 max-w-lg mx-auto">
             <div className="flex items-center justify-between mb-1">
               <h1 className="text-[19px] font-bold text-[var(--color-ink)]">{e.totalFee}</h1>
-              <span className="text-[12px] text-[var(--color-muted)] capitalize">{e.status}</span>
+              <span className="text-[12px] text-[var(--color-muted-text)] capitalize">{e.status}</span>
             </div>
-            <p className="text-[13px] text-[var(--color-muted)] mb-4">
+            <p className="text-[13px] text-[var(--color-muted-text)] mb-4">
               {e.invoicePaid ? "Paid" : "Awaiting payment"}
             </p>
             {isActiveAndUnpaid ? (

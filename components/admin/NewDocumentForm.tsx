@@ -8,7 +8,7 @@ import type { Company } from "@/lib/companies-clients";
 
 const inputClass =
   "w-full mt-1 rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-[14px]";
-const labelClass = "text-[13px] font-medium text-[var(--color-muted)]";
+const labelClass = "text-[13px] font-medium text-[var(--color-muted-text)]";
 
 export function NewDocumentForm({ companies }: { companies: Company[] }) {
   const router = useRouter();
@@ -46,7 +46,7 @@ export function NewDocumentForm({ companies }: { companies: Company[] }) {
   if (companies.length === 0) {
     return (
       <Card className="px-9 py-7">
-        <p className="text-[14px] text-[var(--color-muted)]">
+        <p className="text-[14px] text-[var(--color-muted-text)]">
           Add a company first before adding documents.
         </p>
       </Card>

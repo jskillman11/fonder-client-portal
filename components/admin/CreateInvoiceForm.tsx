@@ -31,7 +31,7 @@ export function CreateInvoiceForm({ engagementId }: { engagementId: string }) {
 
   return (
     <div>
-      <p className="text-[13px] text-[var(--color-muted)] mb-3">
+      <p className="text-[13px] text-[var(--color-muted-text)] mb-3">
         Creates a real QuickBooks invoice for this engagement&apos;s numeric fee and generates a
         hosted pay-page link for the client.
       </p>

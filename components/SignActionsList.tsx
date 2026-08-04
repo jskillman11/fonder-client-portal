@@ -35,7 +35,7 @@ export function SignActionsList({
         >
           <div>
             <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">{doc.label}</p>
-            <p className="text-[13px] text-[var(--color-muted)] mt-0.5">{doc.description}</p>
+            <p className="text-[13px] text-[var(--color-muted-text)] mt-0.5">{doc.description}</p>
           </div>
           {doc.signed ? (
             <span className="rounded-[var(--radius-pill)] bg-[var(--color-cream)] text-[var(--color-ink)] border border-[var(--color-border)] text-[13px] font-semibold px-5 py-2.5 whitespace-nowrap ml-4">

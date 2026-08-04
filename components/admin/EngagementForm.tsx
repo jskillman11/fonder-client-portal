@@ -21,7 +21,7 @@ export type EngagementFormValues = {
 
 const inputClass =
   "w-full mt-1 rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-[14px]";
-const labelClass = "text-[13px] font-medium text-[var(--color-muted)]";
+const labelClass = "text-[13px] font-medium text-[var(--color-muted-text)]";
 
 export function EngagementForm({
   lockedCompanyId,
@@ -134,7 +134,7 @@ export function EngagementForm({
         <h1 className="text-[20px] font-bold text-[var(--color-ink)] mb-3">
           Engagement created
         </h1>
-        <p className="text-[14px] text-[var(--color-muted)] mb-5">
+        <p className="text-[14px] text-[var(--color-muted-text)] mb-5">
           Portal link:{" "}
           <a
             href={`/portal/${portalSlug}`}
@@ -172,7 +172,7 @@ export function EngagementForm({
           <Link
             href={`/admin/companies/${lockedCompanyId}`}
             target="_blank"
-            className="text-[12px] underline text-[var(--color-muted)]"
+            className="text-[12px] underline text-[var(--color-muted-text)]"
           >
             + New client
           </Link>
@@ -186,7 +186,7 @@ export function EngagementForm({
         </div>
 
         {loadingOptions ? (
-          <p className="text-[13px] text-[var(--color-muted)]">Loading…</p>
+          <p className="text-[13px] text-[var(--color-muted-text)]">Loading…</p>
         ) : (
           <div className="mb-4">
             <label className={labelClass}>Client (signatory)</label>
@@ -319,7 +319,7 @@ export function EngagementForm({
         <h2 className="text-[16px] font-bold text-[var(--color-ink)] mb-1">
           Schedule
         </h2>
-        <p className="text-[13px] text-[var(--color-muted)] mb-4">
+        <p className="text-[13px] text-[var(--color-muted-text)] mb-4">
           Start date, deliverable dates, and any other milestones — shown in the portal&apos;s
           Overview section.
         </p>

@@ -39,7 +39,7 @@ export default async function CompanyDocumentsPage({
         <NewDocumentForm companies={[company]} />
       </div>
       {documents.length === 0 ? (
-        <p className="text-[13px] text-[var(--color-muted)]">No documents yet for this company.</p>
+        <p className="text-[13px] text-[var(--color-muted-text)]">No documents yet for this company.</p>
       ) : (
         <div className="-mx-7 px-7">
           {documents.map((d) => (
@@ -50,7 +50,7 @@ export default async function CompanyDocumentsPage({
             >
               <div>
                 <p className="text-[14px] font-semibold text-[var(--color-ink)]">{d.title}</p>
-                <p className="text-[12.5px] text-[var(--color-muted)]">{d.docType.toUpperCase()}</p>
+                <p className="text-[12.5px] text-[var(--color-muted-text)]">{d.docType.toUpperCase()}</p>
               </div>
             </Link>
           ))}

@@ -70,7 +70,7 @@ export function StaffList({
                 {s.email}
                 {isSelf && <span className="text-[var(--color-faint)] font-normal"> (you)</span>}
               </p>
-              <p className="text-[13px] text-[var(--color-muted)]">
+              <p className="text-[13px] text-[var(--color-muted-text)]">
                 {s.isSuperAdmin ? "Super-admin" : "Staff"} ·{" "}
                 {s.hasAccepted ? "Active" : "Invited, not yet accepted"}
               </p>

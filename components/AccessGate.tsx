@@ -45,7 +45,7 @@ export function AccessGate({ clientSlug }: { clientSlug: string }) {
             <h1 className="text-[18px] font-bold text-[var(--color-ink)] mb-2">
               Check your email
             </h1>
-            <p className="text-[14px] text-[var(--color-muted)]">
+            <p className="text-[14px] text-[var(--color-muted-text)]">
               We&apos;ve sent a link to {email} — open it to access your portal.
             </p>
           </>
@@ -54,7 +54,7 @@ export function AccessGate({ clientSlug }: { clientSlug: string }) {
             <h1 className="text-[18px] font-bold text-[var(--color-ink)] mb-2">
               Access your portal
             </h1>
-            <p className="text-[14px] text-[var(--color-muted)] mb-5">
+            <p className="text-[14px] text-[var(--color-muted-text)] mb-5">
               Enter your email and we&apos;ll send you a secure link.
             </p>
             <form onSubmit={handleSubmit} className="space-y-3">

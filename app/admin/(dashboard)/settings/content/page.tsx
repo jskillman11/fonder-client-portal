@@ -51,7 +51,7 @@ const FIELD_GROUPS: { heading: string; fields: { key: PortalCopyKey; label: stri
 
 const inputClass =
   "w-full mt-1 rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-[14px]";
-const labelClass = "text-[13px] font-medium text-[var(--color-muted)]";
+const labelClass = "text-[13px] font-medium text-[var(--color-muted-text)]";
 
 export default function PortalContentPage() {
   const [values, setValues] = useState<Record<string, string>>(PORTAL_COPY_DEFAULTS);
@@ -89,7 +89,7 @@ export default function PortalContentPage() {
   if (loading) {
     return (
       <main className="py-12 px-4">
-        <p className="text-center text-[14px] text-[var(--color-muted)]">Loading…</p>
+        <p className="text-center text-[14px] text-[var(--color-muted-text)]">Loading…</p>
       </main>
     );
   }
@@ -102,7 +102,7 @@ export default function PortalContentPage() {
           <h1 className="text-[20px] font-bold text-[var(--color-ink)]">
             Portal content
           </h1>
-          <p className="text-[13px] text-[var(--color-muted)] mt-1">
+          <p className="text-[13px] text-[var(--color-muted-text)] mt-1">
             Edit once — applies to every client&apos;s portal immediately.
           </p>
         </div>

@@ -56,7 +56,7 @@ export function CompanyPortalContentForm({
 
   return (
     <form onSubmit={handleSubmit}>
-      <p className="text-[13px] text-[var(--color-muted)] mb-4">
+      <p className="text-[13px] text-[var(--color-muted-text)] mb-4">
         Controls whether the client portal app&apos;s tabs (Tasks, Chat, Invoices, etc.) stay
         locked until both documents are sent for signature.
       </p>
@@ -73,7 +73,7 @@ export function CompanyPortalContentForm({
       </label>
 
       <div className="mt-5">
-        <p className="text-[13px] font-medium text-[var(--color-muted)]">Per-tab overrides</p>
+        <p className="text-[13px] font-medium text-[var(--color-muted-text)]">Per-tab overrides</p>
         <p className="text-[11px] text-[var(--color-faint)] mt-1 mb-2">
           Overrides the lock above for a specific tab, regardless of whether documents have been
           sent yet. Home isn&apos;t listed here — onboarding lives there, so it&apos;s always

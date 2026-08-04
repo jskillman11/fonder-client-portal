@@ -24,7 +24,7 @@ export default async function CompaniesPage() {
 
         {companies.length === 0 ? (
           <Card className="px-9 py-9 text-center">
-            <p className="text-[14px] text-[var(--color-muted)]">
+            <p className="text-[14px] text-[var(--color-muted-text)]">
               No companies yet — add the first one above.
             </p>
           </Card>

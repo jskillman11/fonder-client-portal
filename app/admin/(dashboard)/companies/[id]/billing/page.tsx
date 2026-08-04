@@ -34,7 +34,7 @@ export default async function CompanyBillingPage({
       <Card className="px-9 py-8">
         <h2 className="text-[16px] font-bold text-[var(--color-ink)] mb-4">Billing</h2>
         {engagements.length === 0 ? (
-          <p className="text-[13px] text-[var(--color-muted)]">No engagements yet for this company.</p>
+          <p className="text-[13px] text-[var(--color-muted-text)]">No engagements yet for this company.</p>
         ) : (
           <Table>
             <TableHeader>
@@ -80,7 +80,7 @@ export default async function CompanyBillingPage({
       </Card>
 
       <Card className="px-9 py-6">
-        <p className="text-[13px] text-[var(--color-muted)]">
+        <p className="text-[13px] text-[var(--color-muted-text)]">
           QuickBooks:{" "}
           {qb.connected ? (
             <span className="font-semibold text-[var(--color-ink)]">

@@ -17,7 +17,7 @@ export default async function StaffPage() {
         <div className="max-w-2xl mx-auto space-y-5">
           <BackButton />
           <Card className="px-9 py-9 text-center">
-            <p className="text-[14px] text-[var(--color-muted)]">
+            <p className="text-[14px] text-[var(--color-muted-text)]">
               Only super-admins can manage staff.
             </p>
           </Card>
@@ -38,7 +38,7 @@ export default async function StaffPage() {
 
         {staff.length === 0 ? (
           <Card className="px-9 py-9 text-center">
-            <p className="text-[14px] text-[var(--color-muted)]">
+            <p className="text-[14px] text-[var(--color-muted-text)]">
               No staff accounts yet.
             </p>
           </Card>

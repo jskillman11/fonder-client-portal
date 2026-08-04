@@ -61,22 +61,22 @@ export function CompanyTeamForm({
   return (
     <form onSubmit={handleSubmit}>
       <div className="flex items-center justify-between mb-1">
-        <p className="text-[13px] text-[var(--color-muted)]">
+        <p className="text-[13px] text-[var(--color-muted-text)]">
           Select who&apos;s shown on this brand&apos;s portal.
         </p>
         <Link
           href="/admin/settings/team"
           target="_blank"
-          className="text-[12px] underline text-[var(--color-muted)] shrink-0 ml-3"
+          className="text-[12px] underline text-[var(--color-muted-text)] shrink-0 ml-3"
         >
           + New team member
         </Link>
       </div>
 
       {loadingOptions ? (
-        <p className="text-[13px] text-[var(--color-muted)] mt-3">Loading…</p>
+        <p className="text-[13px] text-[var(--color-muted-text)] mt-3">Loading…</p>
       ) : teamMembers.length === 0 ? (
-        <p className="text-[13px] text-[var(--color-muted)] mt-3">
+        <p className="text-[13px] text-[var(--color-muted-text)] mt-3">
           No team members yet — add some via the &quot;+ New team member&quot; link above.
         </p>
       ) : (
@@ -105,7 +105,7 @@ export function CompanyTeamForm({
                 </div>
                 <div>
                   <p className="text-[13.5px] font-semibold text-[var(--color-ink)]">{t.name}</p>
-                  <p className="text-[12px] text-[var(--color-muted)]">{t.role}</p>
+                  <p className="text-[12px] text-[var(--color-muted-text)]">{t.role}</p>
                 </div>
               </label>
             );

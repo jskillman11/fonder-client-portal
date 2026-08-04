@@ -29,7 +29,7 @@ export default async function CompanyClientsPage({
         <NewClientForm companies={[company]} />
       </div>
       {clients.length === 0 ? (
-        <p className="text-[13px] text-[var(--color-muted)]">No clients yet for this company.</p>
+        <p className="text-[13px] text-[var(--color-muted-text)]">No clients yet for this company.</p>
       ) : (
         <div className="-mx-2">
           {clients.map((c) => (

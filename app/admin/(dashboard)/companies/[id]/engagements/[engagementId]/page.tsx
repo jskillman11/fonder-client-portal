@@ -24,7 +24,7 @@ export default async function EngagementDetailPage({
           <h1 className="text-[19px] font-bold text-[var(--color-ink)]">
             {engagement.engagementTitle}
           </h1>
-          <p className="text-[13px] text-[var(--color-muted)]">{engagement.companyName}</p>
+          <p className="text-[13px] text-[var(--color-muted-text)]">{engagement.companyName}</p>
         </div>
         <EngagementOverviewForm
           engagementId={engagement.id}
@@ -45,7 +45,7 @@ export default async function EngagementDetailPage({
         <Card className="px-9 py-9">
           <h2 className="text-[16px] font-bold text-[var(--color-ink)] mb-4">Invoice</h2>
           {!engagement.totalFeeAmount ? (
-            <p className="text-[13px] text-[var(--color-muted)]">
+            <p className="text-[13px] text-[var(--color-muted-text)]">
               Set a numeric total fee above and save, then come back here to create the invoice.
             </p>
           ) : engagement.qbInvoiceId ? (
@@ -54,12 +54,12 @@ export default async function EngagementDetailPage({
                 {engagement.invoicePaidAt ? "Paid" : "Awaiting payment"}
               </p>
               {engagement.invoiceSentAt && (
-                <p className="text-[13px] text-[var(--color-muted)]">
+                <p className="text-[13px] text-[var(--color-muted-text)]">
                   Sent {new Date(engagement.invoiceSentAt).toLocaleDateString()}
                 </p>
               )}
               {engagement.invoicePaidAt && (
-                <p className="text-[13px] text-[var(--color-muted)]">
+                <p className="text-[13px] text-[var(--color-muted-text)]">
                   Paid {new Date(engagement.invoicePaidAt).toLocaleDateString()}
                 </p>
               )}

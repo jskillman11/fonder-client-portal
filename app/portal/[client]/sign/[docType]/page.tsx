@@ -42,7 +42,7 @@ export default async function SignDocumentPage({
       <div className="max-w-2xl mx-auto space-y-3">
         <Link
           href={`/portal/${client}/app/home`}
-          className="inline-block text-[13px] text-[var(--color-muted)] hover:text-[var(--color-ink)]"
+          className="inline-block text-[13px] text-[var(--color-muted-text)] hover:text-[var(--color-ink)]"
         >
           ← Back to portal
         </Link>

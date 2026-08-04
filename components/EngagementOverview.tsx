@@ -21,13 +21,13 @@ export function EngagementOverview({
       <h2 className="text-[19px] font-bold text-[var(--color-ink)] mb-1">
         {heading}
       </h2>
-      <p className="text-[14px] text-[var(--color-muted)] mb-6">
+      <p className="text-[14px] text-[var(--color-muted-text)] mb-6">
         {subheading}
       </p>
 
       {scopeSummary && (
         <div className="mb-6">
-          <p className="text-[12px] font-semibold uppercase tracking-wide text-[var(--color-muted)] mb-1">
+          <p className="text-[12px] font-semibold uppercase tracking-wide text-[var(--color-muted-text)] mb-1">
             Scope
           </p>
           <p className="text-[14px] text-[var(--color-ink)] leading-relaxed">
@@ -38,7 +38,7 @@ export function EngagementOverview({
 
       {milestones.length > 0 && (
         <div className="mb-6">
-          <p className="text-[12px] font-semibold uppercase tracking-wide text-[var(--color-muted)] mb-2">
+          <p className="text-[12px] font-semibold uppercase tracking-wide text-[var(--color-muted-text)] mb-2">
             Schedule
           </p>
           <div className="space-y-2">
@@ -63,7 +63,7 @@ export function EngagementOverview({
 
       <div className="flex items-center justify-between rounded-[14px] bg-[var(--color-cream)] px-5 py-4">
         <div>
-          <p className="text-[12px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+          <p className="text-[12px] font-semibold uppercase tracking-wide text-[var(--color-muted-text)]">
             Total fee
           </p>
           <p className="text-[15px] font-semibold text-[var(--color-ink)]">
@@ -71,7 +71,7 @@ export function EngagementOverview({
           </p>
         </div>
         <div className="text-right">
-          <p className="text-[12px] font-semibold uppercase tracking-wide text-[var(--color-muted)]">
+          <p className="text-[12px] font-semibold uppercase tracking-wide text-[var(--color-muted-text)]">
             Final delivery
           </p>
           <p className="text-[15px] font-semibold text-[var(--color-ink)]">

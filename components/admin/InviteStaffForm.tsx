@@ -7,7 +7,7 @@ import { PillButton } from "@/components/PillButton";
 
 const inputClass =
   "w-full mt-1 rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-[14px]";
-const labelClass = "text-[13px] font-medium text-[var(--color-muted)]";
+const labelClass = "text-[13px] font-medium text-[var(--color-muted-text)]";
 
 export function InviteStaffForm() {
   const router = useRouter();
@@ -56,7 +56,7 @@ export function InviteStaffForm() {
             className={inputClass}
           />
         </div>
-        <label className="flex items-center gap-2 text-[13px] text-[var(--color-muted)]">
+        <label className="flex items-center gap-2 text-[13px] text-[var(--color-muted-text)]">
           <input
             type="checkbox"
             checked={makeSuperAdmin}

@@ -10,7 +10,7 @@ export default function ChangeRequestPage() {
         <h1 className="text-[19px] font-bold text-[var(--color-ink)] mb-2">
           Request a change
         </h1>
-        <p className="text-[14px] text-[var(--color-muted)] leading-relaxed mb-6">
+        <p className="text-[14px] text-[var(--color-muted-text)] leading-relaxed mb-6">
           Request a new date and priority for a change to your project. We&apos;ll show you which
           tasks are affected, the new timeline, and any budget impact — you decide whether to
           accept before anything changes.
@@ -18,7 +18,7 @@ export default function ChangeRequestPage() {
 
         <div className="grid grid-cols-2 gap-4 mb-4 opacity-50 pointer-events-none">
           <div>
-            <label className="text-[13px] font-medium text-[var(--color-muted)]">
+            <label className="text-[13px] font-medium text-[var(--color-muted-text)]">
               Requested date
             </label>
             <input
@@ -28,7 +28,7 @@ export default function ChangeRequestPage() {
             />
           </div>
           <div>
-            <label className="text-[13px] font-medium text-[var(--color-muted)]">
+            <label className="text-[13px] font-medium text-[var(--color-muted-text)]">
               Priority
             </label>
             <select
@@ -53,7 +53,7 @@ export default function ChangeRequestPage() {
         <p className="text-[12px] font-semibold uppercase tracking-wide text-[var(--color-faint)] mb-3">
           Once built, this will show
         </p>
-        <ul className="space-y-2 text-[13.5px] text-[var(--color-muted)]">
+        <ul className="space-y-2 text-[13.5px] text-[var(--color-muted-text)]">
           <li>— Which task(s) are affected by this change</li>
           <li>— Their new timelines</li>
           <li>— Any impact to the project budget</li>

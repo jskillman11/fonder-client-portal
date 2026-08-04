@@ -34,7 +34,7 @@ export default async function AdminHomePage() {
           {stats.map((s) => (
             <Card key={s.label} className="px-5 py-4">
               <p className="text-2xl font-bold text-[var(--color-ink)]">{s.value}</p>
-              <p className="text-[13px] text-[var(--color-muted)]">{s.label}</p>
+              <p className="text-[13px] text-[var(--color-muted-text)]">{s.label}</p>
             </Card>
           ))}
         </div>
@@ -53,7 +53,7 @@ export default async function AdminHomePage() {
           <h2 className="text-[15px] font-semibold text-[var(--color-ink)] mb-2">Recent engagements</h2>
           {recent.length === 0 ? (
             <Card className="px-7 py-9 text-center">
-              <p className="text-[14px] text-[var(--color-muted)]">No engagements yet.</p>
+              <p className="text-[14px] text-[var(--color-muted-text)]">No engagements yet.</p>
             </Card>
           ) : (
             <Card className="px-7 py-2">
@@ -65,9 +65,9 @@ export default async function AdminHomePage() {
                 >
                   <div>
                     <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">{e.engagementTitle}</p>
-                    <p className="text-[13px] text-[var(--color-muted)]">{e.companyName}</p>
+                    <p className="text-[13px] text-[var(--color-muted-text)]">{e.companyName}</p>
                   </div>
-                  <span className="text-[12px] uppercase tracking-wide text-[var(--color-muted)]">{e.status}</span>
+                  <span className="text-[12px] uppercase tracking-wide text-[var(--color-muted-text)]">{e.status}</span>
                 </Link>
               ))}
             </Card>

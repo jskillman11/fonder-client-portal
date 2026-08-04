@@ -21,7 +21,7 @@ import type { Company } from "@/lib/companies-clients";
 
 const inputClass =
   "w-full mt-1 rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-[14px]";
-const labelClass = "text-[13px] font-medium text-[var(--color-muted)]";
+const labelClass = "text-[13px] font-medium text-[var(--color-muted-text)]";
 
 export function EditCompanyForm({ company }: { company: Company }) {
   const router = useRouter();
@@ -117,7 +117,7 @@ export function EditCompanyForm({ company }: { company: Company }) {
                 <AvatarImage src={company.logoUrl} alt={company.name} className="rounded-lg object-cover" />
                 <AvatarFallback className="rounded-lg">{company.name.charAt(0).toUpperCase()}</AvatarFallback>
               </Avatar>
-              <p className="text-[12px] text-[var(--color-muted)]">Current logo</p>
+              <p className="text-[12px] text-[var(--color-muted-text)]">Current logo</p>
               <button
                 type="button"
                 onClick={handleRemoveLogo}
@@ -133,7 +133,7 @@ export function EditCompanyForm({ company }: { company: Company }) {
             onChange={(e) => setLogo(e.target.files?.[0] ?? null)}
             className="w-full mt-1 text-[13px]"
           />
-          <p className="text-[12px] text-[var(--color-muted)] mt-2 mb-1">Or fetch from website</p>
+          <p className="text-[12px] text-[var(--color-muted-text)] mt-2 mb-1">Or fetch from website</p>
           <input
             value={logoDomain}
             onChange={(e) => setLogoDomain(e.target.value)}
@@ -149,7 +149,7 @@ export function EditCompanyForm({ company }: { company: Company }) {
               onChange={(e) => setLogoBackgroundColor(e.target.value)}
               className="h-7 w-10 rounded border border-[var(--color-border)] p-0.5"
             />
-            <p className="text-[12px] text-[var(--color-muted)]">
+            <p className="text-[12px] text-[var(--color-muted-text)]">
               Fills in transparent areas of the logo — applies on next save.
             </p>
           </div>

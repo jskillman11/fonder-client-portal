@@ -21,7 +21,7 @@ import type { TeamMemberRecord } from "@/lib/team-members";
 
 const inputClass =
   "w-full mt-1 rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-[14px]";
-const labelClass = "text-[13px] font-medium text-[var(--color-muted)]";
+const labelClass = "text-[13px] font-medium text-[var(--color-muted-text)]";
 
 export function EditTeamMemberForm({ teamMember }: { teamMember: TeamMemberRecord }) {
   const router = useRouter();

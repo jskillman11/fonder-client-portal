@@ -15,7 +15,7 @@ export function TeamIntro({
       <h2 className="text-[19px] font-bold text-[var(--color-ink)] mb-1">
         {heading}
       </h2>
-      <p className="text-[14px] text-[var(--color-muted)] mb-6">
+      <p className="text-[14px] text-[var(--color-muted-text)] mb-6">
         {subheading}
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -42,7 +42,7 @@ export function TeamIntro({
             <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">
               {member.name}
             </p>
-            <p className="text-[13px] text-[var(--color-muted)]">
+            <p className="text-[13px] text-[var(--color-muted-text)]">
               {member.role}
             </p>
             {member.blurb && (

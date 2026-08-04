@@ -37,7 +37,7 @@ export function SimulatePaymentButton({
       <button
         onClick={handleClick}
         disabled={status === "working"}
-        className="text-[12px] font-medium text-[var(--color-muted)] underline"
+        className="text-[12px] font-medium text-[var(--color-muted-text)] underline"
       >
         {status === "working" ? "Simulating…" : "Simulate payment (sandbox testing)"}
       </button>

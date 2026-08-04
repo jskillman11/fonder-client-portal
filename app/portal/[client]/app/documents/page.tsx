@@ -67,7 +67,7 @@ export default async function DocumentsPage({
         <Card key={e.id} className="px-9 py-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-[16px] font-bold text-[var(--color-ink)]">{e.engagementTitle}</h2>
-            <span className="text-[12px] text-[var(--color-muted)] capitalize">{e.status}</span>
+            <span className="text-[12px] text-[var(--color-muted-text)] capitalize">{e.status}</span>
           </div>
           <div className="space-y-3">
             {(e.sowSigned || e.sowDocumentPath) && (

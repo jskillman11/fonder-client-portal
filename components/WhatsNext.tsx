@@ -60,7 +60,7 @@ export function WhatsNext({
       <h2 className="text-[19px] font-bold text-[var(--color-ink)] mb-1">
         {heading}
       </h2>
-      <p className="text-[14px] text-[var(--color-muted)] mb-6">
+      <p className="text-[14px] text-[var(--color-muted-text)] mb-6">
         {subheading}
       </p>
       <div className="space-y-4">
@@ -89,7 +89,7 @@ export function WhatsNext({
                   <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">
                     {step.title}
                   </p>
-                  <p className="text-[13.5px] text-[var(--color-muted)] leading-relaxed">
+                  <p className="text-[13.5px] text-[var(--color-muted-text)] leading-relaxed">
                     {step.body}
                   </p>
 
@@ -155,7 +155,7 @@ export function WhatsNext({
           <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">
             Onboarding completed
           </p>
-          <p className="text-[13px] text-[var(--color-muted)] mt-0.5">
+          <p className="text-[13px] text-[var(--color-muted-text)] mt-0.5">
             You&apos;re all set — explore the rest of your portal using the tabs above.
           </p>
         </div>

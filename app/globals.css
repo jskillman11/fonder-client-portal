@@ -13,7 +13,7 @@
   --color-white: oklch(1 0 0);
   --color-ink: oklch(0.145 0 0);
   --color-border: oklch(0.922 0 0);
-  --color-muted: oklch(0.556 0 0);
+  --color-muted-text: oklch(0.556 0 0);
   --color-faint: oklch(0.708 0 0);
   --radius-card: 22px;
   --radius-logo: 12px;
@@ -58,11 +58,22 @@
   --color-white: var(--color-white);
   --color-ink: var(--color-ink);
   --color-border: var(--color-border);
-  --color-muted: var(--color-muted);
+  --color-muted-text: var(--color-muted-text);
   --color-faint: var(--color-faint);
   --font-sans: var(--font-sans);
 
   --color-background: var(--background);
+  /* Was previously unmapped: --color-muted-text (this app's own token, used
+     directly via var(--color-muted-text) across ~50 files for muted TEXT)
+     used to be declared under this SAME key as the generic Tailwind
+     `--color-muted` slot, silently overriding it. That made shadcn's stock
+     bg-muted (meant to be a light background) resolve to a medium-dark
+     gray meant for text -- identical in value to --color-muted-foreground,
+     so anything using bg-muted + text-muted-foreground together (e.g.
+     Avatar's fallback) rendered invisible text on a same-color background.
+     This mapping restores bg-muted to what shadcn components actually
+     expect. */
+  --color-muted: var(--muted);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);

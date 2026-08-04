@@ -50,7 +50,7 @@ export function ClientRow({
           <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">
             {client.firstName} {client.lastName}
           </p>
-          <p className="text-[13px] text-[var(--color-muted)]">
+          <p className="text-[13px] text-[var(--color-muted-text)]">
             {client.companyName} · {client.email}
           </p>
           {access && (
