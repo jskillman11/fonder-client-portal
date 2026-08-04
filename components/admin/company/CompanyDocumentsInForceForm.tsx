@@ -37,7 +37,11 @@ export function CompanyDocumentsInForceForm({
     const res = await fetch("/api/admin/update-company-settings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ companyId, sowDocumentId, msaDocumentId }),
+      body: JSON.stringify({
+        companyId,
+        sowDocumentId: sowDocumentId || null,
+        msaDocumentId: msaDocumentId || null,
+      }),
     });
     const data = await res.json();
 

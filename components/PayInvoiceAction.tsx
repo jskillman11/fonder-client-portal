@@ -1,9 +1,17 @@
+import { SimulatePaymentButton } from "./SimulatePaymentButton";
+
 export function PayInvoiceAction({
   invoiceLink,
   invoicePaid,
+  engagementId,
+  canSimulate,
+  onSimulated,
 }: {
   invoiceLink: string | null;
   invoicePaid: boolean;
+  engagementId?: string;
+  canSimulate?: boolean;
+  onSimulated?: () => void;
 }) {
   if (invoicePaid) {
     return (
@@ -26,6 +34,9 @@ export function PayInvoiceAction({
         >
           Pay invoice
         </a>
+        {canSimulate && engagementId && (
+          <SimulatePaymentButton engagementId={engagementId} onSimulated={onSimulated} />
+        )}
       </div>
     );
   }

@@ -21,7 +21,12 @@ export function SigningSession({
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
+    // AbortController actually cancels the in-flight request on cleanup --
+    // not just a `cancelled` flag guarding the state update after the fact.
+    // Matters here specifically because this request has a real side effect
+    // (creates a DocuSeal submission, resets sow/msa_signed_at) -- React's
+    // dev-mode double-invoke of effects would otherwise fire it twice.
+    const controller = new AbortController();
 
     async function startSigning() {
       try {
@@ -29,9 +34,9 @@ export function SigningSession({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ clientSlug, docType }),
+          signal: controller.signal,
         });
         const data = await res.json();
-        if (cancelled) return;
 
         if (!res.ok) {
           setStatus("error");
@@ -45,17 +50,16 @@ export function SigningSession({
         setEmbedSrc(data.embedSrc);
         setSubmitterEmail(data.submitterEmail);
         setStatus("ready");
-      } catch {
-        if (!cancelled) {
-          setStatus("error");
-          setErrorDetail("Couldn't reach the signing service.");
-        }
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        setStatus("error");
+        setErrorDetail("Couldn't reach the signing service.");
       }
     }
 
     startSigning();
     return () => {
-      cancelled = true;
+      controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

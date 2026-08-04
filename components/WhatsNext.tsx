@@ -26,6 +26,8 @@ export function WhatsNext({
   kickoffStartTime,
   qbInvoiceLink,
   invoicePaid,
+  engagementId,
+  canSimulatePayment,
 }: {
   heading: string;
   subheading: string;
@@ -46,9 +48,12 @@ export function WhatsNext({
   kickoffStartTime: string | null;
   qbInvoiceLink: string | null;
   invoicePaid: boolean;
+  engagementId: string;
+  canSimulatePayment?: boolean;
 }) {
   const [booked, setBooked] = useState(kickoffBooked);
-  const allStepsComplete = docsSigned && booked && invoicePaid;
+  const [paid, setPaid] = useState(invoicePaid);
+  const allStepsComplete = docsSigned && booked && paid;
 
   return (
     <Card className="px-9 py-9 md:px-12 md:py-10">
@@ -60,7 +65,12 @@ export function WhatsNext({
       </p>
       <div className="space-y-4">
         {steps.map((step, i) => {
-          const locked = i > 0 && !docsSigned;
+          // Sequential, not "everything after step 1 unlocks together": step
+          // 2 (pay invoice) gates on docs signed; step 3 (kickoff) gates on
+          // top of that on the invoice actually being paid, not just reached.
+          const lockedStep2 = !docsSigned;
+          const lockedStep3 = !docsSigned || !paid;
+          const locked = i === 1 ? lockedStep2 : i === 2 ? lockedStep3 : false;
 
           return (
             <div
@@ -100,16 +110,24 @@ export function WhatsNext({
                   {i === 1 &&
                     (locked ? (
                       <p className="text-[12px] text-[var(--color-faint)] mt-3">
-                        Unlocks once your documents are sent for signature.
+                        Unlocks once your documents are signed.
                       </p>
                     ) : (
-                      <PayInvoiceAction invoiceLink={qbInvoiceLink} invoicePaid={invoicePaid} />
+                      <PayInvoiceAction
+                        invoiceLink={qbInvoiceLink}
+                        invoicePaid={paid}
+                        engagementId={engagementId}
+                        canSimulate={canSimulatePayment}
+                        onSimulated={() => setPaid(true)}
+                      />
                     ))}
 
                   {i === 2 &&
                     (locked ? (
                       <p className="text-[12px] text-[var(--color-faint)] mt-3">
-                        Unlocks once your documents are sent for signature.
+                        {!docsSigned
+                          ? "Unlocks once your documents are signed."
+                          : "Unlocks once your invoice is paid."}
                       </p>
                     ) : (
                       calLink && (

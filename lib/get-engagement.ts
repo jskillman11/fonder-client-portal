@@ -98,7 +98,7 @@ export async function getEngagement(
   const { data: company, error: companyError } = await supabase
     .from("companies")
     .select(
-      "id, name, logo_storage_path, sow_document_id, msa_document_id, lock_portal_tabs, shared_drive_url, tab_lock_overrides, sow_signed_at, msa_signed_at, kickoff_booked_at, kickoff_start_time, sow_doc:sow_document_id(content_markdown), msa_doc:msa_document_id(content_markdown)",
+      "id, name, logo_storage_path, sow_document_id, msa_document_id, lock_portal_tabs, shared_drive_url, tab_lock_overrides, sow_doc:sow_document_id(content_markdown), msa_doc:msa_document_id(content_markdown)",
     )
     .eq("client_slug", clientSlug)
     .single();
@@ -164,10 +164,10 @@ export async function getEngagement(
     clientLogoUrl,
     sowContentMarkdown: sowDoc?.content_markdown ?? null,
     msaContentMarkdown: msaDoc?.content_markdown ?? null,
-    sowSigned: Boolean(company.sow_signed_at),
-    msaSigned: Boolean(company.msa_signed_at),
-    kickoffBooked: Boolean(company.kickoff_booked_at),
-    kickoffStartTime: company.kickoff_start_time,
+    sowSigned: Boolean(engagement.sow_signed_at),
+    msaSigned: Boolean(engagement.msa_signed_at),
+    kickoffBooked: Boolean(engagement.kickoff_booked_at),
+    kickoffStartTime: engagement.kickoff_start_time,
     kickoffEarliestDate: engagement.kickoff_earliest_date,
     scopeSummary: engagement.scope_summary,
     lockPortalTabs: company.lock_portal_tabs,

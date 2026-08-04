@@ -3,8 +3,9 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-// Server-side client that respects the logged-in user's session -- used only
-// to check "is someone logged in" (e.g. in middleware, or the admin pages).
+// Server-side client that respects the logged-in user's session -- used to
+// check "is someone logged in" from admin pages, portal pages, and API
+// routes alike.
 export async function createServerAuthClient() {
   const cookieStore = await cookies();
   return createServerClient(
@@ -14,9 +15,21 @@ export async function createServerAuthClient() {
       cookies: {
         getAll: () => cookieStore.getAll(),
         setAll: (cookiesToSet) => {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options),
-          );
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options),
+            );
+          } catch {
+            // setAll was called from a Server Component during render --
+            // Next.js only allows cookie writes from a Server Action, Route
+            // Handler, or Middleware. Safe to ignore here: this call is just
+            // Supabase opportunistically persisting a refreshed session
+            // token; without it, that read simply falls back to the
+            // existing (possibly soon-to-expire) cookie, which the next
+            // Route Handler/Server Action call will refresh instead. This
+            // repo has no middleware.ts to refresh sessions proactively on
+            // every request, so this path can be hit fairly routinely.
+          }
         },
       },
     },

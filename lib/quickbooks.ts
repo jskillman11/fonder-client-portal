@@ -281,6 +281,39 @@ function toWorkingInvoiceLink(rawLink: string | undefined): string | null {
   );
 }
 
+// Records a real QuickBooks Payment against an invoice, for sandbox testing
+// only -- QuickBooks' own sandbox does not actually process card payments
+// through the hosted invoice page (confirmed by live testing, see
+// SETUP.md), so this is the only way to reach a genuinely-paid invoice
+// state there. This IS a real accounting entry (not a mock), which is
+// exactly why it must never run against a production connection -- callers
+// must check the environment before calling this.
+export async function recordTestPayment({
+  customerId,
+  invoiceId,
+  amount,
+}: {
+  customerId: string;
+  invoiceId: string;
+  amount: number;
+}): Promise<{ paymentId: string }> {
+  const created = await qboFetch<{ Payment: { Id: string } }>(`/payment?minorversion=${MINOR_VERSION}`, {
+    method: "POST",
+    body: JSON.stringify({
+      CustomerRef: { value: customerId },
+      TotalAmt: amount,
+      Line: [
+        {
+          Amount: amount,
+          LinkedTxn: [{ TxnId: invoiceId, TxnType: "Invoice" }],
+        },
+      ],
+    }),
+  });
+
+  return { paymentId: created.Payment.Id };
+}
+
 export async function getInvoice(id: string): Promise<{ id: string; balance: number; totalAmt: number }> {
   const result = await qboFetch<{ Invoice: QuickBooksInvoice }>(
     `/invoice/${id}?minorversion=${MINOR_VERSION}`,

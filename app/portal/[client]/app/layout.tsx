@@ -24,17 +24,20 @@ export default async function ClientAppLayout({
     return <AccessGate clientSlug={client} />;
   }
 
-  // The global tab unlock requires the whole onboarding flow done -- not
-  // just documents signed. Steps 1 (Pay invoice) and 2 (Schedule kickoff)
-  // unlock together once documents are signed (step 2 has nothing of its
-  // own to complete yet, pending real invoicing), but the OTHER portal tabs
-  // (Tasks/Chat/Invoices/Deliverables/etc.) stay locked until a kickoff is
-  // actually booked -- a real, persisted Cal.com booking, not just reaching
-  // the step (see components/KickoffScheduler.tsx).
+  // The global tab unlock requires the whole onboarding flow done: documents
+  // signed, invoice paid, AND kickoff actually booked (a real, persisted
+  // Cal.com booking, not just reaching the step -- see
+  // components/KickoffScheduler.tsx). A missing SOW or MSA trivially
+  // satisfies its own half of docsSigned (a company using only one of the
+  // two shouldn't be blocked on the other), but that must not extend to
+  // having neither -- hasAnyDoc guards against that (mirrors the identical
+  // check in app/portal/[client]/app/page.tsx).
+  const hasAnyDoc = Boolean(engagement.sowContentMarkdown) || Boolean(engagement.msaContentMarkdown);
   const docsSigned =
+    hasAnyDoc &&
     (!engagement.sowContentMarkdown || engagement.sowSigned) &&
     (!engagement.msaContentMarkdown || engagement.msaSigned);
-  const onboardingComplete = docsSigned && engagement.kickoffBooked;
+  const onboardingComplete = docsSigned && engagement.invoicePaid && engagement.kickoffBooked;
 
   return (
     <ClientAppNav

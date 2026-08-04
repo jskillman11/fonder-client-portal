@@ -84,12 +84,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true });
   }
 
-  const signedColumn = docType === "sow" ? "sow_signed_at" : "msa_signed_at";
+  // Signing completion is engagement-scoped (per-contract), not
+  // company-scoped -- the webhook only carries a companyId (encoded at
+  // submission-creation time), so resolve that company's currently active
+  // engagement here rather than writing to the company itself.
   const supabase = createServiceClient();
+  const { data: activeEngagement } = await supabase
+    .from("engagements")
+    .select("id")
+    .eq("company_id", companyId)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (!activeEngagement) {
+    console.log("DocuSeal webhook: no active engagement for company", { companyId });
+    return NextResponse.json({ received: true });
+  }
+
+  const signedColumn = docType === "sow" ? "sow_signed_at" : "msa_signed_at";
   await supabase
-    .from("companies")
+    .from("engagements")
     .update({ [signedColumn]: new Date().toISOString() })
-    .eq("id", companyId);
+    .eq("id", activeEngagement.id);
 
   return NextResponse.json({ received: true });
 }

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getEngagement } from "@/lib/get-engagement";
 import { getPortalCopy, renderTemplate } from "@/lib/portal-copy";
+import { hasPortalAccess } from "@/lib/supabase/server";
 import { WelcomeHero } from "@/components/WelcomeHero";
 import { EngagementOverview } from "@/components/EngagementOverview";
 import { TeamIntro } from "@/components/TeamIntro";
@@ -14,16 +15,31 @@ export default async function OnboardingTabPage({
   params: Promise<{ client: string }>;
 }) {
   const { client } = await params;
-  const [engagement, copy] = await Promise.all([
+  const [engagement, copy, { isAdmin }] = await Promise.all([
     getEngagement(client),
     getPortalCopy(),
+    hasPortalAccess(client),
   ]);
 
   if (!engagement) {
     notFound();
   }
 
+  // "Simulate payment" is a testing escape hatch for QuickBooks' sandbox,
+  // which cannot actually process a card payment through the hosted invoice
+  // page (see SETUP.md) -- restricted to staff previewing the portal, never
+  // a real client's magic-link session, and hard-blocked once
+  // QUICKBOOKS_ENVIRONMENT is "production" (the API route enforces this too).
+  const canSimulatePayment = isAdmin && process.env.QUICKBOOKS_ENVIRONMENT !== "production";
+
+  // A missing SOW or MSA trivially satisfies its own half of this check (a
+  // company using only one of the two shouldn't be blocked on the other),
+  // but that must not extend to having neither -- with nothing to sign, both
+  // halves would trivially pass and steps 2/3 would unlock instantly, with
+  // step 1 itself rendering empty. hasAnyDoc guards against that.
+  const hasAnyDoc = Boolean(engagement.sowContentMarkdown) || Boolean(engagement.msaContentMarkdown);
   const docsSigned =
+    hasAnyDoc &&
     (!engagement.sowContentMarkdown || engagement.sowSigned) &&
     (!engagement.msaContentMarkdown || engagement.msaSigned);
 
@@ -80,6 +96,8 @@ export default async function OnboardingTabPage({
         kickoffStartTime={engagement.kickoffStartTime}
         qbInvoiceLink={engagement.qbInvoiceLink}
         invoicePaid={engagement.invoicePaid}
+        engagementId={engagement.id}
+        canSimulatePayment={canSimulatePayment}
       />
     </div>
   );

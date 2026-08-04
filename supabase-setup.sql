@@ -2,7 +2,7 @@
 -- Run this once, in the SQL Editor of a fresh Supabase project.
 --
 -- This file is kept CURRENT — it reproduces the full schema as it stands
--- today (post stage2 through stage9), not just the original v1 schema.
+-- today (post stage2 through stage10), not just the original v1 schema.
 -- The individual supabase-stage*.sql files remain in the repo as the
 -- historical record of how the live project got here incrementally (each
 -- already ran against production); this file is what you'd run instead if
@@ -13,8 +13,11 @@
 -- Companies: a brand/organization, reusable across engagements over time.
 -- Holds everything that's a property of the ongoing brand relationship
 -- rather than a specific contract: the stable portal routing slug, which
--- SOW/MSA is currently in force, shared drive link, portal tab-lock
--- settings, real e-signature completion, and kickoff-booking completion.
+-- SOW/MSA is currently in force, shared drive link, and portal tab-lock
+-- settings. Real e-signature completion and kickoff-booking completion live
+-- on engagements instead (added below) -- they're per-contract state, not
+-- brand-relationship state; a new engagement must not inherit "already
+-- signed"/"already booked" from a previous, unrelated one.
 -- companies and documents reference each other (a company points at its
 -- in-force sow_document_id/msa_document_id; a document points back at its
 -- owning company) -- created without the cross-reference first, then
@@ -28,10 +31,6 @@ create table companies (
   lock_portal_tabs boolean not null default true, -- locks client portal app tabs until documents are signed + kickoff booked
   shared_drive_url text, -- Google Drive folder link for the Shared Drive tab
   tab_lock_overrides jsonb not null default '{}'::jsonb, -- per-tab lock overrides, keyed by tab key ("locked"/"unlocked"); absent = follow lock_portal_tabs
-  sow_signed_at timestamptz, -- set by the DocuSeal completion webhook once the client actually signs the SOW
-  msa_signed_at timestamptz, -- set by the DocuSeal completion webhook once the client actually signs the MSA
-  kickoff_booked_at timestamptz, -- set once a real Cal.com kickoff booking completes
-  kickoff_start_time timestamptz, -- the booked meeting's start time, for display
   qb_customer_id text, -- this company's QuickBooks Customer id, reusable across engagements
   created_at timestamptz not null default now()
 );
@@ -68,6 +67,8 @@ alter table companies add column msa_document_id uuid references documents(id); 
 -- partial unique index below) -- team, documents-in-force, shared drive,
 -- and portal-lock settings all live on companies instead, since they're
 -- properties of the ongoing brand relationship, not a specific contract.
+-- Signing/kickoff/invoicing completion all live here, though, since each is
+-- specific to this one contract period.
 create table engagements (
   id uuid primary key default gen_random_uuid(),
   company_id uuid references companies(id),
@@ -82,6 +83,10 @@ create table engagements (
   kickoff_earliest_date date, -- opens the Cal.com scheduling embed to this month by default
   scope_summary text, -- short admin-written scope description for the portal Overview section
   status text not null default 'active' check (status in ('active', 'completed')),
+  sow_signed_at timestamptz, -- set by the DocuSeal completion webhook once the client actually signs the SOW
+  msa_signed_at timestamptz, -- set by the DocuSeal completion webhook once the client actually signs the MSA
+  kickoff_booked_at timestamptz, -- set once a real Cal.com kickoff booking completes
+  kickoff_start_time timestamptz, -- the booked meeting's start time, for display
   qb_invoice_id text, -- this engagement's QuickBooks Invoice id, once created
   qb_invoice_link text, -- QuickBooks' own hosted pay-page URL for that invoice
   invoice_sent_at timestamptz, -- set when an admin creates/sends the invoice
