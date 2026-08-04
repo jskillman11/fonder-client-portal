@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getEngagement, computeDocsSigned } from "@/lib/get-engagement";
-import { hasPortalAccess } from "@/lib/supabase/server";
+import { hasPortalAccess, getAdminUser } from "@/lib/supabase/server";
+import { getClient } from "@/lib/companies-clients";
 import { AccessGate } from "@/components/AccessGate";
 import { ClientAppNav } from "@/components/portal-app/ClientAppNav";
 import { ClientAccountMenu } from "@/components/portal-app/ClientAccountMenu";
@@ -24,6 +25,9 @@ export default async function ClientAppLayout({
     return <AccessGate clientSlug={client} />;
   }
 
+  const adminUser = isAdmin ? await getAdminUser() : null;
+  const clientRecord = !isAdmin && engagement.clientId ? await getClient(engagement.clientId) : null;
+
   // The global tab unlock requires the whole onboarding flow done: documents
   // signed, invoice paid, AND kickoff actually booked (a real, persisted
   // Cal.com booking, not just reaching the step -- see
@@ -34,6 +38,9 @@ export default async function ClientAppLayout({
   return (
     <ClientAppNav
       clientSlug={client}
+      companyName={engagement.clientName}
+      companyLogoUrl={engagement.clientLogoUrl}
+      engagementTitle={engagement.engagementTitle}
       lockEnabled={engagement.lockPortalTabs}
       tabLockOverrides={engagement.tabLockOverrides}
       onboardingComplete={onboardingComplete}
@@ -43,6 +50,11 @@ export default async function ClientAppLayout({
           hasSession={!isAdmin}
           isAdmin={isAdmin}
           clientName={engagement.clientSignatoryName}
+          clientEmail={engagement.clientSignatoryEmail}
+          clientAvatarUrl={clientRecord?.avatarUrl}
+          adminEmail={adminUser?.email}
+          adminFullName={adminUser?.fullName}
+          adminAvatarUrl={adminUser?.avatarUrl}
         />
       }
     >

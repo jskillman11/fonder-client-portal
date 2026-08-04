@@ -16,6 +16,13 @@ export default async function SettingsPage() {
 
         <Card className="px-7 py-2">
           <Link
+            href="/admin/settings/profile"
+            className="block py-3 border-b border-[var(--color-border)] -mx-7 px-7 hover:bg-[var(--color-cream)]"
+          >
+            <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">Profile</p>
+            <p className="text-[13px] text-[var(--color-muted)]">Your name and photo</p>
+          </Link>
+          <Link
             href="/admin/settings/team"
             className="block py-3 border-b border-[var(--color-border)] -mx-7 px-7 hover:bg-[var(--color-cream)]"
           >

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Card } from "@/components/Card";
 import { PillButton } from "@/components/PillButton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +27,9 @@ export function EditCompanyForm({ company }: { company: Company }) {
   const router = useRouter();
   const [name, setName] = useState(company.name);
   const [logo, setLogo] = useState<File | null>(null);
-  const [status, setStatus] = useState<"idle" | "saving" | "deleting">("idle");
+  const [logoDomain, setLogoDomain] = useState("");
+  const [logoBackgroundColor, setLogoBackgroundColor] = useState(company.logoBackgroundColor);
+  const [status, setStatus] = useState<"idle" | "saving" | "deleting" | "removingLogo">("idle");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -36,6 +39,8 @@ export function EditCompanyForm({ company }: { company: Company }) {
     formData.append("id", company.id);
     formData.append("name", name);
     if (logo) formData.append("logo", logo);
+    else if (logoDomain.trim()) formData.append("logoDomain", logoDomain.trim());
+    formData.append("logoBackgroundColor", logoBackgroundColor);
 
     const res = await fetch("/api/admin/update-company", { method: "POST", body: formData });
     const data = await res.json();
@@ -46,6 +51,28 @@ export function EditCompanyForm({ company }: { company: Company }) {
       return;
     }
     toast.success("Saved.");
+    setLogoDomain("");
+    setLogo(null);
+    router.refresh();
+  }
+
+  async function handleRemoveLogo() {
+    setStatus("removingLogo");
+
+    const formData = new FormData();
+    formData.append("id", company.id);
+    formData.append("name", name);
+    formData.append("removeLogo", "true");
+
+    const res = await fetch("/api/admin/update-company", { method: "POST", body: formData });
+    const data = await res.json();
+    setStatus("idle");
+
+    if (!res.ok) {
+      toast.error([data.error, data.detail].filter(Boolean).join(" — "));
+      return;
+    }
+    toast.success("Logo removed.");
     router.refresh();
   }
 
@@ -86,9 +113,18 @@ export function EditCompanyForm({ company }: { company: Company }) {
           <label className={labelClass}>Logo</label>
           {company.logoUrl && (
             <div className="flex items-center gap-2 mt-2 mb-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={company.logoUrl} alt={company.name} className="h-8 w-auto max-w-[100px] object-contain" />
-              <p className="text-[12px] text-[var(--color-muted)]">Current logo — upload a new one to replace it.</p>
+              <Avatar className="h-8 w-8 rounded-lg after:rounded-lg">
+                <AvatarImage src={company.logoUrl} alt={company.name} className="rounded-lg object-cover" />
+                <AvatarFallback className="rounded-lg">{company.name.charAt(0).toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <p className="text-[12px] text-[var(--color-muted)]">Current logo</p>
+              <button
+                type="button"
+                onClick={handleRemoveLogo}
+                className="text-[12px] text-[#a32d2d] underline ml-auto"
+              >
+                {status === "removingLogo" ? "Removing…" : "Remove logo"}
+              </button>
             </div>
           )}
           <input
@@ -97,6 +133,26 @@ export function EditCompanyForm({ company }: { company: Company }) {
             onChange={(e) => setLogo(e.target.files?.[0] ?? null)}
             className="w-full mt-1 text-[13px]"
           />
+          <p className="text-[12px] text-[var(--color-muted)] mt-2 mb-1">Or fetch from website</p>
+          <input
+            value={logoDomain}
+            onChange={(e) => setLogoDomain(e.target.value)}
+            className={inputClass}
+            placeholder="coros.com"
+            disabled={!!logo}
+          />
+          <div className="flex items-center gap-2 mt-3">
+            <label className={labelClass}>Background color</label>
+            <input
+              type="color"
+              value={logoBackgroundColor}
+              onChange={(e) => setLogoBackgroundColor(e.target.value)}
+              className="h-7 w-10 rounded border border-[var(--color-border)] p-0.5"
+            />
+            <p className="text-[12px] text-[var(--color-muted)]">
+              Fills in transparent areas of the logo — applies on next save.
+            </p>
+          </div>
         </div>
         <div className="flex justify-between items-center pt-2">
           <AlertDialog>

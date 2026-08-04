@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ChevronsUpDown } from "lucide-react";
+import { ChevronsUpDown, Plus } from "lucide-react";
 import type { Company } from "@/lib/companies-clients";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -33,9 +33,9 @@ export function CompanySwitcher({
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <Avatar className="h-8 w-8 rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+              <Avatar className="h-8 w-8 rounded-lg after:rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                 {activeCompany?.logoUrl && (
-                  <AvatarImage src={activeCompany.logoUrl} alt={activeCompany.name} className="object-cover" />
+                  <AvatarImage src={activeCompany.logoUrl} alt={activeCompany.name} className="rounded-lg object-cover" />
                 )}
                 <AvatarFallback className="rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                   {(activeCompany?.name ?? "Fonder").charAt(0)}
@@ -54,10 +54,6 @@ export function CompanySwitcher({
             sideOffset={4}
           >
             <DropdownMenuLabel className="text-xs text-muted-foreground">Brands</DropdownMenuLabel>
-            <DropdownMenuItem onClick={() => router.push("/admin/companies")} className="gap-2 p-2">
-              Manage brands
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
             {companies.map((c) => (
               <DropdownMenuItem
                 key={c.id}
@@ -67,6 +63,13 @@ export function CompanySwitcher({
                 {c.name}
               </DropdownMenuItem>
             ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => router.push("/admin/companies")} className="gap-2 p-2">
+              <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
+                <Plus className="size-4" />
+              </div>
+              <div className="font-medium text-muted-foreground">Add a brand</div>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

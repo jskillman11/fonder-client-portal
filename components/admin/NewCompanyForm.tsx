@@ -13,6 +13,7 @@ export function NewCompanyForm() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [logo, setLogo] = useState<File | null>(null);
+  const [logoDomain, setLogoDomain] = useState("");
   const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
 
@@ -24,6 +25,7 @@ export function NewCompanyForm() {
     const formData = new FormData();
     formData.append("name", name);
     if (logo) formData.append("logo", logo);
+    else if (logoDomain.trim()) formData.append("logoDomain", logoDomain.trim());
 
     const res = await fetch("/api/admin/create-company", { method: "POST", body: formData });
     const data = await res.json();
@@ -36,6 +38,7 @@ export function NewCompanyForm() {
 
     setName("");
     setLogo(null);
+    setLogoDomain("");
     setStatus("idle");
     router.refresh();
   }
@@ -63,6 +66,16 @@ export function NewCompanyForm() {
             accept="image/*"
             onChange={(e) => setLogo(e.target.files?.[0] ?? null)}
             className="w-full mt-1 text-[13px]"
+          />
+        </div>
+        <div className="flex-1 min-w-[160px]">
+          <label className={labelClass}>Or fetch from website</label>
+          <input
+            value={logoDomain}
+            onChange={(e) => setLogoDomain(e.target.value)}
+            className={inputClass}
+            placeholder="coros.com"
+            disabled={!!logo}
           />
         </div>
         <PillButton type="submit">

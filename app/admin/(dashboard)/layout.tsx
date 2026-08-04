@@ -18,7 +18,13 @@ export default async function DashboardLayout({
     <AdminNav
       companies={companies}
       isSuperAdmin={isSuperAdmin}
-      accountSlot={<AdminAccountMenu email={user?.email ?? ""} />}
+      accountSlot={
+        <AdminAccountMenu
+          email={user?.email ?? ""}
+          fullName={user?.fullName ?? null}
+          avatarUrl={user?.avatarUrl ?? null}
+        />
+      }
     >
       {children}
     </AdminNav>

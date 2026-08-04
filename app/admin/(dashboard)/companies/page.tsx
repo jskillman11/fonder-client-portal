@@ -3,6 +3,8 @@ import { listCompanies } from "@/lib/companies-clients";
 import { Card } from "@/components/Card";
 import { NewCompanyForm } from "@/components/admin/NewCompanyForm";
 import { BackButton } from "@/components/admin/BackButton";
+import { BackfillLogosButton } from "@/components/admin/BackfillLogosButton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,7 @@ export default async function CompaniesPage() {
         </h1>
 
         <NewCompanyForm />
+        <BackfillLogosButton />
 
         {companies.length === 0 ? (
           <Card className="px-9 py-9 text-center">
@@ -33,12 +36,10 @@ export default async function CompaniesPage() {
                 href={`/admin/companies/${c.id}`}
                 className="flex items-center gap-3 py-3 border-b border-[var(--color-border)] last:border-b-0 hover:bg-[var(--color-cream)] -mx-7 px-7"
               >
-                {c.logoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={c.logoUrl} alt={c.name} className="h-6 w-auto max-w-[80px] object-contain" />
-                ) : (
-                  <div className="h-6 w-6 rounded bg-[var(--color-cream)] border border-[var(--color-border)]" />
-                )}
+                <Avatar className="h-6 w-6 rounded-lg after:rounded-lg">
+                  {c.logoUrl && <AvatarImage src={c.logoUrl} alt={c.name} className="rounded-lg object-cover" />}
+                  <AvatarFallback className="rounded-lg">{c.name.charAt(0).toUpperCase()}</AvatarFallback>
+                </Avatar>
                 <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">
                   {c.name}
                 </p>

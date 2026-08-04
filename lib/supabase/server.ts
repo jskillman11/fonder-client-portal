@@ -52,7 +52,9 @@ export function createServiceClient() {
 // there a session" is load-bearing now that clients also get real Supabase
 // Auth accounts (see lib/portal-access.ts) -- any authenticated user without
 // a staff profile row must NOT be treated as staff.
-async function getStaffUser(): Promise<{ id: string; email: string } | null> {
+export type StaffUser = { id: string; email: string; fullName: string | null; avatarUrl: string | null };
+
+async function getStaffUser(): Promise<StaffUser | null> {
   const supabase = await createServerAuthClient();
   const {
     data: { user },
@@ -61,11 +63,20 @@ async function getStaffUser(): Promise<{ id: string; email: string } | null> {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, full_name, avatar_storage_path")
     .eq("id", user.id)
     .single();
 
-  return profile?.role === "staff" ? { id: user.id, email: user.email } : null;
+  if (profile?.role !== "staff") return null;
+
+  return {
+    id: user.id,
+    email: user.email,
+    fullName: profile.full_name,
+    avatarUrl: profile.avatar_storage_path
+      ? supabase.storage.from("engagement-logos").getPublicUrl(profile.avatar_storage_path).data.publicUrl
+      : null,
+  };
 }
 
 // Checks whether the current request has a logged-in Fonder staff session --
@@ -75,11 +86,12 @@ export async function isAdminSession(): Promise<boolean> {
   return Boolean(await getStaffUser());
 }
 
-// Returns the logged-in Fonder admin's id + email, for display in the
-// dashboard shell's account corner and for self-action guards (e.g. "can't
-// remove your own staff account"). Only meaningful under /admin, where
-// middleware already guarantees a logged-in staff user.
-export async function getAdminUser(): Promise<{ id: string; email: string } | null> {
+// Returns the logged-in Fonder admin's id + email + profile (name/avatar,
+// if set), for display in the dashboard shell's account corner and for
+// self-action guards (e.g. "can't remove your own staff account"). Only
+// meaningful under /admin, where middleware already guarantees a logged-in
+// staff user.
+export async function getAdminUser(): Promise<StaffUser | null> {
   return getStaffUser();
 }
 
@@ -170,4 +182,29 @@ export async function hasPortalAccess(
   }
 
   return { authorized: false, isAdmin: false };
+}
+
+// Backstop auth check for app/api/portal/* route handlers that let a client
+// edit their own data -- resolves the CALLER's own client_id from their
+// session rather than trusting a client-supplied id, so one client can't
+// edit another's profile via a manipulated request.
+export async function requireClient(): Promise<{ clientId: string } | NextResponse> {
+  const supabase = await createServerAuthClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, client_id")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.role !== "client" || !profile.client_id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return { clientId: profile.client_id };
 }

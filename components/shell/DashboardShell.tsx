@@ -91,12 +91,7 @@ export function DashboardShell({
     <SidebarProvider>
       <TooltipProvider>
         <Sidebar variant="inset" collapsible="icon">
-          <SidebarHeader>
-            <div className="flex items-center justify-end group-data-[collapsible=icon]:justify-center">
-              <SidebarTrigger />
-            </div>
-            {sidebarTopSlot ?? <BrandHeader />}
-          </SidebarHeader>
+          <SidebarHeader>{sidebarTopSlot ?? <BrandHeader />}</SidebarHeader>
           <SidebarContent>
             {groups.map((group, i) => (
               <SidebarGroup key={`${group.section ?? "ungrouped"}-${i}`}>
@@ -161,7 +156,12 @@ export function DashboardShell({
               </SidebarGroup>
             ))}
           </SidebarContent>
-          <SidebarFooter>{accountSlot}</SidebarFooter>
+          <SidebarFooter>
+            <div className="flex justify-end group-data-[collapsible=icon]:justify-center">
+              <SidebarTrigger />
+            </div>
+            {accountSlot}
+          </SidebarFooter>
           <SidebarRail />
         </Sidebar>
         <SidebarInset>

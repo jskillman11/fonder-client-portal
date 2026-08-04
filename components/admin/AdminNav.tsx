@@ -3,18 +3,7 @@
 import React from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import {
-  Building2,
-  House,
-  Settings,
-  LayoutDashboard,
-  LayoutList,
-  Users,
-  FileText,
-  UserCog,
-  Globe,
-  Receipt,
-} from "lucide-react";
+import { House, LayoutDashboard, LayoutList, Users, FileText, UserCog, Globe, Receipt } from "lucide-react";
 import { DashboardShell, type ShellNavItem } from "@/components/shell/DashboardShell";
 import { CompanySwitcher } from "@/components/admin/CompanySwitcher";
 import {
@@ -28,27 +17,11 @@ import {
 import type { Company } from "@/lib/companies-clients";
 
 function computeNavItems(pathname: string, isSuperAdmin: boolean): ShellNavItem[] {
-  if (pathname.startsWith("/admin/settings")) {
-    return [
-      { href: "/admin", label: "← Home", icon: House },
-      {
-        label: "Settings",
-        icon: Settings,
-        items: [
-          { href: "/admin/settings/team", label: "Team roster" },
-          { href: "/admin/settings/content", label: "Portal content" },
-          ...(isSuperAdmin ? [{ href: "/admin/settings/staff", label: "Staff accounts" }] : []),
-        ],
-      },
-    ];
-  }
-
   const companyMatch = pathname.match(/^\/admin\/companies\/([^/]+)/);
   if (companyMatch) {
     const companyId = companyMatch[1];
     const base = `/admin/companies/${companyId}`;
     return [
-      { href: "/admin/companies", label: "← Companies", icon: Building2 },
       { href: base, label: "Overview", section: "Company", icon: LayoutDashboard },
       { href: `${base}/engagements`, label: "Engagements", section: "Company", icon: LayoutList },
       { href: `${base}/clients`, label: "Clients", section: "Company", icon: Users },
@@ -59,27 +32,42 @@ function computeNavItems(pathname: string, isSuperAdmin: boolean): ShellNavItem[
     ];
   }
 
+  // The Fonder (org-level, no company selected) tabs -- Team roster/Portal
+  // content/Staff accounts are dissolved out of the old collapsible Settings
+  // group now that these ARE the org-level content, not a secondary settings
+  // area buried behind a back-link.
   return [
-    { href: "/admin", label: "Home", icon: House },
-    { href: "/admin/companies", label: "Companies", icon: Building2 },
+    { href: "/admin", label: "Overview", icon: House },
+    { href: "/admin/settings/team", label: "Team roster", icon: Users },
+    { href: "/admin/settings/content", label: "Portal content", icon: FileText },
+    ...(isSuperAdmin ? [{ href: "/admin/settings/staff", label: "Staff accounts", icon: UserCog }] : []),
   ];
 }
 
+// "Fonder" doubles as the way back to the Home dashboard on org-level
+// sub-pages (Team roster, etc.) -- there's no dedicated back-link button
+// anymore, so this crumb is the only path back once a switcher click has
+// taken you off /admin.
 function computeBreadcrumb(pathname: string, activeCompany: Company | null) {
-  if (pathname.startsWith("/admin/settings")) {
-    return [{ label: "Home", href: "/admin" }, { label: "Settings" }];
-  }
   if (activeCompany) {
-    return [
-      { label: "Home", href: "/admin" },
-      { label: "Companies", href: "/admin/companies" },
-      { label: activeCompany.name },
-    ];
+    return [{ label: "Fonder", href: "/admin" }, { label: activeCompany.name }];
   }
-  if (pathname === "/admin/companies") {
-    return [{ label: "Home", href: "/admin" }, { label: "Companies" }];
+  if (pathname === "/admin") {
+    return [{ label: "Fonder" }];
   }
-  return [{ label: "Home" }];
+  const subLabel =
+    pathname === "/admin/settings/team"
+      ? "Team roster"
+      : pathname === "/admin/settings/content"
+        ? "Portal content"
+        : pathname === "/admin/settings/staff"
+          ? "Staff accounts"
+          : pathname === "/admin/settings/profile"
+            ? "Profile"
+            : pathname.startsWith("/admin/settings")
+              ? "Settings"
+              : null;
+  return subLabel ? [{ label: "Fonder", href: "/admin" }, { label: subLabel }] : [{ label: "Fonder" }];
 }
 
 export function AdminNav({

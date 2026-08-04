@@ -1,10 +1,14 @@
 "use client";
 
 import { DashboardShell } from "@/components/shell/DashboardShell";
+import { ClientBrandHeader } from "@/components/portal-app/ClientBrandHeader";
 import { PORTAL_APP_TABS, isTabLocked, type TabLockState } from "@/lib/portal-app-tabs";
 
 export function ClientAppNav({
   clientSlug,
+  companyName,
+  companyLogoUrl,
+  engagementTitle,
   lockEnabled,
   tabLockOverrides,
   onboardingComplete,
@@ -12,6 +16,9 @@ export function ClientAppNav({
   children,
 }: {
   clientSlug: string;
+  companyName: string;
+  companyLogoUrl: string | null;
+  engagementTitle?: string | null;
   lockEnabled: boolean;
   tabLockOverrides: Record<string, TabLockState>;
   onboardingComplete: boolean;
@@ -28,7 +35,13 @@ export function ClientAppNav({
   }));
 
   return (
-    <DashboardShell navItems={navItems} accountSlot={accountSlot}>
+    <DashboardShell
+      navItems={navItems}
+      sidebarTopSlot={
+        <ClientBrandHeader companyName={companyName} companyLogoUrl={companyLogoUrl} engagementTitle={engagementTitle} />
+      }
+      accountSlot={accountSlot}
+    >
       {children}
     </DashboardShell>
   );
