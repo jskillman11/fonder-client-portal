@@ -20,14 +20,11 @@ export function ClientAppNav({
 }) {
   const base = `/portal/${clientSlug}/app`;
 
-  const navItems = [
-    { href: base, label: "Onboarding" },
-    ...PORTAL_APP_TABS.map((tab) => ({
-      href: `${base}${tab.href}`,
-      label: tab.label,
-      locked: isTabLocked(tab.key, lockEnabled, tabLockOverrides, onboardingComplete),
-    })),
-  ];
+  const navItems = PORTAL_APP_TABS.map((tab) => ({
+    href: `${base}${tab.href}`,
+    label: tab.label,
+    locked: isTabLocked(tab.key, lockEnabled, tabLockOverrides, onboardingComplete),
+  }));
 
   return (
     <DashboardShell navItems={navItems} accountSlot={accountSlot}>

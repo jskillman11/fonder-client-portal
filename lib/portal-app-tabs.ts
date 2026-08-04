@@ -5,6 +5,7 @@ export const PORTAL_APP_TABS = [
   { key: "tasks", href: "/tasks", label: "Tasks" },
   { key: "drive", href: "/drive", label: "Shared Drive" },
   { key: "chat", href: "/chat", label: "Chat" },
+  { key: "documents", href: "/documents", label: "Documents" },
   { key: "invoices", href: "/invoices", label: "Invoices" },
   { key: "deliverables", href: "/deliverables", label: "Deliverables" },
   { key: "change-request", href: "/change-request", label: "Change Request" },

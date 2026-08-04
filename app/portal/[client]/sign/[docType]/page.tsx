@@ -41,7 +41,7 @@ export default async function SignDocumentPage({
     <main className="min-h-screen bg-[var(--color-cream)] py-12 px-4">
       <div className="max-w-2xl mx-auto space-y-3">
         <Link
-          href={`/portal/${client}/app`}
+          href={`/portal/${client}/app/home`}
           className="inline-block text-[13px] text-[var(--color-muted)] hover:text-[var(--color-ink)]"
         >
           ← Back to portal

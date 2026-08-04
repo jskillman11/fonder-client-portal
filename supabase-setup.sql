@@ -2,7 +2,7 @@
 -- Run this once, in the SQL Editor of a fresh Supabase project.
 --
 -- This file is kept CURRENT — it reproduces the full schema as it stands
--- today (post stage2 through stage10), not just the original v1 schema.
+-- today (post stage2 through stage11), not just the original v1 schema.
 -- The individual supabase-stage*.sql files remain in the repo as the
 -- historical record of how the live project got here incrementally (each
 -- already ran against production); this file is what you'd run instead if
@@ -79,12 +79,13 @@ create table engagements (
   final_delivery_date text not null,
   fonder_signatory_name text not null default 'Tom Abrams',
   fonder_signatory_email text not null default 'tom@fonder.studio',
-  document_storage_path text, -- reserved for the final signed PDF (post-signing)
   kickoff_earliest_date date, -- opens the Cal.com scheduling embed to this month by default
   scope_summary text, -- short admin-written scope description for the portal Overview section
   status text not null default 'active' check (status in ('active', 'completed')),
   sow_signed_at timestamptz, -- set by the DocuSeal completion webhook once the client actually signs the SOW
   msa_signed_at timestamptz, -- set by the DocuSeal completion webhook once the client actually signs the MSA
+  sow_signed_document_path text, -- final fully-executed SOW PDF, set once DocuSeal's submission.completed webhook fires
+  msa_signed_document_path text, -- final fully-executed MSA PDF, same trigger
   kickoff_booked_at timestamptz, -- set once a real Cal.com kickoff booking completes
   kickoff_start_time timestamptz, -- the booked meeting's start time, for display
   qb_invoice_id text, -- this engagement's QuickBooks Invoice id, once created

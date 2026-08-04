@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getEngagement } from "@/lib/get-engagement";
+import { getEngagement, computeDocsSigned } from "@/lib/get-engagement";
 import { hasPortalAccess } from "@/lib/supabase/server";
 import { AccessGate } from "@/components/AccessGate";
 import { ClientAppNav } from "@/components/portal-app/ClientAppNav";
@@ -27,16 +27,8 @@ export default async function ClientAppLayout({
   // The global tab unlock requires the whole onboarding flow done: documents
   // signed, invoice paid, AND kickoff actually booked (a real, persisted
   // Cal.com booking, not just reaching the step -- see
-  // components/KickoffScheduler.tsx). A missing SOW or MSA trivially
-  // satisfies its own half of docsSigned (a company using only one of the
-  // two shouldn't be blocked on the other), but that must not extend to
-  // having neither -- hasAnyDoc guards against that (mirrors the identical
-  // check in app/portal/[client]/app/page.tsx).
-  const hasAnyDoc = Boolean(engagement.sowContentMarkdown) || Boolean(engagement.msaContentMarkdown);
-  const docsSigned =
-    hasAnyDoc &&
-    (!engagement.sowContentMarkdown || engagement.sowSigned) &&
-    (!engagement.msaContentMarkdown || engagement.msaSigned);
+  // components/KickoffScheduler.tsx).
+  const docsSigned = computeDocsSigned(engagement);
   const onboardingComplete = docsSigned && engagement.invoicePaid && engagement.kickoffBooked;
 
   return (

@@ -23,5 +23,5 @@ export default async function PortalPage({
     return <AccessGate clientSlug={client} />;
   }
 
-  redirect(`/portal/${client}/app`);
+  redirect(`/portal/${client}/app/home`);
 }

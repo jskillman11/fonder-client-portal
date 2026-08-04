@@ -8,7 +8,7 @@ import type { Company } from "@/lib/companies-clients";
 function computeNavItems(pathname: string, isSuperAdmin: boolean): ShellNavItem[] {
   if (pathname.startsWith("/admin/settings")) {
     return [
-      { href: "/admin/companies", label: "← All Clients" },
+      { href: "/admin/companies", label: "← All Brands" },
       { href: "/admin/settings/team", label: "Team", section: "Settings" },
       { href: "/admin/settings/content", label: "Portal content", section: "Settings" },
       ...(isSuperAdmin
@@ -21,12 +21,12 @@ function computeNavItems(pathname: string, isSuperAdmin: boolean): ShellNavItem[
   if (companyMatch) {
     const companyId = companyMatch[1];
     return [
-      { href: "/admin/companies", label: "← All Clients" },
+      { href: "/admin/companies", label: "← All Brands" },
       { href: `/admin/companies/${companyId}`, label: "Engagements", section: "Company" },
     ];
   }
 
-  return [{ href: "/admin/companies", label: "All Clients" }];
+  return [{ href: "/admin/companies", label: "All Brands" }];
 }
 
 export function AdminNav({

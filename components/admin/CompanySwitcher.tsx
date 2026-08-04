@@ -37,7 +37,7 @@ export function CompanySwitcher({
           <div className="h-5 w-5 rounded bg-[var(--color-cream)] border border-[var(--color-border)] shrink-0" />
         )}
         <span className="flex-1 min-w-0 text-left truncate text-[13.5px] font-semibold text-[var(--color-ink)]">
-          {activeCompany?.name ?? "All Clients"}
+          {activeCompany?.name ?? "All Brands"}
         </span>
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="shrink-0">
           <path
@@ -65,7 +65,7 @@ export function CompanySwitcher({
             >
               <div className="h-5 w-5 shrink-0" />
               <span className="text-[13.5px] font-medium text-[var(--color-ink)]">
-                All Clients
+                All Brands
               </span>
             </button>
             {companies.map((c) => (

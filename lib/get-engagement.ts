@@ -29,7 +29,6 @@ export type EngagementData = {
   clientSignatoryEmail: string;
   fonderSignatoryName: string;
   fonderSignatoryEmail: string;
-  documentStoragePath: string | null;
   clientLogoUrl: string | null;
   sowContentMarkdown: string | null;
   msaContentMarkdown: string | null;
@@ -46,6 +45,27 @@ export type EngagementData = {
   qbInvoiceLink: string | null;
   invoicePaid: boolean;
 };
+
+// A missing SOW or MSA trivially satisfies its own half of this check (a
+// company using only one of the two shouldn't be blocked on the other), but
+// that must not extend to having neither -- with nothing to sign, both
+// halves would trivially pass. hasAnyDoc guards against that. Shared by
+// app/portal/[client]/app/layout.tsx (the global tab-unlock gate) and
+// app/portal/[client]/app/home/page.tsx (the onboarding checklist itself) --
+// previously copy-pasted between the two.
+export function computeDocsSigned(engagement: {
+  sowContentMarkdown: string | null;
+  msaContentMarkdown: string | null;
+  sowSigned: boolean;
+  msaSigned: boolean;
+}): boolean {
+  const hasAnyDoc = Boolean(engagement.sowContentMarkdown) || Boolean(engagement.msaContentMarkdown);
+  return (
+    hasAnyDoc &&
+    (!engagement.sowContentMarkdown || engagement.sowSigned) &&
+    (!engagement.msaContentMarkdown || engagement.msaSigned)
+  );
+}
 
 export type EngagementStatus = "active" | "completed";
 
@@ -160,7 +180,6 @@ export async function getEngagement(
     clientSignatoryEmail: client?.email ?? "",
     fonderSignatoryName: engagement.fonder_signatory_name,
     fonderSignatoryEmail: engagement.fonder_signatory_email,
-    documentStoragePath: engagement.document_storage_path,
     clientLogoUrl,
     sowContentMarkdown: sowDoc?.content_markdown ?? null,
     msaContentMarkdown: msaDoc?.content_markdown ?? null,
@@ -191,6 +210,72 @@ export async function getEngagement(
         };
       })
       .filter((t): t is NonNullable<typeof t> => t !== null),
+  };
+}
+
+export type EngagementHistoryItem = {
+  id: string;
+  engagementTitle: string;
+  status: EngagementStatus;
+  totalFee: string;
+  sowSigned: boolean;
+  msaSigned: boolean;
+  sowDocumentPath: string | null;
+  msaDocumentPath: string | null;
+  qbInvoiceLink: string | null;
+  invoicePaid: boolean;
+};
+
+// Portal-facing lookup across a company's FULL engagement history, not just
+// the one currently-active engagement getEngagement() resolves -- feeds the
+// Documents and Invoices tabs, so a client can still reach a prior,
+// completed engagement's signed contract or invoice.
+export async function getCompanyEngagementHistory(clientSlug: string): Promise<{
+  companyName: string;
+  clientLogoUrl: string | null;
+  engagements: EngagementHistoryItem[];
+} | null> {
+  const supabase = createServiceClient();
+
+  const { data: company, error: companyError } = await supabase
+    .from("companies")
+    .select("id, name, logo_storage_path")
+    .eq("client_slug", clientSlug)
+    .single();
+
+  if (companyError || !company) return null;
+
+  const { data: engagementRows } = await supabase
+    .from("engagements")
+    .select(
+      "id, engagement_title, status, total_fee, sow_signed_at, msa_signed_at, sow_signed_document_path, msa_signed_document_path, qb_invoice_link, invoice_paid_at",
+    )
+    .eq("company_id", company.id)
+    .order("created_at", { ascending: false });
+
+  let clientLogoUrl: string | null = null;
+  if (company.logo_storage_path) {
+    const { data } = supabase.storage
+      .from("engagement-logos")
+      .getPublicUrl(company.logo_storage_path);
+    clientLogoUrl = data.publicUrl;
+  }
+
+  return {
+    companyName: company.name,
+    clientLogoUrl,
+    engagements: (engagementRows ?? []).map((e) => ({
+      id: e.id,
+      engagementTitle: e.engagement_title,
+      status: e.status as EngagementStatus,
+      totalFee: e.total_fee,
+      sowSigned: Boolean(e.sow_signed_at),
+      msaSigned: Boolean(e.msa_signed_at),
+      sowDocumentPath: e.sow_signed_document_path,
+      msaDocumentPath: e.msa_signed_document_path,
+      qbInvoiceLink: e.qb_invoice_link,
+      invoicePaid: Boolean(e.invoice_paid_at),
+    })),
   };
 }
 
