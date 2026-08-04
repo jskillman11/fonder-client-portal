@@ -103,11 +103,19 @@ Four sections, top to bottom:
    - Schedule kickoff: a real embedded Cal.com calendar.
    - Access your client portal: links into `/portal/[slug]/app` (see below).
 
-Steps 2 through 4 unlock once both applicable documents are **actually
-signed** (real, DB-persisted state — `companies.sow_signed_at`/
-`msa_signed_at`, computed fresh from the database on every page load), not
-just "session started." This used to be ephemeral client-side-only state
-that reset on refresh; that's fixed.
+Steps 2 and 3 (Invoice/deposit, Schedule kickoff) unlock together once both
+applicable documents are **actually signed** (real, DB-persisted state —
+`companies.sow_signed_at`/`msa_signed_at`, computed fresh from the database
+on every page load, not just "session started" — this used to be ephemeral
+client-side-only state that reset on refresh; that's fixed). Step 2 has
+nothing of its own to complete yet (no QuickBooks), so it's a pass-through.
+
+The **other portal tabs** (`/app/*` — Tasks, Chat, Invoices, Deliverables,
+etc.) unlock on a *separate*, later signal: a real Cal.com booking, not just
+signing. `components/KickoffScheduler.tsx` listens for Cal.com's
+`bookingSuccessfulV2` embed event and persists `companies.kickoff_booked_at`;
+the global unlock requires both documents signed **and** a kickoff actually
+booked (`app/portal/[client]/app/layout.tsx`'s `onboardingComplete`).
 
 ## Signing flow: the actual current behavior
 

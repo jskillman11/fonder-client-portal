@@ -7,14 +7,14 @@ export function ClientAppNav({
   clientSlug,
   lockEnabled,
   tabLockOverrides,
-  docsSigned,
+  onboardingComplete,
   accountSlot,
   children,
 }: {
   clientSlug: string;
   lockEnabled: boolean;
   tabLockOverrides: Record<string, TabLockState>;
-  docsSigned: boolean;
+  onboardingComplete: boolean;
   accountSlot: React.ReactNode;
   children: React.ReactNode;
 }) {
@@ -25,7 +25,7 @@ export function ClientAppNav({
     ...PORTAL_APP_TABS.map((tab) => ({
       href: `${base}${tab.href}`,
       label: tab.label,
-      locked: isTabLocked(tab.key, lockEnabled, tabLockOverrides, docsSigned),
+      locked: isTabLocked(tab.key, lockEnabled, tabLockOverrides, onboardingComplete),
     })),
   ];
 

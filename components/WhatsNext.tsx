@@ -103,6 +103,7 @@ export function WhatsNext({
                       calLink && (
                         <div className="mt-3">
                           <KickoffScheduler
+                            clientSlug={clientSlug}
                             calLink={calLink}
                             kickoffEarliestDate={kickoffEarliestDate ?? null}
                           />
