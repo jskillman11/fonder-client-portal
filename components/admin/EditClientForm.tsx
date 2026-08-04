@@ -2,8 +2,20 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Card } from "@/components/Card";
 import { PillButton } from "@/components/PillButton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import type { Client } from "@/lib/companies-clients";
 
 const inputClass =
@@ -23,13 +35,11 @@ export function EditClientForm({
   const [firstName, setFirstName] = useState(client.firstName);
   const [lastName, setLastName] = useState(client.lastName);
   const [email, setEmail] = useState(client.email);
-  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error" | "deleting">("idle");
-  const [errorDetail, setErrorDetail] = useState<string | null>(null);
+  const [status, setStatus] = useState<"idle" | "saving" | "deleting">("idle");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setStatus("saving");
-    setErrorDetail(null);
 
     const res = await fetch("/api/admin/update-client", {
       method: "POST",
@@ -37,20 +47,18 @@ export function EditClientForm({
       body: JSON.stringify({ id: client.id, firstName, lastName, email }),
     });
     const data = await res.json();
+    setStatus("idle");
 
     if (!res.ok) {
-      setStatus("error");
-      setErrorDetail([data.error, data.detail].filter(Boolean).join(" — "));
+      toast.error([data.error, data.detail].filter(Boolean).join(" — "));
       return;
     }
-    setStatus("saved");
+    toast.success("Saved.");
     router.refresh();
   }
 
   async function handleDelete() {
-    if (!confirm(`Delete ${client.firstName} ${client.lastName}? This can't be undone.`)) return;
     setStatus("deleting");
-    setErrorDetail(null);
 
     const res = await fetch("/api/admin/delete-client", {
       method: "POST",
@@ -60,8 +68,8 @@ export function EditClientForm({
     const data = await res.json();
 
     if (!res.ok) {
-      setStatus("error");
-      setErrorDetail([data.error, data.detail].filter(Boolean).join(" — "));
+      setStatus("idle");
+      toast.error([data.error, data.detail].filter(Boolean).join(" — "));
       return;
     }
     router.push(backHref);
@@ -104,16 +112,24 @@ export function EditClientForm({
             className={inputClass}
           />
         </div>
-        {status === "error" && <p className="text-[13px] text-[#a32d2d]">{errorDetail}</p>}
-        {status === "saved" && <p className="text-[13px] text-[var(--color-ink)]">Saved.</p>}
         <div className="flex justify-between items-center pt-2">
-          <button
-            type="button"
-            onClick={handleDelete}
-            className="text-[13px] text-[#a32d2d] underline"
-          >
-            {status === "deleting" ? "Deleting…" : "Delete client"}
-          </button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button type="button" className="text-[13px] text-[#a32d2d] underline">
+                {status === "deleting" ? "Deleting…" : "Delete client"}
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete {client.firstName} {client.lastName}?</AlertDialogTitle>
+                <AlertDialogDescription>This can&apos;t be undone.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <PillButton type="submit">
             {status === "saving" ? "Saving…" : "Save"}
           </PillButton>

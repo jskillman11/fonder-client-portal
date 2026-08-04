@@ -12,7 +12,13 @@ export async function POST(req: NextRequest) {
   const result = await deleteTeamMember(id);
   if ("error" in result) {
     return NextResponse.json(
-      { error: "Failed to delete team member", detail: result.error },
+      {
+        error: "Failed to delete team member",
+        detail:
+          result.error.includes("foreign key") || result.error.includes("violates")
+            ? "This team member is assigned to one or more companies — remove those assignments first."
+            : result.error,
+      },
       { status: 500 },
     );
   }

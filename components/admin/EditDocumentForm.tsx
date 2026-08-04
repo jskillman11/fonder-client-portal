@@ -2,8 +2,20 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Card } from "@/components/Card";
 import { PillButton } from "@/components/PillButton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import type { DocumentRecord } from "@/lib/documents";
 
 const inputClass =
@@ -22,13 +34,11 @@ export function EditDocumentForm({
   const router = useRouter();
   const [title, setTitle] = useState(document.title);
   const [content, setContent] = useState(document.contentMarkdown);
-  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error" | "deleting">("idle");
-  const [errorDetail, setErrorDetail] = useState<string | null>(null);
+  const [status, setStatus] = useState<"idle" | "saving" | "deleting">("idle");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setStatus("saving");
-    setErrorDetail(null);
 
     const res = await fetch("/api/admin/update-document", {
       method: "POST",
@@ -36,20 +46,18 @@ export function EditDocumentForm({
       body: JSON.stringify({ id: document.id, title, contentMarkdown: content }),
     });
     const data = await res.json();
+    setStatus("idle");
 
     if (!res.ok) {
-      setStatus("error");
-      setErrorDetail([data.error, data.detail].filter(Boolean).join(" — "));
+      toast.error([data.error, data.detail].filter(Boolean).join(" — "));
       return;
     }
-    setStatus("saved");
+    toast.success("Saved.");
     router.refresh();
   }
 
   async function handleDelete() {
-    if (!confirm(`Delete "${document.title}"? This can't be undone.`)) return;
     setStatus("deleting");
-    setErrorDetail(null);
 
     const res = await fetch("/api/admin/delete-document", {
       method: "POST",
@@ -59,8 +67,8 @@ export function EditDocumentForm({
     const data = await res.json();
 
     if (!res.ok) {
-      setStatus("error");
-      setErrorDetail([data.error, data.detail].filter(Boolean).join(" — "));
+      setStatus("idle");
+      toast.error([data.error, data.detail].filter(Boolean).join(" — "));
       return;
     }
     router.push(backHref);
@@ -91,16 +99,24 @@ export function EditDocumentForm({
             className={`${inputClass} font-mono text-[12.5px]`}
           />
         </div>
-        {status === "error" && <p className="text-[13px] text-[#a32d2d]">{errorDetail}</p>}
-        {status === "saved" && <p className="text-[13px] text-[var(--color-ink)]">Saved.</p>}
         <div className="flex justify-between items-center pt-2">
-          <button
-            type="button"
-            onClick={handleDelete}
-            className="text-[13px] text-[#a32d2d] underline"
-          >
-            {status === "deleting" ? "Deleting…" : "Delete document"}
-          </button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button type="button" className="text-[13px] text-[#a32d2d] underline">
+                {status === "deleting" ? "Deleting…" : "Delete document"}
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete &quot;{document.title}&quot;?</AlertDialogTitle>
+                <AlertDialogDescription>This can&apos;t be undone.</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <PillButton type="submit">
             {status === "saving" ? "Saving…" : "Save"}
           </PillButton>

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { ChevronsUpDown } from "lucide-react";
 import type { Company } from "@/lib/companies-clients";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,22 +33,16 @@ export function CompanySwitcher({
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <div className="flex aspect-square size-8 items-center justify-center overflow-hidden rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                {activeCompany?.logoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={activeCompany.logoUrl}
-                    alt={activeCompany.name}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <span className="text-xs font-semibold">
-                    {(activeCompany?.name ?? "Fonder").charAt(0)}
-                  </span>
+              <Avatar className="h-8 w-8 rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                {activeCompany?.logoUrl && (
+                  <AvatarImage src={activeCompany.logoUrl} alt={activeCompany.name} className="object-cover" />
                 )}
-              </div>
+                <AvatarFallback className="rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+                  {(activeCompany?.name ?? "Fonder").charAt(0)}
+                </AvatarFallback>
+              </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{activeCompany?.name ?? "All Brands"}</span>
+                <span className="truncate font-medium">{activeCompany?.name ?? "Fonder"}</span>
               </div>
               <ChevronsUpDown className="ml-auto" />
             </SidebarMenuButton>
@@ -60,7 +55,7 @@ export function CompanySwitcher({
           >
             <DropdownMenuLabel className="text-xs text-muted-foreground">Brands</DropdownMenuLabel>
             <DropdownMenuItem onClick={() => router.push("/admin/companies")} className="gap-2 p-2">
-              All Brands
+              Manage brands
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             {companies.map((c) => (

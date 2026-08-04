@@ -88,13 +88,24 @@ export type EngagementRecord = {
   invoicePaidAt: string | null;
 };
 
-export async function listEngagementsForCompany(companyId: string): Promise<
-  { id: string; engagementTitle: string; status: EngagementStatus }[]
-> {
+export type CompanyEngagementRow = {
+  id: string;
+  engagementTitle: string;
+  status: EngagementStatus;
+  totalFee: string;
+  qbInvoiceId: string | null;
+  qbInvoiceLink: string | null;
+  invoiceSentAt: string | null;
+  invoicePaidAt: string | null;
+};
+
+export async function listEngagementsForCompany(companyId: string): Promise<CompanyEngagementRow[]> {
   const supabase = createServiceClient();
   const { data } = await supabase
     .from("engagements")
-    .select("id, engagement_title, status")
+    .select(
+      "id, engagement_title, status, total_fee, qb_invoice_id, qb_invoice_link, invoice_sent_at, invoice_paid_at",
+    )
     .eq("company_id", companyId)
     .order("created_at", { ascending: false });
 
@@ -102,6 +113,11 @@ export async function listEngagementsForCompany(companyId: string): Promise<
     id: row.id,
     engagementTitle: row.engagement_title,
     status: row.status as EngagementStatus,
+    totalFee: row.total_fee,
+    qbInvoiceId: row.qb_invoice_id,
+    qbInvoiceLink: row.qb_invoice_link,
+    invoiceSentAt: row.invoice_sent_at,
+    invoicePaidAt: row.invoice_paid_at,
   }));
 }
 
@@ -323,6 +339,52 @@ export async function getEngagementById(
     invoiceSentAt: engagement.invoice_sent_at,
     invoicePaidAt: engagement.invoice_paid_at,
   };
+}
+
+export type EngagementSummary = {
+  id: string;
+  companyId: string;
+  companyName: string;
+  engagementTitle: string;
+  status: EngagementStatus;
+  sowSigned: boolean;
+  msaSigned: boolean;
+  qbInvoiceId: string | null;
+  invoicePaidAt: string | null;
+  createdAt: string;
+};
+
+// Cross-company lookup for the admin Home dashboard -- everything else in
+// this file is scoped to one company/engagement. "Signed" here just checks
+// sow_signed_at/msa_signed_at directly rather than reproducing
+// computeDocsSigned's per-company hasAnyDoc nuance (that needs each
+// company's configured sow/msa document, a join this overview doesn't
+// otherwise need), so an engagement with no SOW/MSA configured at all reads
+// as "pending" here -- acceptable for a summary count, not exact per-company.
+export async function listAllEngagements(): Promise<EngagementSummary[]> {
+  const supabase = createServiceClient();
+  const { data } = await supabase
+    .from("engagements")
+    .select(
+      "id, company_id, engagement_title, status, sow_signed_at, msa_signed_at, qb_invoice_id, invoice_paid_at, created_at, companies(name)",
+    )
+    .order("created_at", { ascending: false });
+
+  return (data ?? []).map((row) => {
+    const company = Array.isArray(row.companies) ? row.companies[0] : row.companies;
+    return {
+      id: row.id,
+      companyId: row.company_id,
+      companyName: company?.name ?? "",
+      engagementTitle: row.engagement_title,
+      status: row.status as EngagementStatus,
+      sowSigned: Boolean(row.sow_signed_at),
+      msaSigned: Boolean(row.msa_signed_at),
+      qbInvoiceId: row.qb_invoice_id,
+      invoicePaidAt: row.invoice_paid_at,
+      createdAt: row.created_at,
+    };
+  });
 }
 
 // Downloads the actual PDF bytes from Supabase Storage for a given engagement.

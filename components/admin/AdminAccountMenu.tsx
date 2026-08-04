@@ -15,9 +15,28 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 
+// No display name or avatar is stored for staff today (profiles only has
+// id/role/is_super_admin) -- derive something readable from the email's
+// local part until real profile fields exist.
+function displayNameFromEmail(email: string): string {
+  const local = email.split("@")[0] ?? email;
+  return local
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function initialsFromName(name: string): string {
+  const words = name.split(" ").filter(Boolean);
+  const initials = words.slice(0, 2).map((w) => w.charAt(0).toUpperCase());
+  return initials.join("") || "?";
+}
+
 export function AdminAccountMenu({ email }: { email: string }) {
   const router = useRouter();
   const { isMobile } = useSidebar();
+  const name = displayNameFromEmail(email);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -35,10 +54,11 @@ export function AdminAccountMenu({ email }: { email: string }) {
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarFallback className="rounded-lg">{email.charAt(0).toUpperCase()}</AvatarFallback>
+                <AvatarFallback className="rounded-lg">{initialsFromName(name)}</AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{email}</span>
+                <span className="truncate font-medium">{name}</span>
+                <span className="truncate text-xs">{email}</span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
