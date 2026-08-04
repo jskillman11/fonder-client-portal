@@ -1,13 +1,23 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ChevronsUpDown, Settings, HelpCircle, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 
 export function AdminAccountMenu({ email }: { email: string }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const { isMobile } = useSidebar();
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -16,57 +26,51 @@ export function AdminAccountMenu({ email }: { email: string }) {
   }
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        className="flex items-center gap-2 text-[13px] text-[var(--color-muted)] hover:text-[var(--color-ink)]"
-      >
-        <span>{email}</span>
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-          <path
-            d="M2 3.5L5 6.5L8 3.5"
-            stroke="currentColor"
-            strokeWidth="1.3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </button>
-
-      {open && (
-        <>
-          <div
-            className="fixed inset-0 z-30"
-            onClick={() => setOpen(false)}
-            aria-hidden="true"
-          />
-          <div className="absolute right-0 top-full mt-2 z-40 w-44 rounded-[10px] border border-[var(--color-border)] bg-white shadow-lg py-1">
-            <Link
-              href="/admin/settings"
-              onClick={() => setOpen(false)}
-              className="block px-4 py-2 text-[13px] text-[var(--color-ink)] hover:bg-[var(--color-cream)]"
+    <SidebarMenu>
+      <SidebarMenuItem>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <SidebarMenuButton
+              size="lg"
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              Settings
-            </Link>
-            <Link
-              href="/admin/help"
-              onClick={() => setOpen(false)}
-              className="block px-4 py-2 text-[13px] text-[var(--color-ink)] hover:bg-[var(--color-cream)]"
-            >
-              Help
-            </Link>
-            <div className="my-1 border-t border-[var(--color-border)]" />
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="block w-full text-left px-4 py-2 text-[13px] font-medium text-[var(--color-ink)] hover:bg-[var(--color-cream)]"
-            >
+              <Avatar className="h-8 w-8 rounded-lg">
+                <AvatarFallback className="rounded-lg">{email.charAt(0).toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-medium">{email}</span>
+              </div>
+              <ChevronsUpDown className="ml-auto size-4" />
+            </SidebarMenuButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+            side={isMobile ? "bottom" : "right"}
+            align="end"
+            sideOffset={4}
+          >
+            <DropdownMenuGroup>
+              <DropdownMenuItem asChild>
+                <Link href="/admin/settings">
+                  <Settings />
+                  Settings
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/admin/help">
+                  <HelpCircle />
+                  Help
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleSignOut}>
+              <LogOut />
               Sign out
-            </button>
-          </div>
-        </>
-      )}
-    </div>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </SidebarMenuItem>
+    </SidebarMenu>
   );
 }

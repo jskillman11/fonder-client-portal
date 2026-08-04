@@ -23,6 +23,7 @@ export function ClientAppNav({
   const navItems = PORTAL_APP_TABS.map((tab) => ({
     href: `${base}${tab.href}`,
     label: tab.label,
+    icon: tab.icon,
     locked: isTabLocked(tab.key, lockEnabled, tabLockOverrides, onboardingComplete),
   }));
 

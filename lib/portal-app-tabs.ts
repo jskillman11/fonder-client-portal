@@ -1,14 +1,25 @@
+import {
+  House,
+  ListTodo,
+  FolderOpen,
+  MessageSquare,
+  FileText,
+  Receipt,
+  Package,
+  PencilLine,
+} from "lucide-react";
+
 export type TabLockState = "locked" | "unlocked";
 
 export const PORTAL_APP_TABS = [
-  { key: "home", href: "/home", label: "Home" },
-  { key: "tasks", href: "/tasks", label: "Tasks" },
-  { key: "drive", href: "/drive", label: "Shared Drive" },
-  { key: "chat", href: "/chat", label: "Chat" },
-  { key: "documents", href: "/documents", label: "Documents" },
-  { key: "invoices", href: "/invoices", label: "Invoices" },
-  { key: "deliverables", href: "/deliverables", label: "Deliverables" },
-  { key: "change-request", href: "/change-request", label: "Change Request" },
+  { key: "home", href: "/home", label: "Home", icon: House },
+  { key: "tasks", href: "/tasks", label: "Tasks", icon: ListTodo },
+  { key: "drive", href: "/drive", label: "Shared Drive", icon: FolderOpen },
+  { key: "chat", href: "/chat", label: "Chat", icon: MessageSquare },
+  { key: "documents", href: "/documents", label: "Documents", icon: FileText },
+  { key: "invoices", href: "/invoices", label: "Invoices", icon: Receipt },
+  { key: "deliverables", href: "/deliverables", label: "Deliverables", icon: Package },
+  { key: "change-request", href: "/change-request", label: "Change Request", icon: PencilLine },
 ] as const;
 
 // Resolves whether a tab should render locked. lockPortalTabs is the
