@@ -13,7 +13,12 @@ export default async function ProfileSettingsPage() {
     <main className="py-12 px-4">
       <div className="max-w-2xl mx-auto space-y-5">
         <BackButton />
-        <EditProfileForm email={user.email} fullName={user.fullName} avatarUrl={user.avatarUrl} />
+        <EditProfileForm
+          email={user.email}
+          fullName={user.fullName}
+          jobTitle={user.jobTitle}
+          avatarUrl={user.avatarUrl}
+        />
       </div>
     </main>
   );

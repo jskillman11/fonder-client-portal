@@ -15,6 +15,7 @@ export type Client = {
   firstName: string;
   lastName: string;
   email: string;
+  jobTitle: string | null;
   avatarUrl: string | null;
 };
 
@@ -40,7 +41,7 @@ export async function listClients(): Promise<Client[]> {
   const supabase = createServiceClient();
   const { data } = await supabase
     .from("clients")
-    .select("id, company_id, first_name, last_name, email, avatar_storage_path")
+    .select("id, company_id, first_name, last_name, email, job_title, avatar_storage_path")
     .order("first_name", { ascending: true });
 
   return (data ?? []).map((c) => ({
@@ -49,6 +50,7 @@ export async function listClients(): Promise<Client[]> {
     firstName: c.first_name,
     lastName: c.last_name,
     email: c.email,
+    jobTitle: c.job_title,
     avatarUrl: c.avatar_storage_path
       ? supabase.storage.from("engagement-logos").getPublicUrl(c.avatar_storage_path).data.publicUrl
       : null,
@@ -230,7 +232,7 @@ export async function getClient(id: string): Promise<Client | null> {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("clients")
-    .select("id, company_id, first_name, last_name, email, avatar_storage_path")
+    .select("id, company_id, first_name, last_name, email, job_title, avatar_storage_path")
     .eq("id", id)
     .single();
 
@@ -241,6 +243,7 @@ export async function getClient(id: string): Promise<Client | null> {
     firstName: data.first_name,
     lastName: data.last_name,
     email: data.email,
+    jobTitle: data.job_title,
     avatarUrl: data.avatar_storage_path
       ? supabase.storage.from("engagement-logos").getPublicUrl(data.avatar_storage_path).data.publicUrl
       : null,
@@ -252,11 +255,12 @@ export async function updateClientRecord(
   firstName: string,
   lastName: string,
   email: string,
+  jobTitle: string,
 ): Promise<{ success: true } | { error: string }> {
   const supabase = createServiceClient();
   const { error } = await supabase
     .from("clients")
-    .update({ first_name: firstName, last_name: lastName, email })
+    .update({ first_name: firstName, last_name: lastName, email, job_title: jobTitle })
     .eq("id", id);
 
   if (error) return { error: error.message };

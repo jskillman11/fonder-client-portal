@@ -5,6 +5,7 @@ export async function updateMyClientProfile(
   firstName: string,
   lastName: string,
   email: string,
+  jobTitle: string,
   photoFile: File | null,
 ): Promise<{ success: true } | { error: string }> {
   const supabase = createServiceClient();
@@ -12,8 +13,9 @@ export async function updateMyClientProfile(
     first_name: string;
     last_name: string;
     email: string;
+    job_title: string;
     avatar_storage_path?: string;
-  } = { first_name: firstName, last_name: lastName, email };
+  } = { first_name: firstName, last_name: lastName, email, job_title: jobTitle };
 
   if (photoFile) {
     const ext = photoFile.name.split(".").pop() || "png";

@@ -17,6 +17,7 @@ export function ClientProfileForm({ client }: { client: Client }) {
   const [firstName, setFirstName] = useState(client.firstName);
   const [lastName, setLastName] = useState(client.lastName);
   const [email, setEmail] = useState(client.email);
+  const [jobTitle, setJobTitle] = useState(client.jobTitle ?? "");
   const [photo, setPhoto] = useState<File | null>(null);
   const [status, setStatus] = useState<"idle" | "saving">("idle");
 
@@ -28,6 +29,7 @@ export function ClientProfileForm({ client }: { client: Client }) {
     formData.append("firstName", firstName);
     formData.append("lastName", lastName);
     formData.append("email", email);
+    formData.append("jobTitle", jobTitle);
     if (photo) formData.append("photo", photo);
 
     const res = await fetch("/api/portal/update-profile", { method: "POST", body: formData });
@@ -84,6 +86,15 @@ export function ClientProfileForm({ client }: { client: Client }) {
               className={inputClass}
             />
           </div>
+        </div>
+        <div>
+          <label className={labelClass}>Role</label>
+          <input
+            value={jobTitle}
+            onChange={(e) => setJobTitle(e.target.value)}
+            className={inputClass}
+            placeholder="Marketing Director"
+          />
         </div>
         <div>
           <label className={labelClass}>Email</label>

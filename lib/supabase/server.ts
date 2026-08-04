@@ -52,7 +52,13 @@ export function createServiceClient() {
 // there a session" is load-bearing now that clients also get real Supabase
 // Auth accounts (see lib/portal-access.ts) -- any authenticated user without
 // a staff profile row must NOT be treated as staff.
-export type StaffUser = { id: string; email: string; fullName: string | null; avatarUrl: string | null };
+export type StaffUser = {
+  id: string;
+  email: string;
+  fullName: string | null;
+  jobTitle: string | null;
+  avatarUrl: string | null;
+};
 
 async function getStaffUser(): Promise<StaffUser | null> {
   const supabase = await createServerAuthClient();
@@ -63,7 +69,7 @@ async function getStaffUser(): Promise<StaffUser | null> {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, full_name, avatar_storage_path")
+    .select("role, full_name, job_title, avatar_storage_path")
     .eq("id", user.id)
     .single();
 
@@ -73,6 +79,7 @@ async function getStaffUser(): Promise<StaffUser | null> {
     id: user.id,
     email: user.email,
     fullName: profile.full_name,
+    jobTitle: profile.job_title,
     avatarUrl: profile.avatar_storage_path
       ? supabase.storage.from("engagement-logos").getPublicUrl(profile.avatar_storage_path).data.publicUrl
       : null,

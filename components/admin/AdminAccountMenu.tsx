@@ -15,9 +15,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/components/ui/sidebar";
 
-// No display name or avatar is stored for staff today (profiles only has
-// id/role/is_super_admin) -- derive something readable from the email's
-// local part until real profile fields exist.
+// Falls back to something readable derived from the email's local part when
+// a staff member hasn't set a display name yet.
 function displayNameFromEmail(email: string): string {
   const local = email.split("@")[0] ?? email;
   return local
@@ -36,12 +35,14 @@ function initialsFromName(name: string): string {
 export function AdminAccountMenu({
   email,
   fullName,
+  jobTitle,
   avatarUrl,
   showBackToAdmin,
   onViewAsClient,
 }: {
   email: string;
   fullName?: string | null;
+  jobTitle?: string | null;
   avatarUrl?: string | null;
   // Set when this renders inside a client portal a staff member is
   // previewing (see ClientAccountMenu) -- offers a way back without
@@ -69,7 +70,7 @@ export function AdminAccountMenu({
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="h-auto py-2 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg after:rounded-lg">
                 {avatarUrl && <AvatarImage src={avatarUrl} alt={name} className="rounded-lg object-cover" />}
@@ -77,6 +78,7 @@ export function AdminAccountMenu({
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{name}</span>
+                {jobTitle && <span className="truncate text-xs text-sidebar-foreground/70">{jobTitle}</span>}
                 <span className="truncate text-xs">{email}</span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />

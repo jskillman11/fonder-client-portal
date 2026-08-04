@@ -35,6 +35,7 @@ export function EditClientForm({
   const [firstName, setFirstName] = useState(client.firstName);
   const [lastName, setLastName] = useState(client.lastName);
   const [email, setEmail] = useState(client.email);
+  const [jobTitle, setJobTitle] = useState(client.jobTitle ?? "");
   const [status, setStatus] = useState<"idle" | "saving" | "deleting">("idle");
 
   async function handleSubmit(e: React.FormEvent) {
@@ -44,7 +45,7 @@ export function EditClientForm({
     const res = await fetch("/api/admin/update-client", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: client.id, firstName, lastName, email }),
+      body: JSON.stringify({ id: client.id, firstName, lastName, email, jobTitle }),
     });
     const data = await res.json();
     setStatus("idle");
@@ -101,6 +102,15 @@ export function EditClientForm({
               className={inputClass}
             />
           </div>
+        </div>
+        <div>
+          <label className={labelClass}>Role</label>
+          <input
+            value={jobTitle}
+            onChange={(e) => setJobTitle(e.target.value)}
+            className={inputClass}
+            placeholder="Marketing Director"
+          />
         </div>
         <div>
           <label className={labelClass}>Email</label>

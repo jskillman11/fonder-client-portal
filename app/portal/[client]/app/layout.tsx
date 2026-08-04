@@ -26,7 +26,9 @@ export default async function ClientAppLayout({
   }
 
   const adminUser = isAdmin ? await getAdminUser() : null;
-  const clientRecord = !isAdmin && engagement.clientId ? await getClient(engagement.clientId) : null;
+  // Fetched regardless of isAdmin -- staff previewing via "View as client"
+  // should see the real client's avatar/role too, not just their name.
+  const clientRecord = engagement.clientId ? await getClient(engagement.clientId) : null;
 
   // The global tab unlock requires the whole onboarding flow done: documents
   // signed, invoice paid, AND kickoff actually booked (a real, persisted
@@ -51,9 +53,11 @@ export default async function ClientAppLayout({
           isAdmin={isAdmin}
           clientName={engagement.clientSignatoryName}
           clientEmail={engagement.clientSignatoryEmail}
+          clientJobTitle={clientRecord?.jobTitle}
           clientAvatarUrl={clientRecord?.avatarUrl}
           adminEmail={adminUser?.email}
           adminFullName={adminUser?.fullName}
+          adminJobTitle={adminUser?.jobTitle}
           adminAvatarUrl={adminUser?.avatarUrl}
         />
       }

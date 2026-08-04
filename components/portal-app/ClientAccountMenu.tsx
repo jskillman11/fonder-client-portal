@@ -23,6 +23,7 @@ function ClientStyleMenu({
   base,
   name,
   email,
+  jobTitle,
   avatarUrl,
   onSignOut,
   backToAdmin,
@@ -30,6 +31,7 @@ function ClientStyleMenu({
   base: string;
   name: string;
   email?: string;
+  jobTitle?: string | null;
   avatarUrl?: string | null;
   onSignOut: () => void;
   backToAdmin?: () => void;
@@ -43,7 +45,7 @@ function ClientStyleMenu({
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className="h-auto py-2 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg after:rounded-lg">
                 {avatarUrl && <AvatarImage src={avatarUrl} alt={name} className="rounded-lg object-cover" />}
@@ -51,6 +53,7 @@ function ClientStyleMenu({
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{name}</span>
+                {jobTitle && <span className="truncate text-xs text-sidebar-foreground/70">{jobTitle}</span>}
                 {email && <span className="truncate text-xs">{email}</span>}
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
@@ -111,9 +114,11 @@ export function ClientAccountMenu({
   isAdmin,
   clientName,
   clientEmail,
+  clientJobTitle,
   clientAvatarUrl,
   adminEmail,
   adminFullName,
+  adminJobTitle,
   adminAvatarUrl,
 }: {
   clientSlug: string;
@@ -121,9 +126,11 @@ export function ClientAccountMenu({
   isAdmin: boolean;
   clientName: string;
   clientEmail?: string;
+  clientJobTitle?: string | null;
   clientAvatarUrl?: string | null;
   adminEmail?: string;
   adminFullName?: string | null;
+  adminJobTitle?: string | null;
   adminAvatarUrl?: string | null;
 }) {
   const router = useRouter();
@@ -141,6 +148,7 @@ export function ClientAccountMenu({
         base={base}
         name={clientName}
         email={clientEmail}
+        jobTitle={clientJobTitle}
         avatarUrl={clientAvatarUrl}
         onSignOut={handleRealSignOut}
       />
@@ -158,6 +166,7 @@ export function ClientAccountMenu({
           base={base}
           name={clientName}
           email={clientEmail}
+          jobTitle={clientJobTitle}
           avatarUrl={clientAvatarUrl}
           onSignOut={() => setPreviewAsClient(false)}
           backToAdmin={() => setPreviewAsClient(false)}
@@ -169,6 +178,7 @@ export function ClientAccountMenu({
       <AdminAccountMenu
         email={adminEmail ?? ""}
         fullName={adminFullName}
+        jobTitle={adminJobTitle}
         avatarUrl={adminAvatarUrl}
         showBackToAdmin
         onViewAsClient={() => setPreviewAsClient(true)}

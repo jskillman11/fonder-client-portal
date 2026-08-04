@@ -3,10 +3,14 @@ import { createServiceClient } from "./supabase/server";
 export async function updateMyProfile(
   userId: string,
   fullName: string,
+  jobTitle: string,
   photoFile: File | null,
 ): Promise<{ success: true } | { error: string }> {
   const supabase = createServiceClient();
-  const update: { full_name: string; avatar_storage_path?: string } = { full_name: fullName };
+  const update: { full_name: string; job_title: string; avatar_storage_path?: string } = {
+    full_name: fullName,
+    job_title: jobTitle,
+  };
 
   if (photoFile) {
     const ext = photoFile.name.split(".").pop() || "png";

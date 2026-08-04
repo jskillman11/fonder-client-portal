@@ -76,10 +76,11 @@ export function CompanyPortalContentForm({
         <p className="text-[13px] font-medium text-[var(--color-muted)]">Per-tab overrides</p>
         <p className="text-[11px] text-[var(--color-faint)] mt-1 mb-2">
           Overrides the lock above for a specific tab, regardless of whether documents have been
-          sent yet.
+          sent yet. Home isn&apos;t listed here — onboarding lives there, so it&apos;s always
+          unlocked.
         </p>
         <div className="space-y-2">
-          {PORTAL_APP_TABS.map((tab) => (
+          {PORTAL_APP_TABS.filter((tab) => tab.key !== "home").map((tab) => (
             <div
               key={tab.key}
               className="flex items-center justify-between rounded-[10px] border border-[var(--color-border)] px-4 py-2.5"

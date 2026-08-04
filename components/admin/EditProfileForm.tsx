@@ -14,14 +14,17 @@ const labelClass = "text-[13px] font-medium text-[var(--color-muted)]";
 export function EditProfileForm({
   email,
   fullName,
+  jobTitle,
   avatarUrl,
 }: {
   email: string;
   fullName: string | null;
+  jobTitle: string | null;
   avatarUrl: string | null;
 }) {
   const router = useRouter();
   const [name, setName] = useState(fullName ?? "");
+  const [role, setRole] = useState(jobTitle ?? "");
   const [photo, setPhoto] = useState<File | null>(null);
   const [status, setStatus] = useState<"idle" | "saving">("idle");
 
@@ -31,6 +34,7 @@ export function EditProfileForm({
 
     const formData = new FormData();
     formData.append("fullName", name);
+    formData.append("jobTitle", role);
     if (photo) formData.append("photo", photo);
 
     const res = await fetch("/api/admin/update-profile", { method: "POST", body: formData });
@@ -72,6 +76,15 @@ export function EditProfileForm({
             onChange={(e) => setName(e.target.value)}
             className={inputClass}
             placeholder="Your name"
+          />
+        </div>
+        <div>
+          <label className={labelClass}>Role</label>
+          <input
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className={inputClass}
+            placeholder="Global Brand Design Lead"
           />
         </div>
         <div>

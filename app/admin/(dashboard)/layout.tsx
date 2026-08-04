@@ -22,6 +22,7 @@ export default async function DashboardLayout({
         <AdminAccountMenu
           email={user?.email ?? ""}
           fullName={user?.fullName ?? null}
+          jobTitle={user?.jobTitle ?? null}
           avatarUrl={user?.avatarUrl ?? null}
         />
       }

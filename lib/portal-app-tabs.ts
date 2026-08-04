@@ -27,12 +27,17 @@ export const PORTAL_APP_TABS = [
 // regardless of any per-tab override. When on, a tab follows its own
 // override if set ("locked"/"unlocked"), otherwise falls back to the
 // docs-signed signal shared across the app (see AppUnlockContext).
+//
+// "home" is a hard exception, not subject to lockPortalTabs or any
+// override: onboarding lives there, and onboarding is what unlocks
+// everything else -- locking it would leave a client with no way in.
 export function isTabLocked(
   tabKey: string,
   lockPortalTabs: boolean,
   tabLockOverrides: Record<string, TabLockState>,
   docsSent: boolean,
 ): boolean {
+  if (tabKey === "home") return false;
   if (!lockPortalTabs) return false;
   const override = tabLockOverrides[tabKey];
   if (override === "unlocked") return false;

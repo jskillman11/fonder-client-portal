@@ -10,13 +10,14 @@ export async function POST(req: NextRequest) {
   const firstName = formData.get("firstName") as string;
   const lastName = formData.get("lastName") as string;
   const email = formData.get("email") as string;
+  const jobTitle = (formData.get("jobTitle") as string | null) ?? "";
   const photo = formData.get("photo") as File | null;
 
   if (!firstName?.trim() || !lastName?.trim() || !email?.trim()) {
     return NextResponse.json({ error: "Name and email are required" }, { status: 400 });
   }
 
-  const result = await updateMyClientProfile(client.clientId, firstName, lastName, email, photo);
+  const result = await updateMyClientProfile(client.clientId, firstName, lastName, email, jobTitle, photo);
   if ("error" in result) {
     return NextResponse.json({ error: "Failed to update profile", detail: result.error }, { status: 500 });
   }
