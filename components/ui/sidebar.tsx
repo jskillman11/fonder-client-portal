@@ -24,6 +24,32 @@ import {
 } from "@/components/ui/tooltip"
 import { PanelLeftIcon } from "lucide-react"
 
+// iOS Safari's collapsing address/tab bar doesn't reliably re-layout a
+// position:fixed element's CSS-computed height (dvh, or auto anchored to
+// inset-y-0) when it animates -- Chrome iOS doesn't hit this despite sharing
+// WebKit's rendering engine. visualViewport is the one thing Safari keeps
+// accurate and re-fires resize for, so the mobile sheet measures its height
+// from it directly instead of trusting CSS.
+function useVisualViewportHeight() {
+  const [height, setHeight] = React.useState<number | null>(null)
+
+  React.useEffect(() => {
+    const viewport = window.visualViewport
+    if (!viewport) return
+
+    const update = () => setHeight(viewport.height)
+    update()
+    viewport.addEventListener("resize", update)
+    viewport.addEventListener("scroll", update)
+    return () => {
+      viewport.removeEventListener("resize", update)
+      viewport.removeEventListener("scroll", update)
+    }
+  }, [])
+
+  return height
+}
+
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
 const SIDEBAR_WIDTH = "16rem"
@@ -162,6 +188,7 @@ function Sidebar({
   collapsible?: "offcanvas" | "icon" | "none"
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+  const visualViewportHeight = useVisualViewportHeight()
 
   if (collapsible === "none") {
     return (
@@ -190,6 +217,7 @@ function Sidebar({
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
+              ...(visualViewportHeight ? { height: `${visualViewportHeight}px` } : {}),
             } as React.CSSProperties
           }
           side={side}
