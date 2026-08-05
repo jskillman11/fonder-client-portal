@@ -48,8 +48,8 @@ export function NewCompanyForm() {
       <h2 className="text-[15px] font-bold text-[var(--color-ink)] mb-4">
         Add a company
       </h2>
-      <form onSubmit={handleSubmit} className="flex gap-3 items-end flex-wrap">
-        <div className="flex-1 min-w-[160px]">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end sm:flex-wrap">
+        <div className="sm:flex-1 sm:min-w-[160px]">
           <label className={labelClass}>Name</label>
           <input
             required
@@ -59,16 +59,16 @@ export function NewCompanyForm() {
             placeholder="Coros"
           />
         </div>
-        <div className="flex-1 min-w-[160px]">
+        <div className="min-w-0 sm:flex-1 sm:min-w-[160px]">
           <label className={labelClass}>Logo (optional)</label>
           <input
             type="file"
             accept="image/*"
             onChange={(e) => setLogo(e.target.files?.[0] ?? null)}
-            className="w-full mt-1 text-[13px]"
+            className="mt-1 w-full max-w-full text-[13px]"
           />
         </div>
-        <div className="flex-1 min-w-[160px]">
+        <div className="sm:flex-1 sm:min-w-[160px]">
           <label className={labelClass}>Or fetch from website</label>
           <input
             value={logoDomain}
