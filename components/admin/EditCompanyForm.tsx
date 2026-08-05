@@ -29,6 +29,8 @@ export function EditCompanyForm({ company }: { company: Company }) {
   const [logo, setLogo] = useState<File | null>(null);
   const [logoDomain, setLogoDomain] = useState("");
   const [logoBackgroundColor, setLogoBackgroundColor] = useState(company.logoBackgroundColor);
+  const [clickupListIds, setClickupListIds] = useState(company.clickupListIds.join("\n"));
+  const [googleSheetIds, setGoogleSheetIds] = useState(company.googleSheetIds.join("\n"));
   const [status, setStatus] = useState<"idle" | "saving" | "deleting" | "removingLogo">("idle");
 
   async function handleSubmit(e: React.FormEvent) {
@@ -41,6 +43,8 @@ export function EditCompanyForm({ company }: { company: Company }) {
     if (logo) formData.append("logo", logo);
     else if (logoDomain.trim()) formData.append("logoDomain", logoDomain.trim());
     formData.append("logoBackgroundColor", logoBackgroundColor);
+    formData.append("clickupListIds", clickupListIds);
+    formData.append("googleSheetIds", googleSheetIds);
 
     const res = await fetch("/api/admin/update-company", { method: "POST", body: formData });
     const data = await res.json();
@@ -154,6 +158,40 @@ export function EditCompanyForm({ company }: { company: Company }) {
             </p>
           </div>
         </div>
+        <div className="pt-2 border-t border-[var(--color-border)]">
+          <p className="text-[13px] font-medium text-[var(--color-muted-text)] mb-1">Integrations</p>
+          <p className="text-[11px] text-[var(--color-faint)] mb-3">
+            IDs only, for now — nothing syncs to ClickUp or Google Sheets yet.
+          </p>
+          {company.qbCustomerId && (
+            <p className="text-[12px] text-[var(--color-muted-text)] mb-3">
+              QuickBooks customer ID: <span className="font-mono">{company.qbCustomerId}</span>
+            </p>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelClass}>ClickUp list ID(s)</label>
+              <textarea
+                value={clickupListIds}
+                onChange={(e) => setClickupListIds(e.target.value)}
+                rows={2}
+                className={inputClass}
+                placeholder="One per line"
+              />
+            </div>
+            <div>
+              <label className={labelClass}>Google Sheet ID(s)</label>
+              <textarea
+                value={googleSheetIds}
+                onChange={(e) => setGoogleSheetIds(e.target.value)}
+                rows={2}
+                className={inputClass}
+                placeholder="One per line"
+              />
+            </div>
+          </div>
+        </div>
+
         <div className="flex justify-between items-center pt-2">
           <AlertDialog>
             <AlertDialogTrigger asChild>

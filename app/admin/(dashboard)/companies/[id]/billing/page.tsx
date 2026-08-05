@@ -1,11 +1,14 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getCompany } from "@/lib/companies-clients";
-import { listEngagementsForCompany } from "@/lib/get-engagement";
+import { listEngagementsForCompany, getActiveEngagementForCompany } from "@/lib/get-engagement";
+import { listInstallments, listBillingCycles } from "@/lib/engagement-billing";
 import { getConnectionStatus } from "@/lib/quickbooks";
 import { Card } from "@/components/Card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { EngagementInstallmentsTable } from "@/components/admin/EngagementInstallmentsTable";
+import { EngagementBillingCyclesTable } from "@/components/admin/EngagementBillingCyclesTable";
 
 export const dynamic = "force-dynamic";
 
@@ -24,17 +27,50 @@ export default async function CompanyBillingPage({
   const company = await getCompany(id);
   if (!company) notFound();
 
-  const [engagements, qb] = await Promise.all([
+  const [engagements, activeEngagement, qb] = await Promise.all([
     listEngagementsForCompany(id),
+    getActiveEngagementForCompany(id),
     getConnectionStatus(),
   ]);
 
+  const [installments, cycles] = activeEngagement
+    ? await Promise.all([
+        activeEngagement.engagementType === "project" ? listInstallments(activeEngagement.id) : Promise.resolve([]),
+        activeEngagement.engagementType === "partnership"
+          ? listBillingCycles(activeEngagement.id)
+          : Promise.resolve([]),
+      ])
+    : [[], []];
+
+  const history = engagements.filter((e) => e.id !== activeEngagement?.id);
+
   return (
     <>
+      {activeEngagement && (
+        <Card className="px-9 py-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-[16px] font-bold text-[var(--color-ink)]">
+              Payment schedule — {activeEngagement.engagementTitle}
+            </h2>
+            <Link
+              href={`/admin/companies/${id}/engagements/${activeEngagement.id}`}
+              className="text-[12px] underline text-[var(--color-muted-text)]"
+            >
+              View engagement
+            </Link>
+          </div>
+          {activeEngagement.engagementType === "project" ? (
+            <EngagementInstallmentsTable installments={installments} />
+          ) : (
+            <EngagementBillingCyclesTable cycles={cycles} />
+          )}
+        </Card>
+      )}
+
       <Card className="px-9 py-8">
-        <h2 className="text-[16px] font-bold text-[var(--color-ink)] mb-4">Billing</h2>
-        {engagements.length === 0 ? (
-          <p className="text-[13px] text-[var(--color-muted-text)]">No engagements yet for this company.</p>
+        <h2 className="text-[16px] font-bold text-[var(--color-ink)] mb-4">History</h2>
+        {history.length === 0 ? (
+          <p className="text-[13px] text-[var(--color-muted-text)]">No past engagements for this company.</p>
         ) : (
           <Table>
             <TableHeader>
@@ -46,7 +82,7 @@ export default async function CompanyBillingPage({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {engagements.map((e) => {
+              {history.map((e) => {
                 const invoice = invoiceStatus(e);
                 return (
                   <TableRow key={e.id}>

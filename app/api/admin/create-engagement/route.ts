@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient, requireAdmin } from "@/lib/supabase/server";
+import { createInstallmentsForEngagement } from "@/lib/engagement-billing";
 
 export async function POST(req: NextRequest) {
   const admin = await requireAdmin();
@@ -47,6 +48,10 @@ export async function POST(req: NextRequest) {
       company_id: companyId,
       client_id: clientId,
       engagement_title: body.engagementTitle,
+      engagement_type: body.engagementType || "project",
+      partnership_tier: body.partnershipTier || null,
+      payment_terms: body.paymentTerms || null,
+      duration_months: body.durationMonths ? Number(body.durationMonths) : null,
       total_fee: body.totalFee,
       total_fee_amount: body.totalFeeAmount ? Number(body.totalFeeAmount) : null,
       final_delivery_date: body.finalDeliveryDate,
@@ -65,6 +70,14 @@ export async function POST(req: NextRequest) {
           : insertError.message,
       },
       { status: 500 },
+    );
+  }
+
+  if (engagementRow.engagement_type === "project" && engagementRow.payment_terms) {
+    await createInstallmentsForEngagement(
+      engagementRow.id,
+      engagementRow.payment_terms,
+      engagementRow.total_fee_amount,
     );
   }
 

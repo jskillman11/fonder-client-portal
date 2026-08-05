@@ -32,6 +32,10 @@ export default async function EngagementDetailPage({
           initialValues={{
             clientId: engagement.clientId ?? "",
             engagementTitle: engagement.engagementTitle,
+            engagementType: engagement.engagementType,
+            partnershipTier: engagement.partnershipTier ?? "",
+            paymentTerms: engagement.paymentTerms === "monthly_in_advance" ? "" : (engagement.paymentTerms ?? ""),
+            durationMonths: engagement.durationMonths?.toString() ?? "",
             totalFee: engagement.totalFee,
             totalFeeAmount: engagement.totalFeeAmount?.toString() ?? "",
             finalDeliveryDate: engagement.finalDeliveryDate,

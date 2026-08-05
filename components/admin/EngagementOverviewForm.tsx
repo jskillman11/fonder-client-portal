@@ -14,6 +14,10 @@ const labelClass = "text-[13px] font-medium text-[var(--color-muted-text)]";
 export type EngagementOverviewValues = {
   clientId: string;
   engagementTitle: string;
+  engagementType: "project" | "partnership";
+  partnershipTier: "growth" | "venture" | "";
+  paymentTerms: "50_25_25" | "50_40_10" | "";
+  durationMonths: string;
   totalFee: string;
   totalFeeAmount: string;
   finalDeliveryDate: string;
@@ -87,6 +91,10 @@ export function EngagementOverviewForm({
           engagementId,
           clientId: values.clientId,
           engagementTitle: values.engagementTitle,
+          engagementType: values.engagementType,
+          partnershipTier: values.engagementType === "partnership" ? values.partnershipTier || null : null,
+          paymentTerms: values.engagementType === "project" ? values.paymentTerms || null : "monthly_in_advance",
+          durationMonths: values.engagementType === "partnership" ? values.durationMonths : null,
           totalFee: values.totalFee,
           totalFeeAmount: values.totalFeeAmount,
           finalDeliveryDate: values.finalDeliveryDate,
@@ -188,9 +196,71 @@ export function EngagementOverviewForm({
           />
         </div>
 
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className={labelClass}>Type</label>
+            <select
+              value={values.engagementType}
+              onChange={(e) => set("engagementType", e.target.value as EngagementOverviewValues["engagementType"])}
+              className={inputClass}
+            >
+              <option value="project">Project</option>
+              <option value="partnership">Partnership</option>
+            </select>
+          </div>
+          {values.engagementType === "partnership" ? (
+            <div>
+              <label className={labelClass}>Tier</label>
+              <select
+                value={values.partnershipTier}
+                onChange={(e) => set("partnershipTier", e.target.value as EngagementOverviewValues["partnershipTier"])}
+                className={inputClass}
+              >
+                <option value="" disabled>
+                  Select a tier…
+                </option>
+                <option value="growth">Growth</option>
+                <option value="venture">Venture</option>
+              </select>
+            </div>
+          ) : (
+            <div>
+              <label className={labelClass}>Payment terms</label>
+              <select
+                value={values.paymentTerms}
+                onChange={(e) => set("paymentTerms", e.target.value as EngagementOverviewValues["paymentTerms"])}
+                className={inputClass}
+              >
+                <option value="" disabled>
+                  Select payment terms…
+                </option>
+                <option value="50_25_25">50 / 25 / 25</option>
+                <option value="50_40_10">50 / 40 / 10</option>
+              </select>
+            </div>
+          )}
+        </div>
+
+        {values.engagementType === "partnership" && (
+          <div className="mb-4">
+            <label className={labelClass}>Duration (months)</label>
+            <input
+              type="number"
+              min="1"
+              value={values.durationMonths}
+              onChange={(e) => set("durationMonths", e.target.value)}
+              className={inputClass}
+              placeholder="12"
+            />
+            <p className="text-[11px] text-[var(--color-faint)] mt-1">
+              Billed monthly in advance — the budget below is split evenly across this many months.
+            </p>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className={labelClass}>Total fee</label>
+            <label className={labelClass}>Budget</label>
             <input
               required
               value={values.totalFee}
@@ -210,7 +280,7 @@ export function EngagementOverviewForm({
         </div>
 
         <div className="mt-4">
-          <label className={labelClass}>Total fee (numeric, for invoicing)</label>
+          <label className={labelClass}>Budget (numeric, for invoicing)</label>
           <input
             type="number"
             step="0.01"
@@ -221,7 +291,7 @@ export function EngagementOverviewForm({
             placeholder="12000.00"
           />
           <p className="text-[11px] text-[var(--color-faint)] mt-1">
-            Used to create the real QuickBooks invoice — separate from the display text above.
+            Used to create real QuickBooks invoices — separate from the display text above.
           </p>
         </div>
 

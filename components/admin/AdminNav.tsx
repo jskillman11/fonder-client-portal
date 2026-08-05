@@ -3,7 +3,7 @@
 import React from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { House, LayoutDashboard, LayoutList, Users, FileText, UserCog, Globe, Receipt } from "lucide-react";
+import { House, LayoutDashboard, Users, FileText, UserCog, Globe, Receipt } from "lucide-react";
 import { DashboardShell, type ShellNavItem } from "@/components/shell/DashboardShell";
 import { CompanySwitcher } from "@/components/admin/CompanySwitcher";
 import {
@@ -23,7 +23,6 @@ function computeNavItems(pathname: string, isSuperAdmin: boolean): ShellNavItem[
     const base = `/admin/companies/${companyId}`;
     return [
       { href: base, label: "Overview", section: "Company", icon: LayoutDashboard },
-      { href: `${base}/engagements`, label: "Engagements", section: "Company", icon: LayoutList },
       { href: `${base}/clients`, label: "Clients", section: "Company", icon: Users },
       { href: `${base}/documents`, label: "Documents", section: "Company", icon: FileText },
       { href: `${base}/team`, label: "Team", section: "Company", icon: UserCog },

@@ -69,12 +69,21 @@ export function computeDocsSigned(engagement: {
 
 export type EngagementStatus = "active" | "completed";
 
+export type EngagementType = "project" | "partnership";
+export type PartnershipTier = "growth" | "venture";
+export type PaymentTerms = "50_25_25" | "50_40_10" | "monthly_in_advance";
+
 export type EngagementRecord = {
   id: string;
   companyId: string;
   companyName: string;
   clientId: string | null;
+  clientEmail: string | null;
   engagementTitle: string;
+  engagementType: EngagementType;
+  partnershipTier: PartnershipTier | null;
+  paymentTerms: PaymentTerms | null;
+  durationMonths: number | null;
   totalFee: string;
   totalFeeAmount: number | null;
   finalDeliveryDate: string;
@@ -86,6 +95,7 @@ export type EngagementRecord = {
   qbInvoiceLink: string | null;
   invoiceSentAt: string | null;
   invoicePaidAt: string | null;
+  qbCustomerId: string | null;
 };
 
 export type CompanyEngagementRow = {
@@ -303,7 +313,7 @@ export async function getEngagementById(
   const supabase = createServiceClient();
   const { data: engagement, error } = await supabase
     .from("engagements")
-    .select("*, companies(id, name)")
+    .select("*, companies(id, name, qb_customer_id), clients(email)")
     .eq("id", engagementId)
     .single();
 
@@ -311,6 +321,7 @@ export async function getEngagementById(
   const company = Array.isArray(engagement.companies)
     ? engagement.companies[0]
     : engagement.companies;
+  const client = Array.isArray(engagement.clients) ? engagement.clients[0] : engagement.clients;
 
   const { data: milestoneRows } = await supabase
     .from("engagement_milestones")
@@ -323,7 +334,12 @@ export async function getEngagementById(
     companyId: engagement.company_id,
     companyName: company?.name ?? "",
     clientId: engagement.client_id,
+    clientEmail: client?.email ?? null,
     engagementTitle: engagement.engagement_title,
+    engagementType: engagement.engagement_type as EngagementType,
+    partnershipTier: engagement.partnership_tier,
+    paymentTerms: engagement.payment_terms,
+    durationMonths: engagement.duration_months,
     totalFee: engagement.total_fee,
     totalFeeAmount: engagement.total_fee_amount,
     finalDeliveryDate: engagement.final_delivery_date,
@@ -338,7 +354,25 @@ export async function getEngagementById(
     qbInvoiceLink: engagement.qb_invoice_link,
     invoiceSentAt: engagement.invoice_sent_at,
     invoicePaidAt: engagement.invoice_paid_at,
+    qbCustomerId: company?.qb_customer_id ?? null,
   };
+}
+
+// Admin-facing lookup for the company Overview tab -- the current
+// engagement's full record (if the company has one active), reusing the
+// exact same shape as getEngagementById so the Overview tab's form can share
+// EngagementOverviewForm with the (now-removed) standalone engagement page.
+export async function getActiveEngagementForCompany(companyId: string): Promise<EngagementRecord | null> {
+  const supabase = createServiceClient();
+  const { data: row } = await supabase
+    .from("engagements")
+    .select("id")
+    .eq("company_id", companyId)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (!row) return null;
+  return getEngagementById(row.id);
 }
 
 export type EngagementSummary = {

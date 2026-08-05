@@ -7,7 +7,40 @@ export type Company = {
   logoUrl: string | null;
   logoBackgroundColor: string;
   clientSlug: string | null;
+  qbCustomerId: string | null;
+  clickupListIds: string[];
+  googleSheetIds: string[];
 };
+
+const COMPANY_COLUMNS =
+  "id, name, logo_storage_path, logo_background_color, client_slug, qb_customer_id, clickup_list_ids, google_sheet_ids";
+
+function mapCompanyRow(
+  supabase: ReturnType<typeof createServiceClient>,
+  data: {
+    id: string;
+    name: string;
+    logo_storage_path: string | null;
+    logo_background_color: string;
+    client_slug: string | null;
+    qb_customer_id: string | null;
+    clickup_list_ids: string[] | null;
+    google_sheet_ids: string[] | null;
+  },
+): Company {
+  return {
+    id: data.id,
+    name: data.name,
+    logoUrl: data.logo_storage_path
+      ? supabase.storage.from("engagement-logos").getPublicUrl(data.logo_storage_path).data.publicUrl
+      : null,
+    logoBackgroundColor: data.logo_background_color,
+    clientSlug: data.client_slug,
+    qbCustomerId: data.qb_customer_id,
+    clickupListIds: data.clickup_list_ids ?? [],
+    googleSheetIds: data.google_sheet_ids ?? [],
+  };
+}
 
 export type Client = {
   id: string;
@@ -23,18 +56,10 @@ export async function listCompanies(): Promise<Company[]> {
   const supabase = createServiceClient();
   const { data } = await supabase
     .from("companies")
-    .select("id, name, logo_storage_path, logo_background_color, client_slug")
+    .select(COMPANY_COLUMNS)
     .order("name", { ascending: true });
 
-  return (data ?? []).map((c) => ({
-    id: c.id,
-    name: c.name,
-    logoUrl: c.logo_storage_path
-      ? supabase.storage.from("engagement-logos").getPublicUrl(c.logo_storage_path).data.publicUrl
-      : null,
-    logoBackgroundColor: c.logo_background_color,
-    clientSlug: c.client_slug,
-  }));
+  return (data ?? []).map((c) => mapCompanyRow(supabase, c));
 }
 
 export async function listClients(): Promise<Client[]> {
@@ -61,40 +86,24 @@ export async function getCompany(id: string): Promise<Company | null> {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("companies")
-    .select("id, name, logo_storage_path, logo_background_color, client_slug")
+    .select(COMPANY_COLUMNS)
     .eq("id", id)
     .single();
 
   if (error || !data) return null;
-  return {
-    id: data.id,
-    name: data.name,
-    logoUrl: data.logo_storage_path
-      ? supabase.storage.from("engagement-logos").getPublicUrl(data.logo_storage_path).data.publicUrl
-      : null,
-    logoBackgroundColor: data.logo_background_color,
-    clientSlug: data.client_slug,
-  };
+  return mapCompanyRow(supabase, data);
 }
 
 export async function getCompanyBySlug(clientSlug: string): Promise<Company | null> {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("companies")
-    .select("id, name, logo_storage_path, logo_background_color, client_slug")
+    .select(COMPANY_COLUMNS)
     .eq("client_slug", clientSlug)
     .single();
 
   if (error || !data) return null;
-  return {
-    id: data.id,
-    name: data.name,
-    logoUrl: data.logo_storage_path
-      ? supabase.storage.from("engagement-logos").getPublicUrl(data.logo_storage_path).data.publicUrl
-      : null,
-    logoBackgroundColor: data.logo_background_color,
-    clientSlug: data.client_slug,
-  };
+  return mapCompanyRow(supabase, data);
 }
 
 // A manual file upload always wins if both are given. logoDomain fetches a
@@ -183,6 +192,8 @@ export async function updateCompany(
   logoDomain: string | null = null,
   logoBackgroundColor: string | null = null,
   removeLogo: boolean = false,
+  clickupListIds: string[] | null = null,
+  googleSheetIds: string[] | null = null,
 ): Promise<{ success: true } | { error: string }> {
   const supabase = createServiceClient();
 
@@ -192,7 +203,16 @@ export async function updateCompany(
     .eq("id", id)
     .single();
 
-  const update: { name: string; logo_storage_path?: string | null; logo_background_color?: string } = { name };
+  const update: {
+    name: string;
+    logo_storage_path?: string | null;
+    logo_background_color?: string;
+    clickup_list_ids?: string[];
+    google_sheet_ids?: string[];
+  } = { name };
+
+  if (clickupListIds !== null) update.clickup_list_ids = clickupListIds;
+  if (googleSheetIds !== null) update.google_sheet_ids = googleSheetIds;
 
   if (removeLogo) {
     if (current?.logo_storage_path) {

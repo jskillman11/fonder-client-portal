@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient, requireAdmin } from "@/lib/supabase/server";
+import { createInstallmentsForEngagement } from "@/lib/engagement-billing";
 
 // Maps the camelCase body keys the engagement Overview form may send to
 // their snake_case columns -- only keys actually present in the body are
@@ -8,6 +9,10 @@ import { createServiceClient, requireAdmin } from "@/lib/supabase/server";
 const COLUMN_MAP: Record<string, string> = {
   clientId: "client_id",
   engagementTitle: "engagement_title",
+  engagementType: "engagement_type",
+  partnershipTier: "partnership_tier",
+  paymentTerms: "payment_terms",
+  durationMonths: "duration_months",
   totalFee: "total_fee",
   totalFeeAmount: "total_fee_amount",
   finalDeliveryDate: "final_delivery_date",
@@ -53,10 +58,12 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = createServiceClient();
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("engagements")
     .update(update)
-    .eq("id", engagementId);
+    .eq("id", engagementId)
+    .select("engagement_type, payment_terms, total_fee_amount")
+    .single();
 
   if (error) {
     return NextResponse.json(
@@ -68,6 +75,14 @@ export async function POST(req: NextRequest) {
       },
       { status: 500 },
     );
+  }
+
+  // Regenerate the pending installment plan whenever the terms or budget
+  // that produced it might have changed -- a no-op for partnerships (no
+  // matching plan) and harmless if neither field was actually touched.
+  const touchedInstallmentInputs = "payment_terms" in update || "total_fee_amount" in update;
+  if (touchedInstallmentInputs && updated.engagement_type === "project") {
+    await createInstallmentsForEngagement(engagementId, updated.payment_terms, updated.total_fee_amount);
   }
 
   return NextResponse.json({ success: true });
