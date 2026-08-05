@@ -169,7 +169,7 @@ export function DashboardShell({
             <SidebarTrigger className="-ml-1 md:hidden" />
             {breadcrumb}
           </header>
-          <div className="flex-1 px-4 py-8">{children}</div>
+          <div className="min-w-0 flex-1 px-4 py-8">{children}</div>
         </SidebarInset>
       </TooltipProvider>
     </SidebarProvider>
