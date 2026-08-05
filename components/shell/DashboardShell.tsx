@@ -165,11 +165,10 @@ export function DashboardShell({
           <SidebarRail />
         </Sidebar>
         <SidebarInset>
-          {breadcrumb && (
-            <header className="flex h-14 shrink-0 items-center gap-2 border-b border-[var(--color-border)] bg-[var(--color-white)] px-4">
-              {breadcrumb}
-            </header>
-          )}
+          <header className="flex h-14 shrink-0 items-center gap-2 border-b border-[var(--color-border)] bg-[var(--color-white)] px-4">
+            <SidebarTrigger className="-ml-1 md:hidden" />
+            {breadcrumb}
+          </header>
           <div className="flex-1 px-4 py-8">{children}</div>
         </SidebarInset>
       </TooltipProvider>
