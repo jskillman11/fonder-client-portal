@@ -2,16 +2,18 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // Protects everything under /admin (pages) and /api/admin (route handlers) —
-// requires a real, logged-in Supabase user with a staff profile. Also runs
-// for /portal/[client] so client (magic-link) sessions get the same
-// treatment below; those routes stay open to anyone, auth is enforced by
-// hasPortalAccess further down the stack, not here.
+// requires a real, logged-in Supabase user with a staff profile. /admin/login
+// and /admin/auth/callback (the Google OAuth redirect target) are exempt
+// since they run before a session exists. Also runs for /portal/[client] so
+// client (magic-link) sessions get the same treatment below; those routes
+// stay open to anyone, auth is enforced by hasPortalAccess further down the
+// stack, not here.
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isApiAdmin = pathname.startsWith("/api/admin");
   const isAdminPage = pathname.startsWith("/admin");
 
-  if (pathname === "/admin/login" || pathname.startsWith("/admin/invite/")) {
+  if (pathname === "/admin/login" || pathname === "/admin/auth/callback") {
     return NextResponse.next();
   }
 
@@ -68,6 +70,7 @@ export async function proxy(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const loginUrl = new URL("/admin/login", request.url);
+    loginUrl.searchParams.set("error", "unauthorized");
     return NextResponse.redirect(loginUrl);
   }
 

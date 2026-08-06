@@ -39,9 +39,10 @@ export async function listStaff(): Promise<StaffRecord[]> {
 }
 
 // Creates a real Supabase Auth account for a new staff member and emails
-// them a branded invite link -- mirrors lib/portal-access.ts's magic-link
-// pattern (generateLink creates the user and returns a hashed_token; no
-// email is sent by Supabase itself, so we send our own).
+// them a branded invite -- staff sign in with Google (see /admin/login), so
+// unlike the old password flow there's no link to click to "accept": the
+// account just needs to exist with a matching email before their first
+// Google sign-in links to it.
 export async function inviteStaff(
   email: string,
   makeSuperAdmin: boolean,
@@ -50,34 +51,32 @@ export async function inviteStaff(
   const supabase = createServiceClient();
   const normalizedEmail = email.toLowerCase().trim();
 
-  const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-    type: "invite",
+  const { data: created, error: createError } = await supabase.auth.admin.createUser({
     email: normalizedEmail,
+    email_confirm: true,
   });
 
-  if (linkError || !linkData) {
-    return { error: linkError?.message || "Failed to create staff invite" };
+  if (createError || !created.user) {
+    return { error: createError?.message || "Failed to create staff account" };
   }
 
   const { error: profileError } = await supabase.from("profiles").insert({
-    id: linkData.user.id,
+    id: created.user.id,
     role: "staff",
     is_super_admin: makeSuperAdmin,
   });
 
   if (profileError) return { error: profileError.message };
 
-  const link = `${appOrigin}/admin/invite/${linkData.properties.hashed_token}`;
-
   return sendBrandedActionEmail({
     to: normalizedEmail,
     subject: "You've been invited to the Fonder admin dashboard",
     heading: "You're invited",
-    body: "You've been added as a staff member on the Fonder Studio admin dashboard.",
-    ctaLabel: "Accept invite",
-    ctaUrl: link,
+    body: "You've been added as a staff member on the Fonder Studio admin dashboard. Sign in with your Fonder Google Workspace account to get started.",
+    ctaLabel: "Sign in with Google",
+    ctaUrl: `${appOrigin}/admin/login`,
     footerNote:
-      "This link can only be used by you. If you weren't expecting this, you can ignore this email.",
+      "Use the Google account matching this email address. If you weren't expecting this, you can ignore this email.",
   });
 }
 
