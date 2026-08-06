@@ -64,12 +64,14 @@ export function DashboardShell({
   navItems,
   sidebarTopSlot,
   breadcrumb,
+  headerActions,
   accountSlot,
   children,
 }: {
   navItems: ShellNavItem[];
   sidebarTopSlot?: React.ReactNode;
   breadcrumb?: React.ReactNode;
+  headerActions?: React.ReactNode;
   accountSlot: React.ReactNode;
   children: React.ReactNode;
 }) {
@@ -168,6 +170,7 @@ export function DashboardShell({
           <header className="flex h-14 shrink-0 items-center gap-2 border-b border-[var(--color-border)] bg-[var(--color-white)] px-4">
             <SidebarTrigger className="-ml-1 md:hidden" />
             {breadcrumb}
+            {headerActions && <div className="ml-auto flex items-center gap-2">{headerActions}</div>}
           </header>
           <div className="min-w-0 flex-1 px-4 py-8">{children}</div>
         </SidebarInset>
