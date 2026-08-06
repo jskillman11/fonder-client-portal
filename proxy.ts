@@ -2,17 +2,15 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // Protects everything under /admin (pages) and /api/admin (route handlers) —
-// requires a real, logged-in Supabase user. The public /portal/[client]
-// routes are untouched by this and stay open, since that's what clients
-// themselves need to access without any login.
+// requires a real, logged-in Supabase user with a staff profile. Also runs
+// for /portal/[client] so client (magic-link) sessions get the same
+// treatment below; those routes stay open to anyone, auth is enforced by
+// hasPortalAccess further down the stack, not here.
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isApiAdmin = pathname.startsWith("/api/admin");
   const isAdminPage = pathname.startsWith("/admin");
 
-  if (!isApiAdmin && !isAdminPage) {
-    return NextResponse.next();
-  }
   if (pathname === "/admin/login" || pathname.startsWith("/admin/invite/")) {
     return NextResponse.next();
   }
@@ -38,9 +36,19 @@ export async function proxy(request: NextRequest) {
     },
   );
 
+  // Refreshes the session (and rewrites the cookie) on every matched
+  // request. Server Components can't persist a refreshed cookie themselves
+  // (see lib/supabase/server.ts) -- without this, a session silently dies
+  // once its access token expires instead of transparently refreshing,
+  // which is what was forcing clients (and staff) to re-verify/log in again
+  // on their next visit.
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  if (!isApiAdmin && !isAdminPage) {
+    return response;
+  }
 
   // Beyond "is there a session": clients also get real Supabase Auth
   // accounts (see lib/portal-access.ts), so admin access requires an actual
@@ -67,5 +75,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/admin/:path*"],
+  matcher: ["/admin/:path*", "/api/admin/:path*", "/portal/:path*"],
 };
