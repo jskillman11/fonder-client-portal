@@ -30,10 +30,19 @@ export async function POST(req: NextRequest) {
     .from("engagement-logos")
     .upload(path, resized, { contentType: "image/png" });
 
-  let downloaded: ReturnType<typeof describe> | null = null;
+  let downloadedViaPublicUrl: ReturnType<typeof describe> | null = null;
+  let downloadedViaStorageApi: ReturnType<typeof describe> | null = null;
+  let storageApiError: string | null = null;
   if (!uploadError) {
     const url = supabase.storage.from("engagement-logos").getPublicUrl(path).data.publicUrl;
-    downloaded = describe(Buffer.from(await (await fetch(url)).arrayBuffer()));
+    downloadedViaPublicUrl = describe(Buffer.from(await (await fetch(url)).arrayBuffer()));
+
+    const { data: apiData, error: apiError } = await supabase.storage.from("engagement-logos").download(path);
+    if (apiError) {
+      storageApiError = apiError.message;
+    } else {
+      downloadedViaStorageApi = describe(Buffer.from(await apiData.arrayBuffer()));
+    }
   }
 
   return NextResponse.json({
@@ -44,7 +53,9 @@ export async function POST(req: NextRequest) {
     raw: describe(buffer),
     resized: describe(resized),
     uploadError: uploadError?.message ?? null,
-    downloadedFromStorage: downloaded,
+    downloadedViaPublicUrl,
+    downloadedViaStorageApi,
+    storageApiError,
     path,
   });
 }
