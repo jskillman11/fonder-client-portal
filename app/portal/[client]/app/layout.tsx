@@ -59,6 +59,8 @@ export default async function ClientAppLayout({
           adminFullName={adminUser?.fullName}
           adminJobTitle={adminUser?.jobTitle}
           adminAvatarUrl={adminUser?.avatarUrl}
+          adminIconBgColor={adminUser?.iconBgColor}
+          adminIconTextColor={adminUser?.iconTextColor}
         />
       }
     >

@@ -27,6 +27,8 @@ export default async function DashboardLayout({
           fullName={user?.fullName ?? null}
           jobTitle={user?.jobTitle ?? null}
           avatarUrl={user?.avatarUrl ?? null}
+          iconBgColor={user?.iconBgColor ?? null}
+          iconTextColor={user?.iconTextColor ?? null}
         />
       }
     >

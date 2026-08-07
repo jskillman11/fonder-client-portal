@@ -32,6 +32,8 @@ export function AdminAccountMenu({
   fullName,
   jobTitle,
   avatarUrl,
+  iconBgColor,
+  iconTextColor,
   showBackToAdmin,
   onViewAsClient,
 }: {
@@ -39,6 +41,8 @@ export function AdminAccountMenu({
   fullName?: string | null;
   jobTitle?: string | null;
   avatarUrl?: string | null;
+  iconBgColor?: string | null;
+  iconTextColor?: string | null;
   // Set when this renders inside a client portal a staff member is
   // previewing (see ClientAccountMenu) -- offers a way back without
   // otherwise changing this component's own behavior.
@@ -69,7 +73,12 @@ export function AdminAccountMenu({
             >
               <Avatar className="h-8 w-8 rounded-lg after:rounded-lg">
                 {avatarUrl && <AvatarImage src={avatarUrl} alt={name} className="rounded-lg object-cover" />}
-                <AvatarFallback className="rounded-lg">{initialsFromName(name)}</AvatarFallback>
+                <AvatarFallback
+                  className="rounded-lg"
+                  style={{ backgroundColor: iconBgColor || "#f2f1ec", color: iconTextColor || "#181a1e" }}
+                >
+                  {initialsFromName(name)}
+                </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{name}</span>

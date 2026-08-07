@@ -121,6 +121,8 @@ export function ClientAccountMenu({
   adminFullName,
   adminJobTitle,
   adminAvatarUrl,
+  adminIconBgColor,
+  adminIconTextColor,
 }: {
   clientSlug: string;
   hasSession: boolean;
@@ -133,6 +135,8 @@ export function ClientAccountMenu({
   adminFullName?: string | null;
   adminJobTitle?: string | null;
   adminAvatarUrl?: string | null;
+  adminIconBgColor?: string | null;
+  adminIconTextColor?: string | null;
 }) {
   const router = useRouter();
   const [previewAsClient, setPreviewAsClient] = useState(false);
@@ -181,6 +185,8 @@ export function ClientAccountMenu({
         fullName={adminFullName}
         jobTitle={adminJobTitle}
         avatarUrl={adminAvatarUrl}
+        iconBgColor={adminIconBgColor}
+        iconTextColor={adminIconTextColor}
         showBackToAdmin
         onViewAsClient={() => setPreviewAsClient(true)}
       />
