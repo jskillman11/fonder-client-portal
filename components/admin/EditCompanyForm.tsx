@@ -28,7 +28,6 @@ export function EditCompanyForm({ company }: { company: Company }) {
   const [name, setName] = useState(company.name);
   const [logo, setLogo] = useState<File | null>(null);
   const [logoDomain, setLogoDomain] = useState("");
-  const [logoBackgroundColor, setLogoBackgroundColor] = useState(company.logoBackgroundColor);
   const [status, setStatus] = useState<"idle" | "saving" | "deleting" | "removingLogo">("idle");
 
   async function handleSubmit(e: React.FormEvent) {
@@ -40,7 +39,6 @@ export function EditCompanyForm({ company }: { company: Company }) {
     formData.append("name", name);
     if (logo) formData.append("logo", logo);
     else if (logoDomain.trim()) formData.append("logoDomain", logoDomain.trim());
-    formData.append("logoBackgroundColor", logoBackgroundColor);
 
     const res = await fetch("/api/admin/update-company", { method: "POST", body: formData });
     const data = await res.json();
@@ -141,18 +139,6 @@ export function EditCompanyForm({ company }: { company: Company }) {
             placeholder="coros.com"
             disabled={!!logo}
           />
-          <div className="flex items-center gap-2 mt-3">
-            <label className={labelClass}>Background color</label>
-            <input
-              type="color"
-              value={logoBackgroundColor}
-              onChange={(e) => setLogoBackgroundColor(e.target.value)}
-              className="h-7 w-10 rounded border border-[var(--color-border)] p-0.5"
-            />
-            <p className="text-[12px] text-[var(--color-muted-text)]">
-              Fills in transparent areas of the logo — applies on next save.
-            </p>
-          </div>
         </div>
         <div className="flex justify-between items-center pt-2">
           <AlertDialog>
