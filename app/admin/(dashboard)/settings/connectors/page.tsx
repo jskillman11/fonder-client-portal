@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { isSuperAdminSession } from "@/lib/supabase/server";
 import { getConnectionStatus } from "@/lib/quickbooks";
+import { getConnectionStatus as getClickUpConnectionStatus } from "@/lib/clickup";
 import { listCompanies } from "@/lib/companies-clients";
 import { Card } from "@/components/Card";
 import { BackButton } from "@/components/admin/BackButton";
 import { QuickBooksDisconnectButton } from "@/components/admin/QuickBooksDisconnectButton";
+import { ClickUpConnectionForm } from "@/components/admin/ClickUpConnectionForm";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +28,11 @@ export default async function DataConnectorsPage() {
     );
   }
 
-  const [qb, companies] = await Promise.all([getConnectionStatus(), listCompanies()]);
+  const [qb, clickup, companies] = await Promise.all([
+    getConnectionStatus(),
+    getClickUpConnectionStatus(),
+    listCompanies(),
+  ]);
   const clickupCount = companies.filter((c) => c.clickupListIds.length > 0).length;
   const sheetsCount = companies.filter((c) => c.googleSheetIds.length > 0).length;
 
@@ -81,13 +87,13 @@ export default async function DataConnectorsPage() {
 
         <Card className="px-9 py-8">
           <h2 className="text-[15px] font-bold text-[var(--color-ink)] mb-1">ClickUp</h2>
-          <p className="text-[13px] text-[var(--color-muted-text)] mb-2">
-            {clickupCount} of {companies.length} companies have a ClickUp list linked. IDs only,
-            for now &mdash; nothing syncs automatically yet.
+          <ClickUpConnectionForm connected={clickup.connected} connectedByEmail={clickup.connectedByEmail} />
+          <p className="text-[13px] text-[var(--color-muted-text)] mt-4 pt-4 border-t border-[var(--color-border)]">
+            {clickupCount} of {companies.length} companies have a ClickUp list linked.{" "}
+            <Link href="/admin/companies" className="underline text-[var(--color-ink)]">
+              Manage per company
+            </Link>
           </p>
-          <Link href="/admin/companies" className="text-[13px] underline text-[var(--color-ink)]">
-            Manage per company
-          </Link>
         </Card>
 
         <Card className="px-9 py-8">
