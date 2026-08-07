@@ -29,3 +29,16 @@ export async function normalizeLogoImage(input: Buffer, backgroundColor: string)
     .png()
     .toBuffer();
 }
+
+// For logos shown standalone (no colored tile/avatar around them) rather
+// than in a fixed-size slot next to other content -- just caps the
+// dimensions, keeping the source's own aspect ratio and alpha transparency
+// intact instead of flattening/padding onto a solid canvas like above.
+const MAX_STANDALONE_SIZE = 160;
+
+export async function resizeStandaloneLogo(input: Buffer): Promise<Buffer> {
+  return sharp(input)
+    .resize(MAX_STANDALONE_SIZE, MAX_STANDALONE_SIZE, { fit: "inside", withoutEnlargement: true })
+    .png()
+    .toBuffer();
+}

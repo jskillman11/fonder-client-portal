@@ -1,10 +1,5 @@
 import { createServiceClient } from "./supabase/server";
-import { normalizeLogoImage } from "./logo-processing";
-
-// Flatten background for the admin-dashboard brand mark -- this asset isn't
-// shown against varied colored contexts the way company logos are, so
-// there's no need for a per-upload color picker like EditCompanyForm's.
-const BRAND_LOGO_BACKGROUND = "#ffffff";
+import { resizeStandaloneLogo } from "./logo-processing";
 
 export async function getBrandLogoUrl(): Promise<string | null> {
   const supabase = createServiceClient();
@@ -43,7 +38,7 @@ export async function updateBrandLogo(
   if (!logoFile) return { error: "No file provided" };
 
   const buffer = Buffer.from(await logoFile.arrayBuffer());
-  const normalized = await normalizeLogoImage(buffer, BRAND_LOGO_BACKGROUND);
+  const normalized = await resizeStandaloneLogo(buffer);
   // A unique path per upload (rather than a fixed brand/fonder-logo.png
   // upsert target) so the public URL actually changes and isn't served
   // stale from cache -- same reasoning as companies' per-upload logo paths.
