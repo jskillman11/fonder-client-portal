@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getTeamMember } from "@/lib/team-members";
 import { getStaffProfileById } from "@/lib/staff";
 import { getAdminUser, isSuperAdminSession } from "@/lib/supabase/server";
@@ -33,7 +33,17 @@ export default async function TeamMemberDetailPage({
     );
   }
 
-  const canEdit = isSuperAdmin || admin?.id === profile.id;
+  // A roster entry linked to your OWN staff account would otherwise
+  // duplicate /admin/settings/profile exactly (same EditProfileForm, same
+  // data) -- send you straight there instead of rendering a second copy of
+  // the same page under a different URL. Someone else's linked entry has
+  // no such duplicate (this is the only place to view/edit it), so it
+  // keeps rendering here.
+  if (admin?.id === profile.id) {
+    redirect("/admin/settings/profile");
+  }
+
+  const canEdit = isSuperAdmin;
 
   return (
     <main className="py-12 px-4">
