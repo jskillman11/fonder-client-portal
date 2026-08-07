@@ -29,9 +29,10 @@ ongoing client portal. The SOW and MSA are two fully independent signing
 events, signed directly inside the portal via an embedded DocuSeal form —
 no email round-trip required for the client.
 
-The `[slug]` is stable **per brand/company**, not per engagement — a company
-keeps the same portal link across multiple engagements over time (see "Data
-model" below).
+The `[slug]` is a property of the brand/company itself, generated
+automatically when the company is created (see "Data model" below) — a
+company's portal link exists before any engagement details are even filled
+in, and stays the same for as long as the company exists.
 
 ## Architecture
 
@@ -52,17 +53,41 @@ services for these still exist, they're safe to decommission.
 
 ## Data model
 
-- `companies`: a brand/organization. Holds `name`, `logo_storage_path`, the
-  stable portal `client_slug`, and everything that's a property of the
-  ongoing brand relationship rather than a specific contract: which
-  SOW/MSA document is currently in force (`sow_document_id`/`msa_document_id`,
-  FKs into `documents`), `lock_portal_tabs`, `shared_drive_url`,
-  `tab_lock_overrides`, and real signing completion (`sow_signed_at`/
-  `msa_signed_at`, set by the DocuSeal webhook).
+**"Engagement" is a type (`project`|`partnership`), not a row with its own
+lifecycle.** There is no `engagements` table anymore — every piece of
+per-contract state lives directly on `companies`, since a company only ever
+has one ongoing engagement at a time. If you see references to a separate
+`engagements` table, `engagement_id`, an active/completed `status`, or a
+"start an engagement" step in old docs/commits, those are gone (removed in
+the "phase out engagements" restructure).
+
+- `companies`: a brand/organization, and now also the single source of
+  truth for its one ongoing engagement. Holds `name`, `logo_storage_path`,
+  the `client_slug` (portal routing key — generated automatically at
+  company creation, see "Adding a new client" below, not tied to any
+  engagement setup step), which SOW/MSA document is currently in force
+  (`sow_document_id`/`msa_document_id`, FKs into `documents`),
+  `lock_portal_tabs`, `shared_drive_url`, `tab_lock_overrides`, and every
+  engagement-specific field: `client_id` (the stakeholder signatory),
+  `engagement_title`, `engagement_type` (`'project'|'partnership'`),
+  `partnership_tier`, `payment_terms`, `duration_months`, `total_fee(_amount)`,
+  `final_delivery_date`, `scope_summary`, `kickoff_earliest_date`/
+  `kickoff_booked_at`/`kickoff_start_time`, real signing completion
+  (`sow_signed_at`/`msa_signed_at`/`sow_signed_document_path`/
+  `msa_signed_document_path`, set by the DocuSeal webhook),
+  `fonder_signatory_name`/`_email`, and QuickBooks invoicing state
+  (`qb_customer_id`, `qb_invoice_id`, `qb_invoice_link`, `invoice_sent_at`,
+  `invoice_paid_at`). All of it is nullable/empty until staff fill it in on
+  the company's Overview tab — a brand new company has a working portal
+  link immediately, with nothing configured yet.
 - `clients`: a real person, belonging to one company. A company can have
-  multiple clients; one is picked as the signatory per engagement.
+  multiple clients; one is picked as the signatory (`companies.client_id`).
 - `documents`: SOW or MSA content in Markdown, scoped to a company, reusable
-  across engagements.
+  if the document is later swapped for a new version. **Swapping which
+  document is in force (`sow_document_id`/`msa_document_id`) automatically
+  resets that document's signed state** (`app/api/admin/update-company-settings/route.ts`)
+  — that's the only re-sign trigger; there's no separate "reset signature"
+  action.
 - `team_members`: Fonder's own staff roster, global — `name`, `role`,
   `icon_bg_color`/`icon_text_color`, and an optional `staff_id` FK into
   `profiles`. When set, the roster entry's displayed name/role/icon colors
@@ -70,16 +95,14 @@ services for these still exist, they're safe to decommission.
   own columns (see "Team roster ↔ staff accounts" below) — most current
   roster entries are still unlinked, that's normal, linking is optional.
 - `company_team_assignments`: join table, which team members are the
-  standing "account team" for a company. **Not scoped per engagement** —
-  no history of who was staffed on a past engagement is kept, by design.
-- `engagements`: a lean historical record of one contract period — `company_id`,
-  `client_id` (stakeholder), title, fee, dates, scope summary, `status`
-  (`'active'|'completed'`), enforced **one active engagement per company** via
-  a DB-level partial unique index. Does NOT hold the slug, documents,
-  team, shared drive, or portal-lock settings anymore — those all live on
-  `companies` (see above).
-- `engagement_milestones`: label/date pairs shown in the portal Overview's
-  schedule, scoped per engagement (this one thing does stay per-contract).
+  standing "account team" for a company. Not per-engagement — there's only
+  ever one engagement per company to be scoped to anyway.
+- `company_milestones`: label/date pairs shown in the portal Overview's
+  schedule, keyed by `company_id`.
+- `company_invoice_installments` / `company_billing_cycles`: the payment
+  schedule for `project`-type (installments, from `payment_terms`) vs.
+  `partnership`-type (monthly billing cycles, created by the cron job)
+  engagements, both keyed by `company_id`. See "QuickBooks invoicing" below.
 - `profiles`: `id` references `auth.users.id`, `role: 'staff'|'client'`,
   nullable `client_id`, `is_super_admin`, plus `full_name`, `job_title`,
   `avatar_storage_path`, `icon_bg_color`, `icon_text_color`. This is the
@@ -98,15 +121,6 @@ services for these still exist, they're safe to decommission.
   wordmark that looks right on the login page reads as a plain block of
   color once cropped into the tiny sidebar tile. Managed at
   `/admin/settings/brand`, super-admin only.
-- `portal_access_tokens`: **dead table, unused** — an early hand-rolled
-  magic-link mechanism, superseded by real Supabase Auth
-  (`auth.admin.generateLink`/`verifyOtp`). Kept as a rollback path; safe to
-  drop in a future cleanup pass.
-
-A few now-orphaned columns on `engagements` from earlier schema iterations
-were already cleaned up as part of the company-level restructure — if you
-see references to `sow_content_markdown`/`msa_content_markdown` or
-`client_name` directly on `engagements` in old docs/commits, those are gone.
 
 ## The client-facing portal (`/portal/[slug]`)
 
@@ -191,12 +205,11 @@ Both staff and clients are real Supabase Auth users, distinguished by
   client's portal directly, via `hasPortalAccess()` in
   `lib/supabase/server.ts` (staff are always authorized).
 
-Client access is checked against the **company's currently active
-engagement's** stakeholder (`profiles.client_id` must match that
-engagement's `client_id`) — if the stakeholder changes when a new engagement
-goes active for a company, portal access transfers to the new stakeholder.
-There's a revoke-access action on the admin Clients section
-(`lib/client-access.ts`), available to any staff member.
+Client access is checked directly against the company's designated
+stakeholder (`profiles.client_id` must match `companies.client_id`) — if
+staff change who the stakeholder is, portal access transfers to the new
+person immediately. There's a revoke-access action on the admin Clients
+section (`lib/client-access.ts`), available to any staff member.
 
 ## Staff auth (Google Workspace SSO)
 
@@ -242,9 +255,7 @@ instead of being editable on the roster entry directly — the roster page
 shows a read-only synced view with an Unlink action for linked entries.
 Most roster people today are **not** linked (no Fonder admin login exists
 for them yet) and keep working exactly as before, typed directly on the
-roster entry. Already-signed engagements are unaffected by any of this —
-`engagement_team_members` is a separate, denormalized snapshot taken at
-engagement setup time, not a live join.
+roster entry.
 
 ## The client portal app (`/portal/[slug]/app/*`)
 
@@ -276,17 +287,13 @@ Sidebar, top to bottom:
 - **Primary nav, org-level** (no brand selected): Overview, Team (roster +
   staff accounts, see above), Portal content (global copy), and — under
   its own "Integrations" heading, super-admin only — Data Connectors.
-- **Primary nav, company-scoped** (a brand selected): Overview (folds in
-  the company's one active engagement, a portal-link card, and billing
-  summary — not a separate Engagements tab), Clients, Documents (which
-  SOW/MSA is currently in force), Team (the standing account-team
-  assignment for this brand), Portal (content/lock settings), Billing.
-  Opening/creating a specific engagement
-  (`/admin/companies/[id]/engagements/[engagementId]` or `/new`) is still a
-  real route, linked from Overview, just not its own sidebar item — a lean
-  form (title/fee/dates/scope/milestones/stakeholder) with a "Mark as
-  completed" action; completing one frees the company up to start a new
-  active engagement (enforced at the DB level, not just the UI).
+- **Primary nav, company-scoped** (a brand selected): Overview (the
+  company's engagement details — client/type/fee/dates/scope/milestones,
+  always editable, no separate "start an engagement" step or lifecycle
+  status — plus a portal-link card), Clients, Documents (which SOW/MSA is
+  currently in force), Team (the standing account-team assignment for this
+  brand), Portal (content/lock settings), Billing (payment schedule +
+  invoice, company-scoped).
 - **Secondary nav**, pinned above the account menu: Settings (the
   `/admin/settings` index), Get Help, Search (a placeholder — no search
   feature exists to wire it up to yet).
@@ -303,24 +310,25 @@ but if something is still referenced, the delete fails with a translated
 error rather than corrupting data — it doesn't yet say exactly what's
 blocking it.
 
-## Adding a new client engagement (the real, current flow)
+## Adding a new client (the real, current flow)
 
-1. `/admin/companies`: add the company, if new.
+1. `/admin/companies`: add the company. Its portal link
+   (`/portal/[client_slug]`) exists immediately — the slug is generated
+   automatically from the company name at creation time, no separate setup
+   step required.
 2. That company's Clients and Documents tabs: add the client (signatory)
-   and the SOW/MSA document content, if new — both company-scoped routes,
-   not separate top-level admin pages.
-3. `/admin/companies/[id]/engagements/new`: create the engagement (client,
-   title, fee, dates, schedule). The portal slug is only asked for on a
-   company's **first-ever** engagement — every engagement after that reuses
-   the existing slug automatically.
+   and the SOW/MSA document content.
+3. That company's Overview tab: fill in the engagement fields — client
+   (signatory), type (project/partnership), fee, dates, scope, schedule.
+   This is always editable, not a one-time creation form.
 4. That company's Team/Documents/Portal tabs: assign the account team,
    pick which SOW/MSA is currently in force, set the Shared Drive URL and
-   portal tab-lock behavior — all standing settings for the brand, not
-   re-entered per engagement.
+   portal tab-lock behavior.
 
-A repeat engagement for an existing company reuses everything already set
-up — only the lean engagement-specific fields (title/fee/dates/scope) are
-new.
+If a company's engagement details change later (new contract, renewed
+scope, different fee), just edit the same Overview fields — there's nothing
+to "complete" or "start over." Swapping the SOW/MSA document selection is
+what triggers a fresh signature requirement (see "Data model" above).
 
 ## Cal.com scheduling
 
@@ -334,14 +342,26 @@ calendar availability handles that naturally.
 
 Single-tenant integration — there is exactly one QuickBooks connection for
 the whole app (Fonder's own company, `quickbooks_connection` singleton
-table), not one per client. An admin creates a real invoice per engagement
-from the engagement detail page (`CreateInvoiceForm.tsx` →
-`/api/admin/quickbooks/create-invoice`), which looks up/creates a QuickBooks
-Customer for the company (`companies.qb_customer_id`), creates a real
-Invoice for `engagements.total_fee_amount` (a structured numeric field,
+table), not one per client. An admin creates a real lump-sum invoice per
+company from the company's Billing tab (`CreateInvoiceForm.tsx` →
+`/api/admin/quickbooks/create-invoice`), which looks up/creates a
+QuickBooks Customer for the company (`companies.qb_customer_id`), creates a
+real Invoice for `companies.total_fee_amount` (a structured numeric field,
 separate from the free-text `total_fee` display string), and requests a
 hosted `InvoiceLink` (`?include=invoiceLink&minorversion=65`) — the client
 pays on QuickBooks' own page, no card data ever touches this app.
+
+Project-type companies with `payment_terms` set instead get an auto-generated
+installment plan (`company_invoice_installments`, via
+`lib/company-billing.ts`'s `createInstallmentsForCompany`) — staff invoice
+each installment individually from the Billing tab
+(`/api/admin/create-installment-invoice`). Partnership-type companies get a
+monthly billing cycle (`company_billing_cycles`), created automatically by
+the `partnership-invoices` cron job (`ensureCurrentBillingCycle`), not
+staff-triggered. Note: the QuickBooks payment webhook (next paragraph) only
+ever marks `companies.invoice_paid_at` — it does **not** mark individual
+`company_invoice_installments`/`company_billing_cycles` rows as paid. That's
+a known, accepted gap, not a bug to fix reflexively.
 
 Two things confirmed only by live testing against the sandbox, not from
 docs (docs actively suggested otherwise or said nothing):
@@ -372,7 +392,7 @@ Client Secret) and parses QuickBooks' CloudEvents payload format (a JSON
 array of envelopes — the legacy `eventNotifications` shape is retired as of
 a mandatory migration deadline that has already passed). On a Payment
 event, it fetches the Payment, walks `Line[].LinkedTxn[]` back to the
-invoice(s) it applied to, and sets `engagements.invoice_paid_at` once that
+invoice(s) it applied to, and sets `companies.invoice_paid_at` once that
 Invoice's `Balance === 0`.
 
 Paid status only updates on the client's next portal page load (no live
@@ -497,7 +517,9 @@ Fully real and working:
 - Companies, clients, documents, team members: full add/edit/delete,
   reusable entities, organized as company-scoped routes rather than flat
   top-level admin pages.
-- One active engagement per company, enforced at the DB level.
+- A company's engagement details (client, type, fee, dates, scope,
+  schedule) live directly on the company row and are always editable — no
+  separate creation step, no active/completed lifecycle to manage.
 - Native Markdown rendering with automatic section numbering via CSS
   counters.
 - Embedded DocuSeal signing per document, independently, with inline
