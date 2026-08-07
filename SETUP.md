@@ -4,10 +4,14 @@ Last updated: August 7, 2026
 Status: **Live for Coros** (first real client). Core signing flow is mid-migration
 from Documenso to DocuSeal (see "Signing flow" below — code is done, DocuSeal
 account/webhook setup and a real end-to-end test are still pending). The
-authenticated client portal app (tasks, chat, invoices, etc.) is scaffolded
-but intentionally not functional yet. See "What's built vs. stubbed" below.
-Staff login switched from email/password to Google Workspace SSO this pass —
-see "Staff auth" below.
+authenticated client portal app (chat, invoices, deliverables, etc.) is
+mostly still scaffolded, but **Tasks is now fully real** (ClickUp-backed —
+see "The client portal app" below). This pass also replaced the admin's
+per-company Overview tab and the org-level Team/Portal-content tabs with
+nested "Brand Settings"/"Workspace Settings" tabs (see "The admin dashboard"
+below), and unified the account-team roster with real staff profiles (see
+"The Team page" below) — going forward every new roster entry must be linked
+to a staff account, whereas before linking was optional.
 
 This document describes the **current state of the system**, not the history
 of how it got here. Read this before touching the code, especially in a fresh
@@ -78,8 +82,9 @@ the "phase out engagements" restructure).
   `fonder_signatory_name`/`_email`, and QuickBooks invoicing state
   (`qb_customer_id`, `qb_invoice_id`, `qb_invoice_link`, `invoice_sent_at`,
   `invoice_paid_at`). All of it is nullable/empty until staff fill it in on
-  the company's Overview tab — a brand new company has a working portal
-  link immediately, with nothing configured yet.
+  the company's Brand Settings > Client & Schedule sub-tab — a brand new
+  company has a working portal link immediately, with nothing configured
+  yet.
 - `clients`: a real person, belonging to one company. A company can have
   multiple clients; one is picked as the signatory (`companies.client_id`).
 - `documents`: SOW or MSA content in Markdown, scoped to a company, reusable
@@ -90,10 +95,14 @@ the "phase out engagements" restructure).
   action.
 - `team_members`: Fonder's own staff roster, global — `name`, `role`,
   `icon_bg_color`/`icon_text_color`, and an optional `staff_id` FK into
-  `profiles`. When set, the roster entry's displayed name/role/icon colors
-  are sourced live from that staff account's profile instead of this row's
-  own columns (see "Team roster ↔ staff accounts" below) — most current
-  roster entries are still unlinked, that's normal, linking is optional.
+  `profiles`. When set, the roster entry's displayed name/role/icon
+  colors/photo are sourced live from that staff account's profile instead
+  of this row's own columns (see "The Team page" below). **Linking is now
+  required for every new roster entry** — creating one means picking an
+  existing staff account, not typing a name/role fresh. Pre-existing
+  unlinked rows (added before this rule) still work exactly as before;
+  their detail page just offers linking (or removing from the roster), not
+  free-text editing.
 - `company_team_assignments`: join table, which team members are the
   standing "account team" for a company. Not per-engagement — there's only
   ever one engagement per company to be scoped to anyway.
@@ -110,7 +119,7 @@ the "phase out engagements" restructure).
   — both roles are real Supabase Auth users, not two parallel systems. A
   staff member's own `job_title` doubles as their client-facing "role" if
   their `team_members` roster entry is linked to them (one field, not two)
-  — see "Team roster ↔ staff accounts" below.
+  — see "The Team page" below.
 - `portal_copy`: every piece of client-facing text as editable key/value
   rows, with hardcoded fallbacks in `lib/portal-copy-constants.ts`.
 - `brand_settings`: singleton row (same `id boolean primary key default
@@ -197,10 +206,11 @@ Both staff and clients are real Supabase Auth users, distinguished by
 `profiles.role`. The portal and the `/app` area require either:
 
 - A valid client session: the client enters their email on a gate screen, or
-  an admin triggers it via "Send access link" on the admin dashboard. This
-  sends a real Supabase magic link (`auth.admin.generateLink`); clicking it
-  sets a session cookie. The email only ever goes to the client's registered
-  address, checked against `clients.email`.
+  an admin triggers it via "Send link" in the header's Open Portal submenu
+  (see "The admin dashboard" below). This sends a real Supabase magic link
+  (`auth.admin.generateLink`); clicking it sets a session cookie. The email
+  only ever goes to the client's registered address, checked against
+  `clients.email`.
 - An active staff session: logged into `/admin` lets you preview any
   client's portal directly, via `hasPortalAccess()` in
   `lib/supabase/server.ts` (staff are always authorized).
@@ -242,20 +252,36 @@ Requires, one-time, outside this repo:
 
 ## The Team page: roster ↔ staff accounts
 
-`/admin/settings/team` merges two previously-separate concepts on one
-page, not one data model: the **account-team roster**
-(`team_members` — who clients see listed as their team, selected onto a
-company via `company_team_assignments`) and **staff accounts**
-(`profiles(role='staff')` — who can log into `/admin`, super-admin only
-section). A roster entry can optionally link to a staff account
-(`team_members.staff_id`); once linked, its name/role/icon colors are
-sourced live from that person's own profile (edited at
-`/admin/settings/profile`, which is where the icon-color pickers live)
-instead of being editable on the roster entry directly — the roster page
-shows a read-only synced view with an Unlink action for linked entries.
-Most roster people today are **not** linked (no Fonder admin login exists
-for them yet) and keep working exactly as before, typed directly on the
-roster entry.
+The **account-team roster** (`team_members` — who clients see listed as
+their team, selected onto a company via `company_team_assignments`) and
+**staff accounts** (`profiles(role='staff')` — who can log into `/admin`,
+super-admin only) are two previously-separate concepts, still two separate
+tables, now presented as one merged experience: the "Team" sub-tab under
+Workspace Settings (`/admin/settings/team`).
+
+**Adding a roster member now requires picking an existing staff account** —
+`NewTeamMemberForm` no longer has a free-text "add manually" option; if
+there's no unlinked staff account to pick, you invite one first (same page,
+"Staff accounts" section below, super-admin only). Clicking into a roster
+entry (`/admin/settings/team/[id]`) reuses `EditProfileForm` — literally the
+same component/page as `/admin/settings/profile` — so name, role, photo,
+and icon colors are edited in exactly one place. A super-admin (or the
+person themselves) can edit; anyone else viewing sees it read-only. Icon
+colors use the same 4-preset swatch picker everywhere now (Profile used to
+have its own raw color-input pickers; unified for consistency). An uploaded
+photo takes precedence over the colored-initials fallback wherever a team
+member shows up — roster list, a company's team picker, and the
+client-portal Team section (the last of these had a real gap: its query
+never joined the linked staff profile at all, so a linked person's live
+name/role/photo never actually reached the client side; fixed alongside
+this).
+
+Pre-existing unlinked rows (added before this rule existed) still display
+using their own `name`/`role`/`icon_bg_color`/`icon_text_color` columns
+exactly as before — their detail page just offers linking to a staff
+account (or removing the row from the roster), not free-text editing.
+Unlinking an already-linked entry back to this state is super-admin only,
+enforced both in the UI and in `/api/admin/unlink-team-member`.
 
 ## The client portal app (`/portal/[slug]/app/*`)
 
@@ -268,9 +294,27 @@ per-tab lock overrides — but only two tabs have real content:
   real.
 - **Shared Drive**: real — redirects to `companies.shared_drive_url` if set,
   otherwise a placeholder.
-- Everything else (Home, Tasks, Chat, Invoices, Deliverables, Change
-  Request): still a generic "coming soon" card each. Change Request has the
-  most fleshed-out placeholder (disabled date-picker/priority-selector,
+- **Tasks**: real, ClickUp-backed (`lib/clickup.ts`). One shared Personal API
+  Token for Fonder's whole ClickUp workspace (singleton `clickup_connection`
+  row, admin-managed at Data Connectors); a company's `clickup_list_ids`
+  says which ClickUp Lists belong to it. A task is only ever shown to the
+  client if a custom field named "Position" has "Client" selected — not a
+  tag, not the ClickUp assignee (clients have no ClickUp account). The tab
+  shows open tasks sorted by due date (nearest/overdue first, no-due-date
+  tasks last), then a separate "Closed" section sorted by most recently
+  completed (`status.type === "closed"`, ClickUp's own categorization, not a
+  string match against a status label — those vary per list's configured
+  status scheme). Clicking a task opens `/portal/[slug]/app/tasks/[taskId]`
+  (description, start/due date, status), which re-fetches directly from
+  ClickUp's single-task endpoint and re-verifies both checks itself (client-
+  visible **and** belongs to one of this company's own lists) rather than
+  trusting that arriving via the list means it's safe — otherwise a client
+  could view any task in the shared workspace by pasting a different task
+  ID into the URL. Every "can't show this" case (not found, wrong company,
+  not client-visible) collapses to the same not-found result.
+- Everything else (Home, Chat, Invoices, Deliverables, Change Request):
+  still a generic "coming soon" card each. Change Request has the most
+  fleshed-out placeholder (disabled date-picker/priority-selector,
   description of the intended full workflow) but no real logic.
 
 ## The admin dashboard (`/admin/*`)
@@ -283,27 +327,43 @@ Sidebar, top to bottom:
 
 - **Company switcher** (`CompanySwitcher`) — "Fonder" (the org-level view,
   `/admin`) is the default entry above a separator, then the list of
-  brands (`/admin/companies/[id]`), then "Add a brand."
-- **Primary nav, org-level** (no brand selected): Overview, Team (roster +
-  staff accounts, see above), Portal content (global copy), and — under
-  its own "Integrations" heading, super-admin only — Data Connectors.
-- **Primary nav, company-scoped** (a brand selected): Overview (the
-  company's engagement details — client/type/fee/dates/scope/milestones,
+  brands (linking straight to `/admin/companies/[id]/settings/company`,
+  see Brand Settings below), then "Add a brand."
+- **Primary nav, org-level** (no brand selected): Overview, then a
+  collapsible **Workspace Settings** parent with its own sub-tabs — Team
+  (roster + staff accounts, see "The Team page" above), Portal Content
+  (global copy), and (super-admin only) Brand, Connectors.
+- **Primary nav, company-scoped** (a brand selected): Clients, Documents
+  (which SOW/MSA is currently in force), Billing (payment schedule +
+  invoice), a collapsible **Brand Settings** parent with sub-tabs — Company
+  (name/logo), Client & Schedule (client/type/fee/dates/scope/milestones —
   always editable, no separate "start an engagement" step or lifecycle
-  status — plus a portal-link card), Clients, Documents (which SOW/MSA is
-  currently in force), Team (the standing account-team assignment for this
-  brand), Portal (content/lock settings), Billing (payment schedule +
-  invoice, company-scoped).
-- **Secondary nav**, pinned above the account menu: Settings (the
-  `/admin/settings` index), Get Help, Search (a placeholder — no search
-  feature exists to wire it up to yet).
-- **Header bar**: breadcrumbs, plus an "Open Portal" button (new tab, the
-  real `/portal/[slug]`) whenever a brand with a portal link is selected.
+  status), Team (the standing account-team assignment for this brand),
+  Portal (shared-drive/lock settings) — and Data Connectors. **There is no
+  separate Overview tab anymore** — it was retired and its two forms
+  (company info, client & schedule) became the first two Brand Settings
+  sub-tabs; the bare `/admin/companies/[id]` route just redirects to
+  `.../settings/company` for old links/bookmarks.
+- **Secondary nav**, pinned above the account menu: Get Help, Search (a
+  placeholder — no search feature exists to wire it up to yet). Settings
+  used to be pinned here too; it moved into the account menu (below) once
+  it became redundant with the Workspace Settings tab.
+- **Header bar**: breadcrumbs, plus a split "Open Portal" button whenever a
+  brand with a portal link is selected — the main click opens the real
+  `/portal/[slug]` in a new tab; a chevron opens a submenu with **Copy**
+  (an absolute URL, not the app's internal relative path) and **Send
+  link** (emails the client a real magic link via the existing
+  `send-portal-link`/`createAndSendMagicLink` flow, same as the client's
+  own self-serve "Request access").
+- **Account menu** (bottom-left corner): Profile, **Workspace Settings**
+  (`/admin/settings`, same page as the sidebar tab — a shortcut reachable
+  from anywhere, including while browsing a specific brand), Help, Sign
+  out.
 
-`/admin/settings/*` (reached via the pinned Settings item, not the primary
-nav): Profile (your own name/photo/role/icon colors), Team, Portal
-content, Brand (the admin UI's own logo — see "Data model"), and Data
-Connectors — all super-admin-gated except Profile/Team/Portal content.
+Both "Settings" nav parents (Brand Settings per company, Workspace
+Settings org-level) are collapsible parents with no page of their own —
+`/admin/companies/[id]/settings` and `/admin/settings` both just redirect
+to their first sub-tab, for anyone hitting the bare route directly.
 
 Known gap: delete works for companies, clients, documents, and team members,
 but if something is still referenced, the delete fails with a translated
@@ -318,17 +378,19 @@ blocking it.
    step required.
 2. That company's Clients and Documents tabs: add the client (signatory)
    and the SOW/MSA document content.
-3. That company's Overview tab: fill in the engagement fields — client
-   (signatory), type (project/partnership), fee, dates, scope, schedule.
-   This is always editable, not a one-time creation form.
-4. That company's Team/Documents/Portal tabs: assign the account team,
-   pick which SOW/MSA is currently in force, set the Shared Drive URL and
-   portal tab-lock behavior.
+3. That company's Brand Settings > Client & Schedule sub-tab: fill in the
+   engagement fields — client (signatory), type (project/partnership), fee,
+   dates, scope, schedule. This is always editable, not a one-time creation
+   form.
+4. That company's Brand Settings > Team/Portal sub-tabs, and the Documents
+   tab: assign the account team, pick which SOW/MSA is currently in force,
+   set the Shared Drive URL and portal tab-lock behavior.
 
 If a company's engagement details change later (new contract, renewed
-scope, different fee), just edit the same Overview fields — there's nothing
-to "complete" or "start over." Swapping the SOW/MSA document selection is
-what triggers a fresh signature requirement (see "Data model" above).
+scope, different fee), just edit the same Client & Schedule fields — there's
+nothing to "complete" or "start over." Swapping the SOW/MSA document
+selection is what triggers a fresh signature requirement (see "Data model"
+above).
 
 ## Cal.com scheduling
 
@@ -506,6 +568,24 @@ password manager, never in GitHub.
     Payments API only; clicking through the checkout UI always declines. Not
     fixable from this app's side; only testable for real once live with
     production keys.
+11. A company logo's padding has to match the logo's **own** background
+    color, not a fixed default — `lib/logo-processing.ts`'s
+    `normalizeLogoImage()` auto-detects it by sampling the source image's own
+    corner pixels (after trimming any transparent canvas padding first,
+    common in design-tool exports) instead of relying on a manually-set
+    value. A hardcoded default (previously always white) left a visible seam
+    around any logo whose own background wasn't white — confirmed by
+    inspecting a real company's stored logo byte-for-byte, not assumed.
+    Falls back to white only when the corners are transparent (an irregular
+    mark with no background of its own) or disagree with each other. There
+    is no manual override anymore — `companies.logo_background_color` still
+    exists as a column but nothing reads or writes it.
+12. ClickUp's list-tasks endpoint (`GET /list/{id}/task`) does **not**
+    include `description`/`start_date` — only the single-task endpoint
+    (`GET /task/{id}`) does. Both endpoints do include `status.type`
+    (`"open"`/`"closed"`/etc., ClickUp's own categorization) and
+    `date_closed`, confirmed against real task responses before relying on
+    either for the Tasks tab's open/closed grouping.
 
 The Documenso/Railway/R2-specific gotchas from before this migration (S3
 transport requirements, Playwright/Chromium version pinning, Docker-only
@@ -528,21 +608,28 @@ Fully real and working:
 - Real, DB-persisted signing-completion tracking, driving real tab-unlock
   state (no longer resets on refresh).
 - Unified staff/client Supabase Auth: staff via Google Workspace SSO
-  (invite-first, no self-serve signup), clients via magic link. Optional
-  linking between the account-team roster and real staff accounts.
+  (invite-first, no self-serve signup), clients via magic link. The
+  account-team roster and real staff accounts are unified into one edit
+  experience (see "The Team page" above) — linking is now required for new
+  roster entries.
 - Real Cal.com scheduling embed.
 - Centralized, globally-editable portal copy.
 - Company-scoped admin dashboard with a brand picker (Fonder itself is a
-  selectable default entry), a Data Connectors status hub
-  (QuickBooks/Google/ClickUp/Supabase), and manageable admin-UI branding
-  (two independent logo slots: login page, sidebar icon).
+  selectable default entry), collapsible nested "Settings" tabs at both the
+  org level (Workspace Settings) and per company (Brand Settings), a Data
+  Connectors status hub (QuickBooks/Google/ClickUp/Supabase), and
+  manageable admin-UI branding (two independent logo slots: login page,
+  sidebar icon).
 - QuickBooks invoicing: real single-tenant OAuth connection, real invoice
   creation with a hosted QuickBooks pay link, real webhook-driven payment
   tracking (pending the account/webhook setup noted above).
+- Client-visible Tasks, backed by ClickUp — list with due-date sort and a
+  separate closed-tasks section, plus a per-task detail view (description,
+  dates, status).
 
 Deliberately stubbed, not forgotten:
 - The client portal app's actual functionality beyond Onboarding/Shared
-  Drive/Invoices (Tasks, Chat, Deliverables, Change Request). Real routes,
+  Drive/Tasks (Chat, Invoices, Deliverables, Change Request). Real routes,
   nav, and lock behavior exist; no real data or logic yet.
 - The "Search" item pinned in the admin sidebar's secondary nav is a
   placeholder — no search feature is built yet.
