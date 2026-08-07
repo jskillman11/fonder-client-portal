@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
     connectedByEmail: admin.email,
   });
 
-  const res = NextResponse.redirect(new URL("/admin/settings/quickbooks?connected=1", req.url));
+  const res = NextResponse.redirect(new URL("/admin/settings/connectors?connected=1", req.url));
   res.cookies.delete("qb_oauth_state");
   return res;
 }

@@ -60,8 +60,15 @@ function BrandHeader() {
   );
 }
 
+export type ShellSecondaryNavItem = {
+  href: string;
+  label: string;
+  icon?: LucideIcon;
+};
+
 export function DashboardShell({
   navItems,
+  secondaryNavItems,
   sidebarTopSlot,
   breadcrumb,
   headerActions,
@@ -69,6 +76,11 @@ export function DashboardShell({
   children,
 }: {
   navItems: ShellNavItem[];
+  // Pinned to the bottom of the sidebar's scrollable content, right above
+  // accountSlot -- mirrors the shadcn dashboard-01 block's NavSecondary
+  // (Settings/Get Help/Search), which uses this exact "own SidebarGroup with
+  // mt-auto inside SidebarContent" trick rather than living in SidebarFooter.
+  secondaryNavItems?: ShellSecondaryNavItem[];
   sidebarTopSlot?: React.ReactNode;
   breadcrumb?: React.ReactNode;
   headerActions?: React.ReactNode;
@@ -157,6 +169,25 @@ export function DashboardShell({
                 </SidebarMenu>
               </SidebarGroup>
             ))}
+            {secondaryNavItems && secondaryNavItems.length > 0 && (
+              <SidebarGroup className="mt-auto">
+                <SidebarMenu>
+                  {secondaryNavItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <SidebarMenuItem key={item.href}>
+                        <SidebarMenuButton asChild tooltip={item.label}>
+                          <Link href={item.href}>
+                            {Icon && <Icon />}
+                            <span>{item.label}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroup>
+            )}
           </SidebarContent>
           <SidebarFooter>
             <div className="flex justify-end group-data-[collapsible=icon]:justify-center">

@@ -44,7 +44,7 @@ export default async function AdminHomePage() {
             Manage brands
           </Link>
           <span className="text-[var(--color-border)]">·</span>
-          <Link href="/admin/settings/staff" className="underline hover:no-underline">
+          <Link href="/admin/settings/team" className="underline hover:no-underline">
             {staff.length} staff {staff.length === 1 ? "member" : "members"}
           </Link>
         </div>

@@ -3,8 +3,21 @@
 import React from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { House, LayoutDashboard, Users, FileText, UserCog, Globe, Receipt, Settings, ExternalLink } from "lucide-react";
-import { DashboardShell, type ShellNavItem } from "@/components/shell/DashboardShell";
+import {
+  House,
+  LayoutDashboard,
+  Users,
+  FileText,
+  UserCog,
+  Globe,
+  Receipt,
+  Settings,
+  ExternalLink,
+  Plug,
+  HelpCircle,
+  Search,
+} from "lucide-react";
+import { DashboardShell, type ShellNavItem, type ShellSecondaryNavItem } from "@/components/shell/DashboardShell";
 import { CompanySwitcher } from "@/components/admin/CompanySwitcher";
 import {
   Breadcrumb,
@@ -28,27 +41,39 @@ function computeNavItems(pathname: string, isSuperAdmin: boolean): ShellNavItem[
       { href: `${base}/team`, label: "Team", section: "Company", icon: UserCog },
       { href: `${base}/portal`, label: "Portal", section: "Company", icon: Globe },
       { href: `${base}/billing`, label: "Billing", section: "Company", icon: Receipt },
-      { href: "/admin/settings", label: "Settings", icon: Settings },
     ];
   }
 
-  // The Fonder (org-level, no company selected) tabs -- Team roster/Portal
-  // content/Staff accounts are dissolved out of the old collapsible Settings
-  // group now that these ARE the org-level content, not a secondary settings
-  // area buried behind a back-link.
+  // The Fonder (org-level, no company selected) tabs -- Team/Portal content
+  // are dissolved out of the old collapsible Settings group now that these
+  // ARE the org-level content, not a secondary settings area buried behind a
+  // back-link. Settings itself now lives in the secondary nav pinned above
+  // the account menu (see buildSecondaryNavItems) rather than duplicated
+  // here. Team merges the account-team roster and staff account management
+  // (previously "Staff accounts") into one page/tab.
   return [
     { href: "/admin", label: "Overview", icon: House },
-    { href: "/admin/settings/team", label: "Team roster", icon: Users },
+    { href: "/admin/settings/team", label: "Team", icon: Users },
     { href: "/admin/settings/content", label: "Portal content", icon: FileText },
-    ...(isSuperAdmin ? [{ href: "/admin/settings/staff", label: "Staff accounts", icon: UserCog }] : []),
+    ...(isSuperAdmin
+      ? [{ href: "/admin/settings/connectors", label: "Data Connectors", section: "Integrations", icon: Plug }]
+      : []),
+  ];
+}
+
+function buildSecondaryNavItems(): ShellSecondaryNavItem[] {
+  return [
     { href: "/admin/settings", label: "Settings", icon: Settings },
+    { href: "/admin/help", label: "Get Help", icon: HelpCircle },
+    // Placeholder -- no search feature exists yet to wire this up to.
+    { href: "#", label: "Search", icon: Search },
   ];
 }
 
 // "Fonder" doubles as the way back to the Home dashboard on org-level
-// sub-pages (Team roster, etc.) -- there's no dedicated back-link button
-// anymore, so this crumb is the only path back once a switcher click has
-// taken you off /admin.
+// sub-pages (Team, etc.) -- there's no dedicated back-link button anymore,
+// so this crumb is the only path back once a switcher click has taken you
+// off /admin.
 function computeBreadcrumb(pathname: string, activeCompany: Company | null) {
   if (activeCompany) {
     return [{ label: "Fonder", href: "/admin" }, { label: activeCompany.name }];
@@ -58,11 +83,11 @@ function computeBreadcrumb(pathname: string, activeCompany: Company | null) {
   }
   const subLabel =
     pathname === "/admin/settings/team"
-      ? "Team roster"
+      ? "Team"
       : pathname === "/admin/settings/content"
         ? "Portal content"
-        : pathname === "/admin/settings/staff"
-          ? "Staff accounts"
+        : pathname === "/admin/settings/connectors"
+          ? "Data Connectors"
           : pathname === "/admin/settings/profile"
             ? "Profile"
             : pathname.startsWith("/admin/settings")
@@ -97,6 +122,7 @@ export function AdminNav({
   return (
     <DashboardShell
       navItems={navItems}
+      secondaryNavItems={buildSecondaryNavItems()}
       sidebarTopSlot={
         <CompanySwitcher companies={companies} activeCompany={activeCompany} fonderLogoUrl={fonderLogoUrl} />
       }

@@ -125,7 +125,7 @@ export default async function CompanyBillingPage({
           ) : (
             <>
               <span className="font-semibold text-[var(--color-ink)]">Not connected.</span>{" "}
-              <Link href="/admin/settings/quickbooks" className="underline text-[var(--color-ink)]">
+              <Link href="/admin/settings/connectors" className="underline text-[var(--color-ink)]">
                 Connect in Settings
               </Link>
               .

@@ -26,9 +26,9 @@ export default async function SettingsPage() {
             href="/admin/settings/team"
             className="block py-3 border-b border-[var(--color-border)] -mx-7 px-7 hover:bg-[var(--color-cream)]"
           >
-            <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">Team roster</p>
+            <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">Team</p>
             <p className="text-[13px] text-[var(--color-muted-text)]">
-              Fonder&apos;s account-team roster
+              Account-team roster and staff accounts
             </p>
           </Link>
           <Link
@@ -42,17 +42,6 @@ export default async function SettingsPage() {
           </Link>
           {isSuperAdmin && (
             <Link
-              href="/admin/settings/staff"
-              className="block py-3 border-b border-[var(--color-border)] -mx-7 px-7 hover:bg-[var(--color-cream)]"
-            >
-              <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">Staff accounts</p>
-              <p className="text-[13px] text-[var(--color-muted-text)]">
-                Fonder staff accounts and roles
-              </p>
-            </Link>
-          )}
-          {isSuperAdmin && (
-            <Link
               href="/admin/settings/brand"
               className="block py-3 border-b border-[var(--color-border)] -mx-7 px-7 hover:bg-[var(--color-cream)]"
             >
@@ -64,12 +53,12 @@ export default async function SettingsPage() {
           )}
           {isSuperAdmin && (
             <Link
-              href="/admin/settings/quickbooks"
+              href="/admin/settings/connectors"
               className="block py-3 -mx-7 px-7 hover:bg-[var(--color-cream)]"
             >
-              <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">QuickBooks connection</p>
+              <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">Data connectors</p>
               <p className="text-[13px] text-[var(--color-muted-text)]">
-                Connect Fonder&apos;s QuickBooks company for invoicing
+                QuickBooks, Google, ClickUp, and Supabase status
               </p>
             </Link>
           )}
