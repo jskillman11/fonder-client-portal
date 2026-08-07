@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { toast } from "sonner";
 import {
   House,
   LayoutDashboard,
@@ -13,6 +14,9 @@ import {
   Receipt,
   Settings,
   ExternalLink,
+  ChevronDown,
+  Copy,
+  Send,
   Plug,
   HelpCircle,
   Search,
@@ -27,6 +31,12 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { Company } from "@/lib/companies-clients";
 
 function computeNavItems(pathname: string, isSuperAdmin: boolean): ShellNavItem[] {
@@ -119,6 +129,32 @@ export function AdminNav({
 
   const crumbs = computeBreadcrumb(pathname, activeCompany);
   const portalUrl = activeCompany?.clientSlug ? `/portal/${activeCompany.clientSlug}` : null;
+  const [sendingAccessLink, setSendingAccessLink] = useState(false);
+
+  async function handleCopyPortalUrl() {
+    if (!portalUrl) return;
+    await navigator.clipboard.writeText(`${window.location.origin}${portalUrl}`);
+    toast.success("Portal link copied.");
+  }
+
+  async function handleSendAccessLink() {
+    if (!activeCompany?.clientSlug) return;
+    setSendingAccessLink(true);
+
+    const res = await fetch("/api/admin/send-portal-link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clientSlug: activeCompany.clientSlug }),
+    });
+    const data = await res.json();
+    setSendingAccessLink(false);
+
+    if (!res.ok) {
+      toast.error(data.error ?? "Failed to send access link.");
+      return;
+    }
+    toast.success("Access link sent.");
+  }
 
   return (
     <DashboardShell
@@ -129,15 +165,38 @@ export function AdminNav({
       }
       headerActions={
         portalUrl ? (
-          <a
-            href={portalUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-[var(--radius-pill)] bg-[var(--color-ink)] px-3.5 py-1.5 text-[13px] font-semibold text-white hover:opacity-90"
-          >
-            <ExternalLink className="size-3.5" />
-            Open Portal
-          </a>
+          <div className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-ink)] text-white">
+            <a
+              href={portalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-l-[var(--radius-pill)] py-1.5 pl-3.5 pr-2.5 text-[13px] font-semibold hover:opacity-90"
+            >
+              <ExternalLink className="size-3.5" />
+              Open Portal
+            </a>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  title="More portal actions"
+                  className="inline-flex items-center justify-center rounded-r-[var(--radius-pill)] border-l border-white/20 px-2 py-1.5 hover:opacity-90"
+                >
+                  <ChevronDown className="size-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleCopyPortalUrl} className="gap-2">
+                  <Copy className="size-3.5" />
+                  Copy link
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSendAccessLink} disabled={sendingAccessLink} className="gap-2">
+                  <Send className="size-3.5" />
+                  {sendingAccessLink ? "Sending…" : "Send access link"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         ) : null
       }
       breadcrumb={
