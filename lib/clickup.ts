@@ -73,6 +73,8 @@ export type ClientTask = {
   status: string;
   statusColor: string;
   dueDate: string | null; // ISO date, or null if unset
+  dateClosed: string | null; // ISO date, or null if not closed
+  isClosed: boolean;
   url: string;
 };
 
@@ -100,8 +102,9 @@ type ClickUpCustomField = {
 type ClickUpTask = {
   id: string;
   name: string;
-  status: { status: string; color: string };
+  status: { status: string; color: string; type: string };
   due_date: string | null;
+  date_closed?: string | null;
   start_date?: string | null;
   description?: string;
   text_content?: string;
@@ -183,6 +186,8 @@ export async function getClientVisibleTasks(listIds: string[]): Promise<ClientTa
       status: t.status.status,
       statusColor: t.status.color,
       dueDate: t.due_date ? new Date(Number(t.due_date)).toISOString() : null,
+      dateClosed: t.date_closed ? new Date(Number(t.date_closed)).toISOString() : null,
+      isClosed: t.status.type === "closed",
       url: t.url,
     }));
 }
@@ -222,6 +227,8 @@ export async function getClientVisibleTask(
     status: task.status.status,
     statusColor: task.status.color,
     dueDate: task.due_date ? new Date(Number(task.due_date)).toISOString() : null,
+    dateClosed: task.date_closed ? new Date(Number(task.date_closed)).toISOString() : null,
+    isClosed: task.status.type === "closed",
     startDate: task.start_date ? new Date(Number(task.start_date)).toISOString() : null,
     description: task.description || task.text_content || "",
     url: task.url,
