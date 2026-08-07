@@ -2,8 +2,6 @@ import Link from "next/link";
 import { listCompanies } from "@/lib/companies-clients";
 import { Card } from "@/components/Card";
 import { NewCompanyForm } from "@/components/admin/NewCompanyForm";
-import { BackButton } from "@/components/admin/BackButton";
-import { BackfillLogosButton } from "@/components/admin/BackfillLogosButton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export const dynamic = "force-dynamic";
@@ -14,13 +12,11 @@ export default async function CompaniesPage() {
   return (
     <main className="py-12 px-4">
       <div className="max-w-2xl mx-auto space-y-5">
-        <BackButton />
         <h1 className="text-[20px] font-bold text-[var(--color-ink)]">
           Companies
         </h1>
 
         <NewCompanyForm />
-        <BackfillLogosButton />
 
         {companies.length === 0 ? (
           <Card className="px-9 py-9 text-center">
