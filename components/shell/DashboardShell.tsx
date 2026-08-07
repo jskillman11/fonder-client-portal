@@ -21,7 +21,6 @@ import {
   SidebarProvider,
   SidebarRail,
   SidebarTrigger,
-  useSidebar,
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -39,17 +38,6 @@ export type ShellNavItem = {
 };
 
 const LOCKED_TITLE = "Unlocks once your documents are sent for signature.";
-
-// Closes the mobile sheet on navigation -- shadcn's SidebarMenuButton has no
-// such behavior built in, so nav links stay open after a click on mobile.
-function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
-  const { isMobile, setOpenMobile } = useSidebar();
-  return (
-    <Link href={href} onClick={() => isMobile && setOpenMobile(false)}>
-      {children}
-    </Link>
-  );
-}
 
 // Shown in the header when no sidebarTopSlot (company switcher) is passed --
 // e.g. the client portal, which has nothing to switch between. Uses the same
@@ -143,9 +131,9 @@ export function DashboardShell({
                                 {item.items.map((sub) => (
                                   <SidebarMenuSubItem key={sub.href}>
                                     <SidebarMenuSubButton asChild isActive={pathname === sub.href}>
-                                      <NavLink href={sub.href}>
+                                      <Link href={sub.href}>
                                         <span>{sub.label}</span>
-                                      </NavLink>
+                                      </Link>
                                     </SidebarMenuSubButton>
                                   </SidebarMenuSubItem>
                                 ))}
@@ -170,10 +158,10 @@ export function DashboardShell({
                     return (
                       <SidebarMenuItem key={item.href}>
                         <SidebarMenuButton asChild tooltip={item.label}>
-                          <NavLink href={item.href ?? "#"}>
+                          <Link href={item.href ?? "#"}>
                             {Icon && <Icon />}
                             <span>{item.label}</span>
-                          </NavLink>
+                          </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     );
@@ -189,10 +177,10 @@ export function DashboardShell({
                     return (
                       <SidebarMenuItem key={item.href}>
                         <SidebarMenuButton asChild tooltip={item.label}>
-                          <NavLink href={item.href}>
+                          <Link href={item.href}>
                             {Icon && <Icon />}
                             <span>{item.label}</span>
-                          </NavLink>
+                          </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     );
