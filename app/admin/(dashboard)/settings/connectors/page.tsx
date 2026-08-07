@@ -4,7 +4,6 @@ import { getConnectionStatus } from "@/lib/quickbooks";
 import { getConnectionStatus as getClickUpConnectionStatus } from "@/lib/clickup";
 import { listCompanies } from "@/lib/companies-clients";
 import { Card } from "@/components/Card";
-import { BackButton } from "@/components/admin/BackButton";
 import { QuickBooksDisconnectButton } from "@/components/admin/QuickBooksDisconnectButton";
 import { ClickUpConnectionForm } from "@/components/admin/ClickUpConnectionForm";
 
@@ -17,7 +16,6 @@ export default async function DataConnectorsPage() {
     return (
       <main className="py-12 px-4">
         <div className="max-w-2xl mx-auto space-y-5">
-          <BackButton />
           <Card className="px-9 py-9 text-center">
             <p className="text-[14px] text-[var(--color-muted-text)]">
               Only super-admins can manage data connectors.
@@ -39,7 +37,6 @@ export default async function DataConnectorsPage() {
   return (
     <main className="py-12 px-4">
       <div className="max-w-2xl mx-auto space-y-5">
-        <BackButton />
         <h1 className="text-[20px] font-bold text-[var(--color-ink)]">Data connectors</h1>
         <p className="text-[13px] text-[var(--color-muted-text)]">
           Everything the portal currently connects to, and how it&apos;s configured.

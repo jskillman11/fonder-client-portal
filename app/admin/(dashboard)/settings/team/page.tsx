@@ -6,7 +6,6 @@ import { Card } from "@/components/Card";
 import { NewTeamMemberForm } from "@/components/admin/NewTeamMemberForm";
 import { InviteStaffForm } from "@/components/admin/InviteStaffForm";
 import { StaffList } from "@/components/admin/StaffList";
-import { BackButton } from "@/components/admin/BackButton";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +20,6 @@ export default async function TeamPage() {
   return (
     <main className="py-12 px-4">
       <div className="max-w-2xl mx-auto space-y-5">
-        <BackButton />
         <h1 className="text-[20px] font-bold text-[var(--color-ink)]">Team</h1>
 
         <div>

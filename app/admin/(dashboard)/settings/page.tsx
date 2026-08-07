@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { isSuperAdminSession } from "@/lib/supabase/server";
 import { Card } from "@/components/Card";
-import { BackButton } from "@/components/admin/BackButton";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +10,6 @@ export default async function SettingsPage() {
   return (
     <main className="py-12 px-4">
       <div className="max-w-2xl mx-auto space-y-5">
-        <BackButton />
         <h1 className="text-[20px] font-bold text-[var(--color-ink)]">Settings</h1>
 
         <Card className="px-7 py-2">

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/Card";
 import { PillButton } from "@/components/PillButton";
-import { BackButton } from "@/components/admin/BackButton";
 import { PORTAL_COPY_DEFAULTS, PortalCopyKey } from "@/lib/portal-copy-constants";
 
 const FIELD_GROUPS: { heading: string; fields: { key: PortalCopyKey; label: string; multiline?: boolean }[] }[] = [
@@ -97,7 +96,6 @@ export default function PortalContentPage() {
   return (
     <main className="py-12 px-4">
       <div className="max-w-2xl mx-auto space-y-5">
-        <BackButton />
         <div>
           <h1 className="text-[20px] font-bold text-[var(--color-ink)]">
             Portal content
