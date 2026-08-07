@@ -191,8 +191,6 @@ export async function updateCompany(
   logoDomain: string | null = null,
   logoBackgroundColor: string | null = null,
   removeLogo: boolean = false,
-  clickupListIds: string[] | null = null,
-  googleSheetIds: string[] | null = null,
 ): Promise<{ success: true } | { error: string }> {
   const supabase = createServiceClient();
 
@@ -206,12 +204,7 @@ export async function updateCompany(
     name: string;
     logo_storage_path?: string | null;
     logo_background_color?: string;
-    clickup_list_ids?: string[];
-    google_sheet_ids?: string[];
   } = { name };
-
-  if (clickupListIds !== null) update.clickup_list_ids = clickupListIds;
-  if (googleSheetIds !== null) update.google_sheet_ids = googleSheetIds;
 
   if (removeLogo) {
     if (current?.logo_storage_path) {

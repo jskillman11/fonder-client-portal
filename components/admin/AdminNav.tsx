@@ -41,6 +41,7 @@ function computeNavItems(pathname: string, isSuperAdmin: boolean): ShellNavItem[
       { href: `${base}/team`, label: "Team", section: "Company", icon: UserCog },
       { href: `${base}/portal`, label: "Portal", section: "Company", icon: Globe },
       { href: `${base}/billing`, label: "Billing", section: "Company", icon: Receipt },
+      { href: `${base}/connectors`, label: "Data Connectors", section: "Integrations", icon: Plug },
     ];
   }
 
