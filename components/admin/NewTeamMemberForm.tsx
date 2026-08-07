@@ -4,41 +4,39 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card } from "@/components/Card";
 import { PillButton } from "@/components/PillButton";
-import { ICON_COLOR_PRESETS } from "@/lib/icon-color-presets";
 import type { UnlinkedStaffOption } from "@/lib/team-members";
 
 const inputClass =
   "w-full mt-1 rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-[14px]";
 const labelClass = "text-[13px] font-medium text-[var(--color-muted-text)]";
 
+// Every roster entry must now be linked to a real staff account -- name,
+// role, photo, and icon colors always come from that account's profile
+// (see EditProfileForm on the team member's detail page), so there's
+// nothing else to fill in here beyond picking who to add.
 export function NewTeamMemberForm() {
   const router = useRouter();
   const [staffOptions, setStaffOptions] = useState<UnlinkedStaffOption[]>([]);
-  const [staffId, setStaffId] = useState<string>("");
-  const [name, setName] = useState("");
-  const [role, setRole] = useState("");
-  const [colors, setColors] = useState<{ bg: string; text: string } | null>(null);
+  const [loadingOptions, setLoadingOptions] = useState(true);
+  const [staffId, setStaffId] = useState("");
   const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/list-unlinked-staff")
       .then((res) => res.json())
-      .then((data) => setStaffOptions(data.staff ?? []))
-      .catch(() => {});
+      .then((data) => {
+        setStaffOptions(data.staff ?? []);
+        setLoadingOptions(false);
+      })
+      .catch(() => setLoadingOptions(false));
   }, []);
 
-  function handleSelectStaff(id: string) {
-    setStaffId(id);
-    const staff = staffOptions.find((s) => s.id === id);
-    if (staff) {
-      setName(staff.fullName || staff.email);
-      setRole(staff.jobTitle || "");
-    }
-  }
+  const selected = staffOptions.find((s) => s.id === staffId) ?? null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!selected) return;
     setStatus("saving");
     setErrorDetail(null);
 
@@ -46,11 +44,9 @@ export function NewTeamMemberForm() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name,
-        role,
-        iconBgColor: colors?.bg ?? null,
-        iconTextColor: colors?.text ?? null,
-        staffId: staffId || null,
+        name: selected.fullName || selected.email,
+        role: selected.jobTitle || "",
+        staffId: selected.id,
       }),
     });
     const data = await res.json();
@@ -62,105 +58,59 @@ export function NewTeamMemberForm() {
     }
 
     setStaffId("");
-    setName("");
-    setRole("");
-    setColors(null);
     setStatus("idle");
     router.refresh();
   }
 
-  const isLinked = Boolean(staffId);
+  if (loadingOptions) {
+    return (
+      <Card className="px-9 py-7">
+        <p className="text-[13px] text-[var(--color-muted-text)]">Loading…</p>
+      </Card>
+    );
+  }
 
   return (
     <Card className="px-9 py-7">
       <h2 className="text-[15px] font-bold text-[var(--color-ink)] mb-4">
         Add a team member
       </h2>
-      <form onSubmit={handleSubmit} className="space-y-3">
-        {staffOptions.length > 0 && (
+      {staffOptions.length === 0 ? (
+        <p className="text-[13px] text-[var(--color-muted-text)]">
+          Every staff account is already on the roster — invite a new one below to add them here
+          too.
+        </p>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className={labelClass}>Link to a staff account (optional)</label>
+            <label className={labelClass}>Staff account</label>
             <select
+              required
               value={staffId}
-              onChange={(e) => handleSelectStaff(e.target.value)}
+              onChange={(e) => setStaffId(e.target.value)}
               className={inputClass}
             >
-              <option value="">— add manually —</option>
+              <option value="" disabled>
+                Select a staff account…
+              </option>
               {staffOptions.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.fullName || s.email}
                 </option>
               ))}
             </select>
-            {isLinked && (
+            {selected && (
               <p className="text-[12px] text-[var(--color-muted-text)] mt-1">
-                Name, role, and icon colors will stay in sync with this person&apos;s staff
-                profile.
+                Name, role, and icon colors will stay in sync with{" "}
+                {selected.fullName || selected.email}&apos;s staff profile.
               </p>
             )}
           </div>
-        )}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={labelClass}>Name</label>
-            <input
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className={inputClass}
-              disabled={isLinked}
-            />
+          <div className="flex justify-end">
+            <PillButton type="submit">{status === "saving" ? "Adding…" : "Add"}</PillButton>
           </div>
-          <div>
-            <label className={labelClass}>Role</label>
-            <input
-              required
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className={inputClass}
-              placeholder="Founder, Creative Director"
-              disabled={isLinked}
-            />
-          </div>
-        </div>
-        {!isLinked && (
-          <div>
-            <label className={labelClass}>Icon colors</label>
-            <div className="flex gap-2 mt-1">
-              {ICON_COLOR_PRESETS.map((preset) => {
-                const isSelected = colors?.bg === preset.bg && colors?.text === preset.text;
-                return (
-                  <button
-                    key={preset.bg}
-                    type="button"
-                    onClick={() => setColors(preset)}
-                    className={`w-9 h-9 rounded-[8px] flex items-center justify-center text-[11px] font-bold ${
-                      isSelected ? "ring-2 ring-offset-2 ring-[var(--color-ink)]" : "border border-[var(--color-border)]"
-                    }`}
-                    style={{ backgroundColor: preset.bg, color: preset.text }}
-                    title={`${preset.bg} / ${preset.text}`}
-                  >
-                    Aa
-                  </button>
-                );
-              })}
-              <button
-                type="button"
-                onClick={() => setColors(null)}
-                className="w-9 h-9 rounded-[8px] border border-dashed border-[var(--color-border)] text-[11px] text-[var(--color-faint)]"
-                title="Default"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-        )}
-        <div className="flex justify-end">
-          <PillButton type="submit">
-            {status === "saving" ? "Adding…" : "Add"}
-          </PillButton>
-        </div>
-      </form>
+        </form>
+      )}
       {status === "error" && <p className="text-[13px] text-[#a32d2d] mt-3">{errorDetail}</p>}
     </Card>
   );

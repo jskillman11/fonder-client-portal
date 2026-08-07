@@ -12,6 +12,7 @@ export default async function ProfileSettingsPage() {
     <main className="py-12 px-4">
       <div className="max-w-2xl mx-auto space-y-5">
         <EditProfileForm
+          userId={user.id}
           email={user.email}
           fullName={user.fullName}
           jobTitle={user.jobTitle}

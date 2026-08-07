@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
 import { getTeamMember } from "@/lib/team-members";
-import { getAdminUser } from "@/lib/supabase/server";
-import { EditTeamMemberForm } from "@/components/admin/EditTeamMemberForm";
+import { getStaffProfileById } from "@/lib/staff";
+import { getAdminUser, isSuperAdminSession } from "@/lib/supabase/server";
+import { EditProfileForm } from "@/components/admin/EditProfileForm";
+import { LinkTeamMemberPrompt } from "@/components/admin/LinkTeamMemberPrompt";
+import { UnlinkTeamMemberButton } from "@/components/admin/UnlinkTeamMemberButton";
 
 export const dynamic = "force-dynamic";
 
@@ -11,13 +14,45 @@ export default async function TeamMemberDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [teamMember, admin] = await Promise.all([getTeamMember(id), getAdminUser()]);
+  const [teamMember, admin, isSuperAdmin] = await Promise.all([
+    getTeamMember(id),
+    getAdminUser(),
+    isSuperAdminSession(),
+  ]);
   if (!teamMember) notFound();
+
+  const profile = teamMember.staffId ? await getStaffProfileById(teamMember.staffId) : null;
+
+  if (!profile) {
+    return (
+      <main className="py-12 px-4">
+        <div className="max-w-lg mx-auto space-y-3">
+          <LinkTeamMemberPrompt teamMember={teamMember} />
+        </div>
+      </main>
+    );
+  }
+
+  const canEdit = isSuperAdmin || admin?.id === profile.id;
 
   return (
     <main className="py-12 px-4">
       <div className="max-w-lg mx-auto space-y-3">
-        <EditTeamMemberForm teamMember={teamMember} currentUserId={admin?.id ?? null} />
+        <EditProfileForm
+          userId={profile.id}
+          email={profile.email}
+          fullName={profile.fullName}
+          jobTitle={profile.jobTitle}
+          avatarUrl={profile.avatarUrl}
+          iconBgColor={profile.iconBgColor}
+          iconTextColor={profile.iconTextColor}
+          canEdit={canEdit}
+        />
+        {isSuperAdmin && (
+          <div className="px-2">
+            <UnlinkTeamMemberButton teamMemberId={teamMember.id} />
+          </div>
+        )}
       </div>
     </main>
   );

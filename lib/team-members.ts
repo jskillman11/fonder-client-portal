@@ -6,6 +6,7 @@ export type TeamMemberRecord = {
   // staffId is set, otherwise this row's own name/role/icon columns.
   name: string;
   role: string;
+  avatarUrl: string | null;
   iconBgColor: string | null;
   iconTextColor: string | null;
   staffId: string | null;
@@ -22,24 +23,34 @@ type TeamMemberRow = {
   profiles: {
     full_name: string | null;
     job_title: string | null;
+    avatar_storage_path: string | null;
     icon_bg_color: string | null;
     icon_text_color: string | null;
   } | null;
 };
 
 const TEAM_MEMBER_SELECT =
-  "id, name, role, icon_bg_color, icon_text_color, staff_id, profiles!staff_id(full_name, job_title, icon_bg_color, icon_text_color)";
+  "id, name, role, icon_bg_color, icon_text_color, staff_id, profiles!staff_id(full_name, job_title, avatar_storage_path, icon_bg_color, icon_text_color)";
 
 // A linked roster entry mirrors its staff account -- name/role/icon colors
 // are edited on the staff profile (Team > Staff accounts), not here, so
 // this row's own columns are only a fallback for whatever the profile
 // hasn't set yet (e.g. a brand-new staff account with no job_title).
-function mapTeamMemberRow(row: TeamMemberRow, staffEmailById: Map<string, string>): TeamMemberRecord {
+// Unlinked rows have no avatar column of their own at all -- only a linked
+// profile's photo can ever show here.
+function mapTeamMemberRow(
+  supabase: ReturnType<typeof createServiceClient>,
+  row: TeamMemberRow,
+  staffEmailById: Map<string, string>,
+): TeamMemberRecord {
   const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
   return {
     id: row.id,
     name: profile?.full_name || row.name,
     role: profile?.job_title || row.role,
+    avatarUrl: profile?.avatar_storage_path
+      ? supabase.storage.from("engagement-logos").getPublicUrl(profile.avatar_storage_path).data.publicUrl
+      : null,
     iconBgColor: profile?.icon_bg_color ?? row.icon_bg_color,
     iconTextColor: profile?.icon_text_color ?? row.icon_text_color,
     staffId: row.staff_id,
@@ -62,7 +73,7 @@ export async function listTeamMembers(): Promise<TeamMemberRecord[]> {
     getStaffEmailsById(supabase),
   ]);
 
-  return ((data ?? []) as unknown as TeamMemberRow[]).map((row) => mapTeamMemberRow(row, staffEmailById));
+  return ((data ?? []) as unknown as TeamMemberRow[]).map((row) => mapTeamMemberRow(supabase, row, staffEmailById));
 }
 
 export async function getTeamMember(id: string): Promise<TeamMemberRecord | null> {
@@ -73,7 +84,7 @@ export async function getTeamMember(id: string): Promise<TeamMemberRecord | null
   ]);
 
   if (error || !data) return null;
-  return mapTeamMemberRow(data as unknown as TeamMemberRow, staffEmailById);
+  return mapTeamMemberRow(supabase, data as unknown as TeamMemberRow, staffEmailById);
 }
 
 export type UnlinkedStaffOption = {
@@ -126,23 +137,6 @@ export async function createTeamMember(
 
   if (error) return { error: error.message };
   return { id: data.id };
-}
-
-export async function updateTeamMemberRecord(
-  id: string,
-  name: string,
-  role: string,
-  iconBgColor: string | null,
-  iconTextColor: string | null,
-): Promise<{ success: true } | { error: string }> {
-  const supabase = createServiceClient();
-  const { error } = await supabase
-    .from("team_members")
-    .update({ name, role, icon_bg_color: iconBgColor, icon_text_color: iconTextColor })
-    .eq("id", id);
-
-  if (error) return { error: error.message };
-  return { success: true };
 }
 
 export async function linkTeamMemberToStaff(

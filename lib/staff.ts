@@ -1,4 +1,4 @@
-import { createServiceClient } from "./supabase/server";
+import { createServiceClient, type StaffUser } from "./supabase/server";
 import { sendBrandedActionEmail } from "./email-template";
 
 export type StaffRecord = {
@@ -8,6 +8,37 @@ export type StaffRecord = {
   invitedAt: string;
   hasAccepted: boolean;
 };
+
+// Like getAdminUser(), but for an arbitrary staff account rather than the
+// current session -- used so a super-admin can view/edit someone else's
+// profile (see app/admin/(dashboard)/settings/team/[id]/page.tsx).
+export async function getStaffProfileById(id: string): Promise<StaffUser | null> {
+  const supabase = createServiceClient();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, full_name, job_title, avatar_storage_path, icon_bg_color, icon_text_color")
+    .eq("id", id)
+    .eq("role", "staff")
+    .single();
+
+  if (!profile) return null;
+
+  const { data: userData } = await supabase.auth.admin.getUserById(id);
+  if (!userData?.user?.email) return null;
+
+  return {
+    id,
+    email: userData.user.email,
+    fullName: profile.full_name,
+    jobTitle: profile.job_title,
+    avatarUrl: profile.avatar_storage_path
+      ? supabase.storage.from("engagement-logos").getPublicUrl(profile.avatar_storage_path).data.publicUrl
+      : null,
+    iconBgColor: profile.icon_bg_color,
+    iconTextColor: profile.icon_text_color,
+  };
+}
 
 export async function listStaff(): Promise<StaffRecord[]> {
   const supabase = createServiceClient();

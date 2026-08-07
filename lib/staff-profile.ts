@@ -1,7 +1,7 @@
 import { createServiceClient } from "./supabase/server";
 import { uploadToStorage } from "./storage-upload";
 
-export async function updateMyProfile(
+export async function updateStaffProfile(
   userId: string,
   fullName: string,
   jobTitle: string,

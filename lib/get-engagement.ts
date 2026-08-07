@@ -5,6 +5,7 @@ export type TeamMember = {
   name: string;
   role: string;
   blurb?: string;
+  avatarUrl?: string | null;
   iconBgColor?: string | null;
   iconTextColor?: string | null;
 };
@@ -103,7 +104,9 @@ export async function getEngagement(clientSlug: string): Promise<EngagementData 
 
   const { data: teamRows } = await supabase
     .from("company_team_assignments")
-    .select("sort_order, team_members(name, role, icon_bg_color, icon_text_color)")
+    .select(
+      "sort_order, team_members(name, role, icon_bg_color, icon_text_color, profiles!staff_id(full_name, job_title, avatar_storage_path, icon_bg_color, icon_text_color))",
+    )
     .eq("company_id", company.id)
     .order("sort_order", { ascending: true });
 
@@ -160,11 +163,18 @@ export async function getEngagement(clientSlug: string): Promise<EngagementData 
       .map((row) => {
         const tm = Array.isArray(row.team_members) ? row.team_members[0] : row.team_members;
         if (!tm) return null;
+        // Mirrors lib/team-members.ts's mapTeamMemberRow -- a linked roster
+        // entry's name/role/icon/photo come from its staff profile, not the
+        // team_members row's own (possibly stale) columns.
+        const profile = Array.isArray(tm.profiles) ? tm.profiles[0] : tm.profiles;
         return {
-          name: tm.name,
-          role: tm.role,
-          iconBgColor: tm.icon_bg_color,
-          iconTextColor: tm.icon_text_color,
+          name: profile?.full_name || tm.name,
+          role: profile?.job_title || tm.role,
+          avatarUrl: profile?.avatar_storage_path
+            ? supabase.storage.from("engagement-logos").getPublicUrl(profile.avatar_storage_path).data.publicUrl
+            : null,
+          iconBgColor: profile?.icon_bg_color ?? tm.icon_bg_color,
+          iconTextColor: profile?.icon_text_color ?? tm.icon_text_color,
         };
       })
       .filter((t): t is NonNullable<typeof t> => t !== null),

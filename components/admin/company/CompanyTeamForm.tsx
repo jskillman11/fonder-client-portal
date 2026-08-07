@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { PillButton } from "@/components/PillButton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { initialsFromName } from "@/lib/initials";
 import type { TeamMemberRecord } from "@/lib/team-members";
 
 export function CompanyTeamForm({
@@ -94,15 +96,15 @@ export function CompanyTeamForm({
                   onChange={() => toggle(t.id)}
                   className="w-4 h-4"
                 />
-                <div
-                  className="w-7 h-7 rounded-[6px] flex items-center justify-center text-[10px] font-semibold shrink-0"
-                  style={{
-                    backgroundColor: t.iconBgColor || "#f2f1ec",
-                    color: t.iconTextColor || "#181a1e",
-                  }}
-                >
-                  {t.name.split(" ").map((n) => n[0]).join("")}
-                </div>
+                <Avatar className="h-7 w-7 rounded-[6px] shrink-0 after:rounded-[6px]">
+                  {t.avatarUrl && <AvatarImage src={t.avatarUrl} alt={t.name} className="rounded-[6px] object-cover" />}
+                  <AvatarFallback
+                    className="rounded-[6px] text-[10px] font-semibold"
+                    style={{ backgroundColor: t.iconBgColor || "#f2f1ec", color: t.iconTextColor || "#181a1e" }}
+                  >
+                    {initialsFromName(t.name)}
+                  </AvatarFallback>
+                </Avatar>
                 <div>
                   <p className="text-[13.5px] font-semibold text-[var(--color-ink)]">{t.name}</p>
                   <p className="text-[12px] text-[var(--color-muted-text)]">{t.role}</p>

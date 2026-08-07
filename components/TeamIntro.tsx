@@ -1,4 +1,6 @@
 import { Card } from "./Card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { initialsFromName } from "@/lib/initials";
 import type { TeamMember } from "@/lib/get-engagement";
 
 export function TeamIntro({
@@ -24,21 +26,21 @@ export function TeamIntro({
             key={member.name}
             className="rounded-[14px] border border-[var(--color-border)] px-5 py-4"
           >
-            <div
-              className="w-10 h-10 rounded-[var(--radius-logo)] mb-3 flex items-center justify-center text-[13px] font-semibold"
-              style={{
-                backgroundColor: member.iconBgColor || "#f2f1ec",
-                color: member.iconTextColor || "#181a1e",
-                border: member.iconBgColor
-                  ? "none"
-                  : "1px solid #ded9cf",
-              }}
-            >
-              {member.name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")}
-            </div>
+            <Avatar className="w-10 h-10 rounded-[var(--radius-logo)] mb-3 after:rounded-[var(--radius-logo)]">
+              {member.avatarUrl && (
+                <AvatarImage src={member.avatarUrl} alt={member.name} className="rounded-[var(--radius-logo)] object-cover" />
+              )}
+              <AvatarFallback
+                className="rounded-[var(--radius-logo)] text-[13px] font-semibold"
+                style={{
+                  backgroundColor: member.iconBgColor || "#f2f1ec",
+                  color: member.iconTextColor || "#181a1e",
+                  border: member.iconBgColor ? "none" : "1px solid #ded9cf",
+                }}
+              >
+                {initialsFromName(member.name)}
+              </AvatarFallback>
+            </Avatar>
             <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">
               {member.name}
             </p>

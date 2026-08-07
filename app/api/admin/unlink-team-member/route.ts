@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { unlinkTeamMember } from "@/lib/team-members";
-import { requireAdmin } from "@/lib/supabase/server";
+import { requireSuperAdmin } from "@/lib/supabase/server";
 
 export async function POST(req: NextRequest) {
-  const admin = await requireAdmin();
+  const admin = await requireSuperAdmin();
   if (admin instanceof NextResponse) return admin;
 
   const { id } = await req.json();
