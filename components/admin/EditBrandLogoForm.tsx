@@ -76,7 +76,7 @@ export function EditBrandLogoForm({ logoUrl }: { logoUrl: string | null }) {
         )}
         <input
           type="file"
-          accept="image/*"
+          accept="image/*,.svg"
           onChange={(e) => setLogo(e.target.files?.[0] ?? null)}
           className="w-full text-[13px]"
         />

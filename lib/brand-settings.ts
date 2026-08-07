@@ -38,14 +38,22 @@ export async function updateBrandLogo(
   if (!logoFile) return { error: "No file provided" };
 
   const buffer = Buffer.from(await logoFile.arrayBuffer());
-  const normalized = await resizeStandaloneLogo(buffer);
+
+  // SVGs are vector -- store them as-is instead of rasterizing to PNG
+  // (which locks them to a fixed resolution and looks blurry once scaled),
+  // so they stay crisp at any size.
+  const isSvg = logoFile.type === "image/svg+xml" || logoFile.name.toLowerCase().endsWith(".svg");
+  const uploadBuffer = isSvg ? buffer : await resizeStandaloneLogo(buffer);
+  const extension = isSvg ? "svg" : "png";
+  const contentType = isSvg ? "image/svg+xml" : "image/png";
+
   // A unique path per upload (rather than a fixed brand/fonder-logo.png
   // upsert target) so the public URL actually changes and isn't served
   // stale from cache -- same reasoning as companies' per-upload logo paths.
-  const path = `brand/fonder-logo-${crypto.randomUUID().slice(0, 8)}.png`;
+  const path = `brand/fonder-logo-${crypto.randomUUID().slice(0, 8)}.${extension}`;
 
-  const { error: uploadError } = await supabase.storage.from("engagement-logos").upload(path, normalized, {
-    contentType: "image/png",
+  const { error: uploadError } = await supabase.storage.from("engagement-logos").upload(path, uploadBuffer, {
+    contentType,
   });
   if (uploadError) return { error: uploadError.message };
 
