@@ -59,6 +59,19 @@ export function CompanySwitcher({
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}
           >
+            <DropdownMenuItem onClick={() => router.push("/admin")} className="gap-2 p-2">
+              <Avatar className="h-6 w-6 rounded-md after:rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
+                {fonderLogoUrl ? (
+                  <AvatarImage src={fonderLogoUrl} alt="Fonder" className="rounded-md object-cover" />
+                ) : (
+                  <AvatarFallback className="rounded-md bg-sidebar-primary text-sidebar-primary-foreground text-[10px]">
+                    F
+                  </AvatarFallback>
+                )}
+              </Avatar>
+              <span className="font-medium">Fonder</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-xs text-muted-foreground">Brands</DropdownMenuLabel>
             {companies.map((c) => (
               <DropdownMenuItem
