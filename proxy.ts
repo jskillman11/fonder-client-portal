@@ -1,6 +1,22 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+// File-upload routes bypass this proxy entirely (see below) -- on
+// production (not reproducible locally), uploads through these routes came
+// back with their binary content corrupted in a pattern consistent with a
+// UTF-8 decode/re-encode round-trip, which only happens when this proxy
+// reconstructs the request via NextResponse.next({ request }) before it
+// reaches the route handler. Each of these already has its own independent
+// requireAdmin/requireSuperAdmin cookie check, so skipping this proxy for
+// them loses nothing except the opportunistic session-cookie refresh (the
+// page load just before submitting one of these already refreshed it).
+const PROXY_BYPASS_UPLOAD_ROUTES = [
+  "/api/admin/update-brand-logo",
+  "/api/admin/update-company",
+  "/api/admin/update-profile",
+  "/api/admin/create-company",
+];
+
 // Protects everything under /admin (pages) and /api/admin (route handlers) —
 // requires a real, logged-in Supabase user with a staff profile. /admin/login
 // and /admin/auth/callback (the Google OAuth redirect target) are exempt
@@ -13,7 +29,11 @@ export async function proxy(request: NextRequest) {
   const isApiAdmin = pathname.startsWith("/api/admin");
   const isAdminPage = pathname.startsWith("/admin");
 
-  if (pathname === "/admin/login" || pathname === "/admin/auth/callback") {
+  if (
+    pathname === "/admin/login" ||
+    pathname === "/admin/auth/callback" ||
+    PROXY_BYPASS_UPLOAD_ROUTES.includes(pathname)
+  ) {
     return NextResponse.next();
   }
 
