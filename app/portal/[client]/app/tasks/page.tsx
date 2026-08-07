@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { getCompanyBySlug } from "@/lib/companies-clients";
 import { getClientVisibleTasks, type ClientTask } from "@/lib/clickup";
 import { PlaceholderTab } from "@/components/portal-app/PlaceholderTab";
@@ -56,22 +57,24 @@ export default async function TasksPage({
   return (
     <div className="max-w-2xl mx-auto space-y-3">
       {tasks.map((t) => (
-        <Card key={t.id} className="px-6 py-4 flex items-center justify-between gap-4">
-          <div>
-            <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">{t.name}</p>
-            {t.dueDate && (
-              <p className="text-[12px] text-[var(--color-muted-text)] mt-0.5">
-                Due {new Date(t.dueDate).toLocaleDateString()}
-              </p>
-            )}
-          </div>
-          <span
-            className="text-[11px] font-semibold uppercase tracking-wide px-3 py-1 rounded-full shrink-0"
-            style={{ backgroundColor: `${t.statusColor}22`, color: t.statusColor }}
-          >
-            {t.status}
-          </span>
-        </Card>
+        <Link key={t.id} href={`/portal/${client}/app/tasks/${t.id}`}>
+          <Card className="px-6 py-4 flex items-center justify-between gap-4 hover:bg-[var(--color-cream)]">
+            <div>
+              <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">{t.name}</p>
+              {t.dueDate && (
+                <p className="text-[12px] text-[var(--color-muted-text)] mt-0.5">
+                  Due {new Date(t.dueDate).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+            <span
+              className="text-[11px] font-semibold uppercase tracking-wide px-3 py-1 rounded-full shrink-0"
+              style={{ backgroundColor: `${t.statusColor}22`, color: t.statusColor }}
+            >
+              {t.status}
+            </span>
+          </Card>
+        </Link>
       ))}
     </div>
   );

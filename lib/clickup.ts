@@ -76,6 +76,11 @@ export type ClientTask = {
   url: string;
 };
 
+export type ClientTaskDetail = ClientTask & {
+  startDate: string | null; // ISO date, or null if unset
+  description: string;
+};
+
 type ClickUpFieldOption = {
   id: string;
   // "drop_down" options use `name`, "labels" options use `label` -- both
@@ -97,7 +102,11 @@ type ClickUpTask = {
   name: string;
   status: { status: string; color: string };
   due_date: string | null;
+  start_date?: string | null;
+  description?: string;
+  text_content?: string;
   url: string;
+  list?: { id: string; name: string };
   custom_fields?: ClickUpCustomField[];
 };
 
@@ -176,4 +185,45 @@ export async function getClientVisibleTasks(listIds: string[]): Promise<ClientTa
       dueDate: t.due_date ? new Date(Number(t.due_date)).toISOString() : null,
       url: t.url,
     }));
+}
+
+// Fetches one task's full detail (description, start date -- not returned
+// by the list endpoint above) for the client-facing task detail view.
+// Returns null for "can't show this" in every case (not found, not one of
+// this company's own lists, not marked client-visible) rather than
+// distinguishing why -- a client shouldn't be able to tell "wrong ID" apart
+// from "that task exists but isn't yours to see" by probing task IDs in the
+// URL.
+export async function getClientVisibleTask(
+  listIds: string[],
+  taskId: string,
+): Promise<ClientTaskDetail | null> {
+  if (listIds.length === 0) return null;
+
+  const apiToken = await getApiToken();
+  if (!apiToken) return null;
+
+  const res = await fetch(`${CLICKUP_API_BASE}/task/${taskId}`, {
+    headers: { Authorization: apiToken },
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new Error(`ClickUp returned ${res.status} for task ${taskId}`);
+  }
+
+  const task = (await res.json()) as ClickUpTask;
+
+  if (!task.list || !listIds.includes(task.list.id)) return null;
+  if (!isClientVisible(task)) return null;
+
+  return {
+    id: task.id,
+    name: task.name,
+    status: task.status.status,
+    statusColor: task.status.color,
+    dueDate: task.due_date ? new Date(Number(task.due_date)).toISOString() : null,
+    startDate: task.start_date ? new Date(Number(task.start_date)).toISOString() : null,
+    description: task.description || task.text_content || "",
+    url: task.url,
+  };
 }
