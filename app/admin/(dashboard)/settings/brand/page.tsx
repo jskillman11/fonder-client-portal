@@ -1,5 +1,5 @@
 import { isSuperAdminSession } from "@/lib/supabase/server";
-import { getBrandLogoUrl } from "@/lib/brand-settings";
+import { getBrandLogoUrls } from "@/lib/brand-settings";
 import { Card } from "@/components/Card";
 import { BackButton } from "@/components/admin/BackButton";
 import { EditBrandLogoForm } from "@/components/admin/EditBrandLogoForm";
@@ -24,14 +24,14 @@ export default async function BrandSettingsPage() {
     );
   }
 
-  const logoUrl = await getBrandLogoUrl();
+  const { login: loginLogoUrl, sidebar: sidebarLogoUrl } = await getBrandLogoUrls();
 
   return (
     <main className="py-12 px-4">
       <div className="max-w-2xl mx-auto space-y-5">
         <BackButton />
         <h1 className="text-[20px] font-bold text-[var(--color-ink)]">Brand</h1>
-        <EditBrandLogoForm logoUrl={logoUrl} />
+        <EditBrandLogoForm loginLogoUrl={loginLogoUrl} sidebarLogoUrl={sidebarLogoUrl} />
       </div>
     </main>
   );

@@ -1,12 +1,12 @@
 import { LoginForm } from "@/components/login-form"
-import { getBrandLogoUrl } from "@/lib/brand-settings"
+import { getLoginLogoUrl } from "@/lib/brand-settings"
 
 export default async function AdminLoginPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>
 }) {
-  const [{ error }, logoUrl] = await Promise.all([searchParams, getBrandLogoUrl()])
+  const [{ error }, logoUrl] = await Promise.all([searchParams, getLoginLogoUrl()])
 
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">

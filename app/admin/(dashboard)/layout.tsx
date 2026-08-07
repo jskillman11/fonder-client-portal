@@ -1,6 +1,6 @@
 import { getAdminUser, isSuperAdminSession } from "@/lib/supabase/server";
 import { listCompanies } from "@/lib/companies-clients";
-import { getBrandLogoUrl } from "@/lib/brand-settings";
+import { getSidebarLogoUrl } from "@/lib/brand-settings";
 import { AdminNav } from "@/components/admin/AdminNav";
 import { AdminAccountMenu } from "@/components/admin/AdminAccountMenu";
 
@@ -9,18 +9,18 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [user, isSuperAdmin, companies, fonderLogoUrl] = await Promise.all([
+  const [user, isSuperAdmin, companies, sidebarLogoUrl] = await Promise.all([
     getAdminUser(),
     isSuperAdminSession(),
     listCompanies(),
-    getBrandLogoUrl(),
+    getSidebarLogoUrl(),
   ]);
 
   return (
     <AdminNav
       companies={companies}
       isSuperAdmin={isSuperAdmin}
-      fonderLogoUrl={fonderLogoUrl}
+      sidebarLogoUrl={sidebarLogoUrl}
       accountSlot={
         <AdminAccountMenu
           email={user?.email ?? ""}

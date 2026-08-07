@@ -17,11 +17,11 @@ import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/c
 export function CompanySwitcher({
   companies,
   activeCompany,
-  fonderLogoUrl,
+  sidebarLogoUrl,
 }: {
   companies: Company[];
   activeCompany: Company | null;
-  fonderLogoUrl?: string | null;
+  sidebarLogoUrl?: string | null;
 }) {
   const router = useRouter();
   const { isMobile } = useSidebar();
@@ -39,8 +39,8 @@ export function CompanySwitcher({
                 {activeCompany?.logoUrl ? (
                   <AvatarImage src={activeCompany.logoUrl} alt={activeCompany.name} className="rounded-lg object-cover" />
                 ) : (
-                  fonderLogoUrl && (
-                    <AvatarImage src={fonderLogoUrl} alt="Fonder" className="rounded-lg object-cover" />
+                  sidebarLogoUrl && (
+                    <AvatarImage src={sidebarLogoUrl} alt="Fonder" className="rounded-lg object-cover" />
                   )
                 )}
                 <AvatarFallback className="rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
@@ -61,8 +61,8 @@ export function CompanySwitcher({
           >
             <DropdownMenuItem onClick={() => router.push("/admin")} className="gap-2 p-2">
               <Avatar className="h-6 w-6 rounded-md after:rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-                {fonderLogoUrl ? (
-                  <AvatarImage src={fonderLogoUrl} alt="Fonder" className="rounded-md object-cover" />
+                {sidebarLogoUrl ? (
+                  <AvatarImage src={sidebarLogoUrl} alt="Fonder" className="rounded-md object-cover" />
                 ) : (
                   <AvatarFallback className="rounded-md bg-sidebar-primary text-sidebar-primary-foreground text-[10px]">
                     F

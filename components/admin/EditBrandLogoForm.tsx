@@ -6,8 +6,19 @@ import { toast } from "sonner";
 import { Card } from "@/components/Card";
 import { PillButton } from "@/components/PillButton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import type { BrandLogoSlot } from "@/lib/brand-settings";
 
-export function EditBrandLogoForm({ logoUrl }: { logoUrl: string | null }) {
+function BrandLogoSlotEditor({
+  slot,
+  title,
+  description,
+  logoUrl,
+}: {
+  slot: BrandLogoSlot;
+  title: string;
+  description: string;
+  logoUrl: string | null;
+}) {
   const router = useRouter();
   const [logo, setLogo] = useState<File | null>(null);
   const [status, setStatus] = useState<"idle" | "saving" | "removing">("idle");
@@ -18,6 +29,7 @@ export function EditBrandLogoForm({ logoUrl }: { logoUrl: string | null }) {
     setStatus("saving");
 
     const formData = new FormData();
+    formData.append("slot", slot);
     formData.append("logo", logo);
 
     const res = await fetch("/api/admin/update-brand-logo", { method: "POST", body: formData });
@@ -37,6 +49,7 @@ export function EditBrandLogoForm({ logoUrl }: { logoUrl: string | null }) {
     setStatus("removing");
 
     const formData = new FormData();
+    formData.append("slot", slot);
     formData.append("removeLogo", "true");
 
     const res = await fetch("/api/admin/update-brand-logo", { method: "POST", body: formData });
@@ -52,11 +65,9 @@ export function EditBrandLogoForm({ logoUrl }: { logoUrl: string | null }) {
   }
 
   return (
-    <Card className="px-9 py-8">
-      <h2 className="text-[15px] font-bold text-[var(--color-ink)] mb-1">Brand logo</h2>
-      <p className="text-[13px] text-[var(--color-muted-text)] mb-4">
-        Shown in the admin sidebar (when no brand is selected) and on the staff login page.
-      </p>
+    <div>
+      <h2 className="text-[15px] font-bold text-[var(--color-ink)] mb-1">{title}</h2>
+      <p className="text-[13px] text-[var(--color-muted-text)] mb-4">{description}</p>
       <form onSubmit={handleSubmit} className="space-y-4">
         {logoUrl && (
           <div className="flex items-center gap-2">
@@ -84,6 +95,33 @@ export function EditBrandLogoForm({ logoUrl }: { logoUrl: string | null }) {
           <PillButton type="submit">{status === "saving" ? "Saving…" : "Save"}</PillButton>
         </div>
       </form>
+    </div>
+  );
+}
+
+export function EditBrandLogoForm({
+  loginLogoUrl,
+  sidebarLogoUrl,
+}: {
+  loginLogoUrl: string | null;
+  sidebarLogoUrl: string | null;
+}) {
+  return (
+    <Card className="px-9 py-8 space-y-8">
+      <BrandLogoSlotEditor
+        slot="login"
+        title="Login page logo"
+        description="Shown standalone above the staff sign-in card -- works best as a wide-format logo."
+        logoUrl={loginLogoUrl}
+      />
+      <div className="border-t border-[var(--color-border)] pt-8">
+        <BrandLogoSlotEditor
+          slot="sidebar"
+          title="Sidebar icon"
+          description="Shown in the admin sidebar's small square tile when no brand is selected -- works best as a square mark, not a wide wordmark."
+          logoUrl={sidebarLogoUrl}
+        />
+      </div>
     </Card>
   );
 }
