@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Fonder Client Portal
 
-## Getting Started
+A branded client onboarding, e-signature, and project-tracking portal for
+Fonder Studio, plus the admin dashboard staff use to run it. Next.js (App
+Router) on Vercel, Supabase for data/auth/storage, DocuSeal for signing.
 
-First, run the development server:
+**For the actual state of the system** — what's real vs. stubbed, the data
+model, known gotchas, where secrets live — read [`SETUP.md`](./SETUP.md).
+This file is just how to get it running locally; that one is the living
+source of truth.
+
+## Local development
 
 ```bash
+npm install
+vercel env pull .env.local   # or copy .env.local from a teammate/password manager
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). Admin dashboard is at
+`/admin` (staff sign in with Google — see `SETUP.md`'s "Staff auth"
+section); the client portal is at `/portal/[slug]`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Next.js 16** (App Router, Turbopack) — note the version: APIs and
+  conventions have changed from what most training data expects (e.g.
+  `middleware.ts` → `proxy.ts`). See `AGENTS.md` before writing new code.
+- **Supabase** — Postgres, Auth (staff via Google Workspace SSO, clients via
+  magic link), and Storage.
+- **DocuSeal** — e-signing, embedded directly in the portal.
+- **shadcn/ui** (Radix) — the admin/portal shell and component primitives.
+- **Vercel** — hosting, deploys on push to `main`.
 
-## Learn More
+## Deploying
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Push to `main` deploys to production automatically via Vercel. There's no
+separate staging environment — test locally against the same Supabase
+project first (see `SETUP.md`'s gotchas before assuming something that
+works locally will behave identically on Vercel).

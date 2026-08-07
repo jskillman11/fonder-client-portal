@@ -1,11 +1,13 @@
 # Fonder Client Portal — Project Status & Handoff
 
-Last updated: August 3, 2026
+Last updated: August 7, 2026
 Status: **Live for Coros** (first real client). Core signing flow is mid-migration
 from Documenso to DocuSeal (see "Signing flow" below — code is done, DocuSeal
 account/webhook setup and a real end-to-end test are still pending). The
 authenticated client portal app (tasks, chat, invoices, etc.) is scaffolded
 but intentionally not functional yet. See "What's built vs. stubbed" below.
+Staff login switched from email/password to Google Workspace SSO this pass —
+see "Staff auth" below.
 
 This document describes the **current state of the system**, not the history
 of how it got here. Read this before touching the code, especially in a fresh
@@ -61,7 +63,12 @@ services for these still exist, they're safe to decommission.
   multiple clients; one is picked as the signatory per engagement.
 - `documents`: SOW or MSA content in Markdown, scoped to a company, reusable
   across engagements.
-- `team_members`: Fonder's own staff roster, global.
+- `team_members`: Fonder's own staff roster, global — `name`, `role`,
+  `icon_bg_color`/`icon_text_color`, and an optional `staff_id` FK into
+  `profiles`. When set, the roster entry's displayed name/role/icon colors
+  are sourced live from that staff account's profile instead of this row's
+  own columns (see "Team roster ↔ staff accounts" below) — most current
+  roster entries are still unlinked, that's normal, linking is optional.
 - `company_team_assignments`: join table, which team members are the
   standing "account team" for a company. **Not scoped per engagement** —
   no history of who was staffed on a past engagement is kept, by design.
@@ -74,11 +81,23 @@ services for these still exist, they're safe to decommission.
 - `engagement_milestones`: label/date pairs shown in the portal Overview's
   schedule, scoped per engagement (this one thing does stay per-contract).
 - `profiles`: `id` references `auth.users.id`, `role: 'staff'|'client'`,
-  nullable `client_id`, `is_super_admin`. This is the single source of truth
-  for both staff and client auth (see "Auth" below) — both roles are real
-  Supabase Auth users, not two parallel systems.
+  nullable `client_id`, `is_super_admin`, plus `full_name`, `job_title`,
+  `avatar_storage_path`, `icon_bg_color`, `icon_text_color`. This is the
+  single source of truth for both staff and client auth (see "Auth" below)
+  — both roles are real Supabase Auth users, not two parallel systems. A
+  staff member's own `job_title` doubles as their client-facing "role" if
+  their `team_members` roster entry is linked to them (one field, not two)
+  — see "Team roster ↔ staff accounts" below.
 - `portal_copy`: every piece of client-facing text as editable key/value
   rows, with hardcoded fallbacks in `lib/portal-copy-constants.ts`.
+- `brand_settings`: singleton row (same `id boolean primary key default
+  true` trick as `quickbooks_connection` below) holding Fonder's own admin
+  UI branding — `login_logo_storage_path` (shown standalone above the
+  staff login card) and `sidebar_logo_storage_path` (shown in the sidebar's
+  small square tile) are two independent slots, not one shared logo — a
+  wordmark that looks right on the login page reads as a plain block of
+  color once cropped into the tiny sidebar tile. Managed at
+  `/admin/settings/brand`, super-admin only.
 - `portal_access_tokens`: **dead table, unused** — an early hand-rolled
   magic-link mechanism, superseded by real Supabase Auth
   (`auth.admin.generateLink`/`verifyOtp`). Kept as a rollback path; safe to
@@ -179,6 +198,54 @@ goes active for a company, portal access transfers to the new stakeholder.
 There's a revoke-access action on the admin Clients section
 (`lib/client-access.ts`), available to any staff member.
 
+## Staff auth (Google Workspace SSO)
+
+Staff sign in with **Google only** — email/password and the old
+invite-link/set-password flow are gone entirely (`app/admin/login/page.tsx`
++ `components/login-form.tsx` are just a "Continue with Google" button;
+`app/admin/auth/callback/route.ts` completes the OAuth code exchange).
+`proxy.ts` still gates `/admin`/`/api/admin` on `profiles.role === 'staff'`
+— **a Google sign-in alone is not sufficient**, the person must already
+have been invited (`lib/staff.ts`'s `inviteStaff()` creates the
+`auth.users` + `profiles(role='staff')` row directly, no link to click;
+Supabase's automatic account-linking-by-email connects their first Google
+sign-in to that pre-existing row). The `hd: "fonder.studio"` param on the
+OAuth request is a UX hint for Google's account picker only, not a real
+security boundary — the invite-first check is what actually gates access.
+
+Requires, one-time, outside this repo:
+- A Google Cloud OAuth client (Web application type), redirect URI set to
+  Supabase's own callback (`https://ifddezqyozounhilkfgp.supabase.co/auth/v1/callback`).
+- The Google provider enabled in Supabase (Authentication → Providers) with
+  that client's ID/secret, and automatic account linking on.
+- **Supabase's Site URL** (Authentication → URL Configuration) set to the
+  real production domain (`https://fonder-client-portal.vercel.app`), not
+  left at its `localhost:3000` default — if `redirectTo` doesn't match an
+  entry in the Redirect URLs allow-list, Supabase silently falls back to
+  Site URL instead of erroring, which is exactly what caused login to
+  bounce to localhost on production before this was caught and fixed.
+  Redirect URLs needs both the production and local
+  `.../admin/auth/callback` entries.
+
+## The Team page: roster ↔ staff accounts
+
+`/admin/settings/team` merges two previously-separate concepts on one
+page, not one data model: the **account-team roster**
+(`team_members` — who clients see listed as their team, selected onto a
+company via `company_team_assignments`) and **staff accounts**
+(`profiles(role='staff')` — who can log into `/admin`, super-admin only
+section). A roster entry can optionally link to a staff account
+(`team_members.staff_id`); once linked, its name/role/icon colors are
+sourced live from that person's own profile (edited at
+`/admin/settings/profile`, which is where the icon-color pickers live)
+instead of being editable on the roster entry directly — the roster page
+shows a read-only synced view with an Unlink action for linked entries.
+Most roster people today are **not** linked (no Fonder admin login exists
+for them yet) and keep working exactly as before, typed directly on the
+roster entry. Already-signed engagements are unaffected by any of this —
+`engagement_team_members` is a separate, denormalized snapshot taken at
+engagement setup time, not a live join.
+
 ## The client portal app (`/portal/[slug]/app/*`)
 
 A separate authenticated area, linked from What's Next step 4. Real routes,
@@ -198,30 +265,38 @@ per-tab lock overrides — but only two tabs have real content:
 ## The admin dashboard (`/admin/*`)
 
 Protected by real Supabase staff-session auth via `proxy.ts` (Next.js 16
-renamed `middleware.ts` → `proxy.ts`). All pages share a persistent left
-sidebar via `components/admin/AdminNav.tsx` + `DashboardShell`.
+renamed `middleware.ts` → `proxy.ts`; see "Staff auth" above). Sidebar
+shell: `components/admin/AdminNav.tsx` + `components/shell/DashboardShell.tsx`.
 
-Nav is **company-scoped**, not a flat list:
+Sidebar, top to bottom:
 
-- A company picker (`CompanySwitcher`) sits above the nav — "All Clients"
-  (`/admin/companies`, the oversight list) or a specific company
-  (`/admin/companies/[id]`).
-- Picking a company shows that company's Engagements, Account team,
-  Clients, Documents (including which SOW/MSA is currently in force), Shared
-  Drive, Portal content & locks, and a Payments placeholder — all as
-  sections on one page, not separate nested routes/tabs.
-- Opening an engagement (`/admin/companies/[id]/engagements/[engagementId]`)
-  is a lean Overview form (title/fee/dates/scope/milestones/stakeholder) with
-  a "Mark as completed" action — completing one frees the company up to
-  start a new active engagement (enforced at the DB level, not just the UI).
-- Team roster CRUD, Portal content (global copy), and Staff account
-  management (super-admin only) live under **Settings**
-  (`/admin/settings/*`), reached only via the account-menu dropdown (also
-  has Help) — not the primary nav.
+- **Company switcher** (`CompanySwitcher`) — "Fonder" (the org-level view,
+  `/admin`) is the default entry above a separator, then the list of
+  brands (`/admin/companies/[id]`), then "Add a brand."
+- **Primary nav, org-level** (no brand selected): Overview, Team (roster +
+  staff accounts, see above), Portal content (global copy), and — under
+  its own "Integrations" heading, super-admin only — Data Connectors.
+- **Primary nav, company-scoped** (a brand selected): Overview (folds in
+  the company's one active engagement, a portal-link card, and billing
+  summary — not a separate Engagements tab), Clients, Documents (which
+  SOW/MSA is currently in force), Team (the standing account-team
+  assignment for this brand), Portal (content/lock settings), Billing.
+  Opening/creating a specific engagement
+  (`/admin/companies/[id]/engagements/[engagementId]` or `/new`) is still a
+  real route, linked from Overview, just not its own sidebar item — a lean
+  form (title/fee/dates/scope/milestones/stakeholder) with a "Mark as
+  completed" action; completing one frees the company up to start a new
+  active engagement (enforced at the DB level, not just the UI).
+- **Secondary nav**, pinned above the account menu: Settings (the
+  `/admin/settings` index), Get Help, Search (a placeholder — no search
+  feature exists to wire it up to yet).
+- **Header bar**: breadcrumbs, plus an "Open Portal" button (new tab, the
+  real `/portal/[slug]`) whenever a brand with a portal link is selected.
 
-Getting a login: no self-serve signup — a super-admin invites staff from
-`/admin/settings/staff` (branded email, same magic-link pattern as clients,
-landing on a set-password page).
+`/admin/settings/*` (reached via the pinned Settings item, not the primary
+nav): Profile (your own name/photo/role/icon colors), Team, Portal
+content, Brand (the admin UI's own logo — see "Data model"), and Data
+Connectors — all super-admin-gated except Profile/Team/Portal content.
 
 Known gap: delete works for companies, clients, documents, and team members,
 but if something is still referenced, the delete fails with a translated
@@ -231,17 +306,17 @@ blocking it.
 ## Adding a new client engagement (the real, current flow)
 
 1. `/admin/companies`: add the company, if new.
-2. On that company's page: add the client (signatory) and the SOW/MSA
-   document content, if new — both live as sections on the company page now,
+2. That company's Clients and Documents tabs: add the client (signatory)
+   and the SOW/MSA document content, if new — both company-scoped routes,
    not separate top-level admin pages.
 3. `/admin/companies/[id]/engagements/new`: create the engagement (client,
    title, fee, dates, schedule). The portal slug is only asked for on a
    company's **first-ever** engagement — every engagement after that reuses
    the existing slug automatically.
-4. On the company page: assign the account team, pick which SOW/MSA is
-   currently in force, set the Shared Drive URL and portal tab-lock
-   behavior — all standing settings for the brand, not re-entered per
-   engagement.
+4. That company's Team/Documents/Portal tabs: assign the account team,
+   pick which SOW/MSA is currently in force, set the Shared Drive URL and
+   portal tab-lock behavior — all standing settings for the brand, not
+   re-entered per engagement.
 
 A repeat engagement for an existing company reuses everything already set
 up — only the lean engagement-specific fields (title/fee/dates/scope) are
@@ -283,7 +358,7 @@ docs (docs actively suggested otherwise or said nothing):
   confirmed both by a raw sandbox API call and by community reports that
   the same swap is needed in production too.
 
-The OAuth connect flow (`/admin/settings/quickbooks`, super-admin only) runs
+The OAuth connect flow (`/admin/settings/connectors`, super-admin only) runs
 through `/api/admin/quickbooks/{connect,callback,disconnect}`. Access tokens
 refresh transparently via `lib/quickbooks.ts`'s `getValidAccessToken()` —
 critical gotcha: QuickBooks **rotates the refresh_token value itself** on
@@ -354,40 +429,63 @@ password manager, never in GitHub.
 
 ## Known gotchas, real, already happened
 
-1. Supabase's MCP tooling (used by AI coding assistants) cannot reach the
-   live project (`ifddezqyozounhilkfgp`) — only unrelated/stale projects are
-   visible to it. Schema changes ship as numbered SQL files at the repo root
-   (`supabase-setup.sql`, `-stage2-` through `-stage6-` and beyond), run
-   manually in the Supabase SQL editor — there's no `supabase/migrations/`
-   directory convention here.
-2. Changing environment variables doesn't restart anything on Vercel — you
+1. **`@supabase/storage-js`'s `.upload()` method silently corrupts binary
+   buffers when it runs inside Vercel's serverless Node.js runtime** —
+   confirmed by uploading the identical buffer two ways in one request (the
+   SDK's `.upload()` vs. a raw `fetch()` to the Storage REST API) and
+   comparing the stored bytes; the SDK's came back corrupted, the raw fetch
+   didn't. Never reproduces locally (`next dev`), which is what made this
+   take a while to isolate — every step tested in isolation locally (multipart
+   parsing, `proxy.ts`, sharp resizing, the upload/download round-trip) came
+   back byte-perfect with the exact same code. Every file-upload path in
+   this app (brand logos, company logos, staff/client avatars, and the
+   DocuSeal webhook's signed-PDF storage) now goes through
+   `lib/storage-upload.ts`'s `uploadToStorage()` instead, which bypasses the
+   SDK for the actual upload call. **Never call
+   `supabase.storage.from(...).upload()` directly in new code — use
+   `uploadToStorage()`.** `.download()`, `.remove()`, and `.getPublicUrl()`
+   are unaffected, only `.upload()`.
+2. Supabase's MCP tooling **can** reach the live project
+   (`ifddezqyozounhilkfgp`) — an earlier version of this doc said it
+   couldn't; that's no longer true. Schema changes still ship as numbered
+   SQL files at the repo root (`supabase-setup.sql`, `-stage2-` through the
+   current stage) for human-readable history, but in a session with MCP
+   access they're applied directly via the `apply_migration` tool, not
+   pasted into the SQL editor by hand.
+3. Changing environment variables doesn't restart anything on Vercel — you
    must explicitly trigger a redeploy afterward.
-3. Supabase's API layer can report "column not found" even when the column
+4. Supabase's API layer can report "column not found" even when the column
    genuinely exists. A stale schema cache, not a real problem. Fix: run
    `NOTIFY pgrst, 'reload schema';` in the SQL Editor.
-4. DocuSeal's webhook signature must be verified against the **raw request
+5. Supabase Auth's **Site URL** setting (Authentication → URL Configuration)
+   silently overrides where an OAuth `redirectTo` sends the browser if it
+   doesn't exactly match an entry in the Redirect URLs allow-list — commonly
+   left at its `localhost:3000` default from project creation, since nobody
+   revisits it after initial setup. This exact thing caused Google staff
+   login to bounce to localhost in production; see "Staff auth" above.
+6. DocuSeal's webhook signature must be verified against the **raw request
    body bytes**, not a re-parsed/re-serialized JSON object — the webhook
    handler reads `req.text()` before `JSON.parse`, deliberately in that
    order.
-5. QuickBooks' refresh_token value rotates on every refresh call (not just
+7. QuickBooks' refresh_token value rotates on every refresh call (not just
    the access token) — always persist the newest refresh_token returned, or
    the next refresh call fails even though the ~100-day validity window
    hasn't actually expired.
-6. QuickBooks webhooks moved to a CloudEvents payload format (a JSON array
+8. QuickBooks webhooks moved to a CloudEvents payload format (a JSON array
    of envelopes) as of a mandatory migration deadline that has already
    passed — the legacy `eventNotifications`/`dataChangeEvent` shape is not
    what ships today; `app/api/webhooks/quickbooks/route.ts` is written
    against the new format.
-7. QuickBooks' `InvoiceLink` field is null unless the invoice has `BillEmail`
+9. QuickBooks' `InvoiceLink` field is null unless the invoice has `BillEmail`
    set (customer-level email alone isn't enough), and the URL it returns
    404s as-is — swap `developer.intuit.com/comingSoonview/` for
    `connect.intuit.com/t/` (same hash) to get the real page. Both handled in
    `lib/quickbooks.ts`'s `createInvoice()`.
-8. QuickBooks' sandbox does not actually process card payments through the
-   hosted invoice page — the documented mock test cards are for the direct
-   Payments API only; clicking through the checkout UI always declines. Not
-   fixable from this app's side; only testable for real once live with
-   production keys.
+10. QuickBooks' sandbox does not actually process card payments through the
+    hosted invoice page — the documented mock test cards are for the direct
+    Payments API only; clicking through the checkout UI always declines. Not
+    fixable from this app's side; only testable for real once live with
+    production keys.
 
 The Documenso/Railway/R2-specific gotchas from before this migration (S3
 transport requirements, Playwright/Chromium version pinning, Docker-only
@@ -397,8 +495,8 @@ deploys) no longer apply — that infrastructure is gone.
 
 Fully real and working:
 - Companies, clients, documents, team members: full add/edit/delete,
-  reusable entities, now organized as company-scoped sections rather than
-  flat top-level admin pages.
+  reusable entities, organized as company-scoped routes rather than flat
+  top-level admin pages.
 - One active engagement per company, enforced at the DB level.
 - Native Markdown rendering with automatic section numbering via CSS
   counters.
@@ -407,11 +505,15 @@ Fully real and working:
   (pending the account/webhook setup noted above).
 - Real, DB-persisted signing-completion tracking, driving real tab-unlock
   state (no longer resets on refresh).
-- Unified staff/client Supabase Auth, magic-link client access, staff
-  invite flow, super-admin-gated staff management.
+- Unified staff/client Supabase Auth: staff via Google Workspace SSO
+  (invite-first, no self-serve signup), clients via magic link. Optional
+  linking between the account-team roster and real staff accounts.
 - Real Cal.com scheduling embed.
 - Centralized, globally-editable portal copy.
-- Company-scoped admin dashboard with a brand picker.
+- Company-scoped admin dashboard with a brand picker (Fonder itself is a
+  selectable default entry), a Data Connectors status hub
+  (QuickBooks/Google/ClickUp/Supabase), and manageable admin-UI branding
+  (two independent logo slots: login page, sidebar icon).
 - QuickBooks invoicing: real single-tenant OAuth connection, real invoice
   creation with a hosted QuickBooks pay link, real webhook-driven payment
   tracking (pending the account/webhook setup noted above).
@@ -420,8 +522,8 @@ Deliberately stubbed, not forgotten:
 - The client portal app's actual functionality beyond Onboarding/Shared
   Drive/Invoices (Tasks, Chat, Deliverables, Change Request). Real routes,
   nav, and lock behavior exist; no real data or logic yet.
-- "Brand HQ" — discussed as a future admin/portal nav concept, explicitly
-  deferred, not built anywhere yet.
+- The "Search" item pinned in the admin sidebar's secondary nav is a
+  placeholder — no search feature is built yet.
 
 ## Open items, unresolved on purpose, not bugs
 
