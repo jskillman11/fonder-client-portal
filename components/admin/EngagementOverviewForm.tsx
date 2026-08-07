@@ -145,7 +145,7 @@ export function EngagementOverviewForm({
         </div>
 
         <div className="mb-4">
-          <label className={labelClass}>Engagement title</label>
+          <label className={labelClass}>Title</label>
           <input
             required
             value={values.engagementTitle}
