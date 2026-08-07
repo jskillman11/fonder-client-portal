@@ -74,11 +74,13 @@ function computeBreadcrumb(pathname: string, activeCompany: Company | null) {
 export function AdminNav({
   companies,
   isSuperAdmin,
+  fonderLogoUrl,
   accountSlot,
   children,
 }: {
   companies: Company[];
   isSuperAdmin: boolean;
+  fonderLogoUrl?: string | null;
   accountSlot: React.ReactNode;
   children: React.ReactNode;
 }) {
@@ -95,7 +97,9 @@ export function AdminNav({
   return (
     <DashboardShell
       navItems={navItems}
-      sidebarTopSlot={<CompanySwitcher companies={companies} activeCompany={activeCompany} />}
+      sidebarTopSlot={
+        <CompanySwitcher companies={companies} activeCompany={activeCompany} fonderLogoUrl={fonderLogoUrl} />
+      }
       headerActions={
         portalUrl ? (
           <a

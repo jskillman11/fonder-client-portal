@@ -17,9 +17,11 @@ import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@/c
 export function CompanySwitcher({
   companies,
   activeCompany,
+  fonderLogoUrl,
 }: {
   companies: Company[];
   activeCompany: Company | null;
+  fonderLogoUrl?: string | null;
 }) {
   const router = useRouter();
   const { isMobile } = useSidebar();
@@ -34,8 +36,12 @@ export function CompanySwitcher({
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg after:rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                {activeCompany?.logoUrl && (
+                {activeCompany?.logoUrl ? (
                   <AvatarImage src={activeCompany.logoUrl} alt={activeCompany.name} className="rounded-lg object-cover" />
+                ) : (
+                  fonderLogoUrl && (
+                    <AvatarImage src={fonderLogoUrl} alt="Fonder" className="rounded-lg object-cover" />
+                  )
                 )}
                 <AvatarFallback className="rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                   {(activeCompany?.name ?? "Fonder").charAt(0)}

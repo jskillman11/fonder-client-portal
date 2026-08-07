@@ -53,6 +53,17 @@ export default async function SettingsPage() {
           )}
           {isSuperAdmin && (
             <Link
+              href="/admin/settings/brand"
+              className="block py-3 border-b border-[var(--color-border)] -mx-7 px-7 hover:bg-[var(--color-cream)]"
+            >
+              <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">Brand</p>
+              <p className="text-[13px] text-[var(--color-muted-text)]">
+                The Fonder logo shown in the admin sidebar and login page
+              </p>
+            </Link>
+          )}
+          {isSuperAdmin && (
+            <Link
               href="/admin/settings/quickbooks"
               className="block py-3 -mx-7 px-7 hover:bg-[var(--color-cream)]"
             >
