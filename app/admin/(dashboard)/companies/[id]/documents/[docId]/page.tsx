@@ -22,7 +22,7 @@ export default async function CompanyDocumentDetailPage({
         <EditDocumentForm
           document={document}
           companyName={company?.name ?? "Unknown company"}
-          backHref={`/admin/companies/${id}`}
+          backHref={`/admin/companies/${id}/documents`}
         />
       </div>
     </main>

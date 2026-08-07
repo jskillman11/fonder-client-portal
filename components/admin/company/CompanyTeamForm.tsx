@@ -67,7 +67,7 @@ export function CompanyTeamForm({
           Select who&apos;s shown on this brand&apos;s portal.
         </p>
         <Link
-          href="/admin/settings"
+          href="/admin/settings/team"
           target="_blank"
           className="text-[12px] underline text-[var(--color-muted-text)] shrink-0 ml-3"
         >

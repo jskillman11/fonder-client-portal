@@ -6,7 +6,6 @@ import Link from "next/link";
 import { toast } from "sonner";
 import {
   House,
-  LayoutDashboard,
   Users,
   FileText,
   Receipt,
@@ -42,29 +41,48 @@ function computeNavItems(pathname: string, isSuperAdmin: boolean): ShellNavItem[
   if (companyMatch) {
     const companyId = companyMatch[1];
     const base = `/admin/companies/${companyId}`;
+    // Brand Settings is a collapsible parent (no href of its own) whose
+    // sub-tabs cover everything that used to be split across the Overview
+    // page and the separate Team/Portal tabs -- one long page didn't scale,
+    // so each section gets its own tab instead. See the /settings redirect
+    // page for why the parent itself still needs a route.
     return [
-      { href: base, label: "Overview", section: "Company", icon: LayoutDashboard },
       { href: `${base}/clients`, label: "Clients", section: "Company", icon: Users },
       { href: `${base}/documents`, label: "Documents", section: "Company", icon: FileText },
       { href: `${base}/billing`, label: "Billing", section: "Company", icon: Receipt },
-      { href: `${base}/settings`, label: "Brand Settings", section: "Company", icon: Settings },
+      {
+        label: "Brand Settings",
+        section: "Company",
+        icon: Settings,
+        items: [
+          { href: `${base}/settings/company`, label: "Company" },
+          { href: `${base}/settings/client-schedule`, label: "Client & Schedule" },
+          { href: `${base}/settings/team`, label: "Team" },
+          { href: `${base}/settings/portal`, label: "Portal" },
+        ],
+      },
       { href: `${base}/connectors`, label: "Data Connectors", section: "Integrations", icon: Plug },
     ];
   }
 
-  // The Fonder (org-level, no company selected) tabs. Workspace Settings
-  // folds in what used to be separate Team/Portal content tabs -- mirrors
-  // how each company's own Brand Settings tab folds in its Team/Portal
-  // tabs, so "Settings" means the same thing (this level's settings) at
-  // both scopes. The secondary nav's old Settings link (see
-  // buildSecondaryNavItems) moved into the account menu instead, since it's
-  // now redundant with this tab.
+  // The Fonder (org-level, no company selected) tabs. Workspace Settings is
+  // the org-level mirror of each company's Brand Settings -- same
+  // collapsible-parent-with-sub-tabs pattern, so "Settings" means the same
+  // thing (this level's settings, broken into sections) at both scopes. The
+  // secondary nav's old Settings link (see buildSecondaryNavItems) moved
+  // into the account menu instead, since it's now redundant with this tab.
   return [
     { href: "/admin", label: "Overview", icon: House },
-    { href: "/admin/settings", label: "Workspace Settings", icon: Settings },
-    ...(isSuperAdmin
-      ? [{ href: "/admin/settings/connectors", label: "Data Connectors", section: "Integrations", icon: Plug }]
-      : []),
+    {
+      label: "Workspace Settings",
+      icon: Settings,
+      items: [
+        { href: "/admin/settings/team", label: "Team" },
+        { href: "/admin/settings/content", label: "Portal Content" },
+        ...(isSuperAdmin ? [{ href: "/admin/settings/brand", label: "Brand" }] : []),
+        ...(isSuperAdmin ? [{ href: "/admin/settings/connectors", label: "Connectors" }] : []),
+      ],
+    },
   ];
 }
 

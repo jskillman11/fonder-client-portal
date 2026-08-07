@@ -123,7 +123,7 @@ export function AdminAccountMenu({
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/admin/settings">
+                <Link href="/admin/settings/team">
                   <Settings />
                   Workspace Settings
                 </Link>

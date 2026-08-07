@@ -29,7 +29,7 @@ export default async function CompaniesPage() {
             {companies.map((c) => (
               <Link
                 key={c.id}
-                href={`/admin/companies/${c.id}`}
+                href={`/admin/companies/${c.id}/settings/company`}
                 className="flex items-center gap-3 py-3 border-b border-[var(--color-border)] last:border-b-0 hover:bg-[var(--color-cream)] -mx-7 px-7"
               >
                 <Avatar className="h-6 w-6 rounded-lg after:rounded-lg">

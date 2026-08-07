@@ -21,7 +21,7 @@ export default async function CompanyClientDetailPage({
         <EditClientForm
           client={client}
           companyName={company?.name ?? "Unknown company"}
-          backHref={`/admin/companies/${id}`}
+          backHref={`/admin/companies/${id}/clients`}
         />
       </div>
     </main>

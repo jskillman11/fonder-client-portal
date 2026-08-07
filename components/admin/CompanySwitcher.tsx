@@ -76,7 +76,7 @@ export function CompanySwitcher({
             {companies.map((c) => (
               <DropdownMenuItem
                 key={c.id}
-                onClick={() => router.push(`/admin/companies/${c.id}`)}
+                onClick={() => router.push(`/admin/companies/${c.id}/settings/company`)}
                 className="gap-2 p-2"
               >
                 {c.name}
