@@ -38,7 +38,7 @@ async function ensureClientAuthUser(
 }
 
 // Creates and emails a magic link to the given address, but only if it
-// matches the engagement's registered client signatory email -- prevents
+// matches the company's registered client signatory email -- prevents
 // someone from redirecting the link to an email that isn't actually theirs.
 // The link itself is a real Supabase Auth magic link (see verify/[token]),
 // not a hand-rolled token -- Supabase enforces expiry and single-use on it.
@@ -51,21 +51,12 @@ export async function createAndSendMagicLink(
 
   const { data: company } = await supabase
     .from("companies")
-    .select("id")
+    .select("id, engagement_title, clients:client_id(id, email)")
     .eq("client_slug", clientSlug)
     .single();
   if (!company) return { error: "Unknown client" };
 
-  const { data: engagement } = await supabase
-    .from("engagements")
-    .select("engagement_title, clients(id, email, first_name)")
-    .eq("company_id", company.id)
-    .eq("status", "active")
-    .maybeSingle();
-
-  if (!engagement) return { error: "Unknown client" };
-
-  const client = Array.isArray(engagement.clients) ? engagement.clients[0] : engagement.clients;
+  const client = Array.isArray(company.clients) ? company.clients[0] : company.clients;
   const registeredEmail = client?.email?.toLowerCase().trim();
 
   if (!client || !registeredEmail || registeredEmail !== requestedEmail.toLowerCase().trim()) {
@@ -88,8 +79,8 @@ export async function createAndSendMagicLink(
 
   return sendBrandedActionEmail({
     to: registeredEmail,
-    subject: `Access your portal — ${engagement.engagement_title}`,
-    heading: engagement.engagement_title,
+    subject: `Access your portal — ${company.engagement_title}`,
+    heading: company.engagement_title,
     body: "Your portal is ready to review and sign.",
     ctaLabel: "Open my portal",
     ctaUrl: link,
