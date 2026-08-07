@@ -5,11 +5,21 @@ export async function updateMyProfile(
   fullName: string,
   jobTitle: string,
   photoFile: File | null,
+  iconBgColor: string | null,
+  iconTextColor: string | null,
 ): Promise<{ success: true } | { error: string }> {
   const supabase = createServiceClient();
-  const update: { full_name: string; job_title: string; avatar_storage_path?: string } = {
+  const update: {
+    full_name: string;
+    job_title: string;
+    avatar_storage_path?: string;
+    icon_bg_color: string | null;
+    icon_text_color: string | null;
+  } = {
     full_name: fullName,
     job_title: jobTitle,
+    icon_bg_color: iconBgColor,
+    icon_text_color: iconTextColor,
   };
 
   if (photoFile) {

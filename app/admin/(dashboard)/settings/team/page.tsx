@@ -57,7 +57,14 @@ export default async function TeamPage() {
                     {t.name.split(" ").map((n) => n[0]).join("")}
                   </div>
                   <div>
-                    <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">{t.name}</p>
+                    <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">
+                      {t.name}
+                      {t.staffId && (
+                        <span className="ml-2 text-[11px] font-medium text-[var(--color-muted-text)]">
+                          &middot; linked to staff account
+                        </span>
+                      )}
+                    </p>
                     <p className="text-[13px] text-[var(--color-muted-text)]">{t.role}</p>
                   </div>
                 </Link>

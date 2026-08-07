@@ -6,11 +6,11 @@ export async function POST(req: NextRequest) {
   const admin = await requireAdmin();
   if (admin instanceof NextResponse) return admin;
 
-  const { name, role, iconBgColor, iconTextColor } = await req.json();
+  const { name, role, iconBgColor, iconTextColor, staffId } = await req.json();
   if (!name?.trim() || !role?.trim()) {
     return NextResponse.json({ error: "Name and role are required" }, { status: 400 });
   }
-  const result = await createTeamMember(name, role, iconBgColor || null, iconTextColor || null);
+  const result = await createTeamMember(name, role, iconBgColor || null, iconTextColor || null, staffId || null);
   if ("error" in result) {
     return NextResponse.json({ error: "Failed to create team member", detail: result.error }, { status: 500 });
   }

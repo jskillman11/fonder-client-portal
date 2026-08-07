@@ -58,6 +58,8 @@ export type StaffUser = {
   fullName: string | null;
   jobTitle: string | null;
   avatarUrl: string | null;
+  iconBgColor: string | null;
+  iconTextColor: string | null;
 };
 
 async function getStaffUser(): Promise<StaffUser | null> {
@@ -69,7 +71,7 @@ async function getStaffUser(): Promise<StaffUser | null> {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, full_name, job_title, avatar_storage_path")
+    .select("role, full_name, job_title, avatar_storage_path, icon_bg_color, icon_text_color")
     .eq("id", user.id)
     .single();
 
@@ -83,6 +85,8 @@ async function getStaffUser(): Promise<StaffUser | null> {
     avatarUrl: profile.avatar_storage_path
       ? supabase.storage.from("engagement-logos").getPublicUrl(profile.avatar_storage_path).data.publicUrl
       : null,
+    iconBgColor: profile.icon_bg_color,
+    iconTextColor: profile.icon_text_color,
   };
 }
 

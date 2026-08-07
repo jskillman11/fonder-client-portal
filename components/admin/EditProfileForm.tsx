@@ -17,16 +17,22 @@ export function EditProfileForm({
   fullName,
   jobTitle,
   avatarUrl,
+  iconBgColor,
+  iconTextColor,
 }: {
   email: string;
   fullName: string | null;
   jobTitle: string | null;
   avatarUrl: string | null;
+  iconBgColor: string | null;
+  iconTextColor: string | null;
 }) {
   const router = useRouter();
   const [name, setName] = useState(fullName ?? "");
   const [role, setRole] = useState(jobTitle ?? "");
   const [photo, setPhoto] = useState<File | null>(null);
+  const [bgColor, setBgColor] = useState(iconBgColor ?? "#f2f1ec");
+  const [textColor, setTextColor] = useState(iconTextColor ?? "#181a1e");
   const [status, setStatus] = useState<"idle" | "saving">("idle");
 
   async function handleSubmit(e: React.FormEvent) {
@@ -36,6 +42,8 @@ export function EditProfileForm({
     const formData = new FormData();
     formData.append("fullName", name);
     formData.append("jobTitle", role);
+    formData.append("iconBgColor", bgColor);
+    formData.append("iconTextColor", textColor);
     if (photo) formData.append("photo", photo);
 
     const res = await fetch("/api/admin/update-profile", { method: "POST", body: formData });
@@ -87,6 +95,29 @@ export function EditProfileForm({
             className={inputClass}
             placeholder="Global Brand Design Lead"
           />
+          <p className="text-[12px] text-[var(--color-muted-text)] mt-1">
+            Also shown on client portals if you&apos;re on a company&apos;s account team roster.
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <label className={labelClass}>Icon background</label>
+            <input
+              type="color"
+              value={bgColor}
+              onChange={(e) => setBgColor(e.target.value)}
+              className="h-7 w-10 rounded border border-[var(--color-border)] p-0.5"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <label className={labelClass}>Icon text</label>
+            <input
+              type="color"
+              value={textColor}
+              onChange={(e) => setTextColor(e.target.value)}
+              className="h-7 w-10 rounded border border-[var(--color-border)] p-0.5"
+            />
+          </div>
         </div>
         <div>
           <label className={labelClass}>Email</label>

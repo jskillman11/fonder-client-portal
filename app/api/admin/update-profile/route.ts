@@ -10,12 +10,14 @@ export async function POST(req: NextRequest) {
   const fullName = formData.get("fullName") as string;
   const jobTitle = (formData.get("jobTitle") as string | null) ?? "";
   const photo = formData.get("photo") as File | null;
+  const iconBgColor = (formData.get("iconBgColor") as string | null) || null;
+  const iconTextColor = (formData.get("iconTextColor") as string | null) || null;
 
   if (!fullName?.trim()) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
 
-  const result = await updateMyProfile(admin.id, fullName, jobTitle, photo);
+  const result = await updateMyProfile(admin.id, fullName, jobTitle, photo, iconBgColor, iconTextColor);
   if ("error" in result) {
     return NextResponse.json({ error: "Failed to update profile", detail: result.error }, { status: 500 });
   }

@@ -18,6 +18,8 @@ export default async function ProfileSettingsPage() {
           fullName={user.fullName}
           jobTitle={user.jobTitle}
           avatarUrl={user.avatarUrl}
+          iconBgColor={user.iconBgColor}
+          iconTextColor={user.iconTextColor}
         />
       </div>
     </main>

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Card } from "@/components/Card";
 import { PillButton } from "@/components/PillButton";
@@ -17,14 +18,66 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { ICON_COLOR_PRESETS } from "@/lib/icon-color-presets";
-import type { TeamMemberRecord } from "@/lib/team-members";
+import type { TeamMemberRecord, UnlinkedStaffOption } from "@/lib/team-members";
 
 const inputClass =
   "w-full mt-1 rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-[14px]";
 const labelClass = "text-[13px] font-medium text-[var(--color-muted-text)]";
 
-export function EditTeamMemberForm({ teamMember }: { teamMember: TeamMemberRecord }) {
+// Once a roster entry is linked to a staff account, its name/role/icon
+// colors come from that account's profile (see lib/team-members.ts) --
+// editing here would just be silently overwritten on the next read, so
+// this view is read-only plus an Unlink action instead of a form.
+function LinkedTeamMemberView({ teamMember, currentUserId }: { teamMember: TeamMemberRecord; currentUserId: string | null }) {
   const router = useRouter();
+  const [status, setStatus] = useState<"idle" | "unlinking">("idle");
+  const isSelf = teamMember.staffId === currentUserId;
+
+  async function handleUnlink() {
+    setStatus("unlinking");
+    const res = await fetch("/api/admin/unlink-team-member", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: teamMember.id }),
+    });
+    const data = await res.json();
+    setStatus("idle");
+
+    if (!res.ok) {
+      toast.error([data.error, data.detail].filter(Boolean).join(" — "));
+      return;
+    }
+    router.refresh();
+  }
+
+  return (
+    <Card className="px-9 py-8">
+      <h1 className="text-[18px] font-bold text-[var(--color-ink)] mb-1">{teamMember.name}</h1>
+      <p className="text-[13px] text-[var(--color-muted-text)] mb-4">{teamMember.role}</p>
+      <p className="text-[13px] text-[var(--color-muted-text)]">
+        Linked to the staff account <span className="font-medium">{teamMember.staffEmail}</span>.
+        Name, role, and icon colors are synced from{" "}
+        {isSelf ? (
+          <Link href="/admin/settings/profile" className="underline text-[var(--color-ink)]">
+            their profile
+          </Link>
+        ) : (
+          "their profile"
+        )}
+        , not editable here.
+      </p>
+      <div className="pt-4 mt-4 border-t border-[var(--color-border)]">
+        <button type="button" onClick={handleUnlink} className="text-[13px] text-[#a32d2d] underline">
+          {status === "unlinking" ? "Unlinking…" : "Unlink from this staff account"}
+        </button>
+      </div>
+    </Card>
+  );
+}
+
+function UnlinkedTeamMemberForm({ teamMember }: { teamMember: TeamMemberRecord }) {
+  const router = useRouter();
+  const [staffOptions, setStaffOptions] = useState<UnlinkedStaffOption[]>([]);
   const [name, setName] = useState(teamMember.name);
   const [role, setRole] = useState(teamMember.role);
   const [colors, setColors] = useState<{ bg: string; text: string } | null>(
@@ -32,7 +85,14 @@ export function EditTeamMemberForm({ teamMember }: { teamMember: TeamMemberRecor
       ? { bg: teamMember.iconBgColor, text: teamMember.iconTextColor }
       : null,
   );
-  const [status, setStatus] = useState<"idle" | "saving" | "deleting">("idle");
+  const [status, setStatus] = useState<"idle" | "saving" | "deleting" | "linking">("idle");
+
+  useEffect(() => {
+    fetch("/api/admin/list-unlinked-staff")
+      .then((res) => res.json())
+      .then((data) => setStaffOptions(data.staff ?? []))
+      .catch(() => {});
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -60,6 +120,25 @@ export function EditTeamMemberForm({ teamMember }: { teamMember: TeamMemberRecor
     router.refresh();
   }
 
+  async function handleLink(staffId: string) {
+    if (!staffId) return;
+    setStatus("linking");
+    const res = await fetch("/api/admin/link-team-member", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: teamMember.id, staffId }),
+    });
+    const data = await res.json();
+    setStatus("idle");
+
+    if (!res.ok) {
+      toast.error([data.error, data.detail].filter(Boolean).join(" — "));
+      return;
+    }
+    toast.success("Linked.");
+    router.refresh();
+  }
+
   async function handleDelete() {
     setStatus("deleting");
 
@@ -83,6 +162,32 @@ export function EditTeamMemberForm({ teamMember }: { teamMember: TeamMemberRecor
       <h1 className="text-[18px] font-bold text-[var(--color-ink)] mb-4">
         {teamMember.name}
       </h1>
+
+      {staffOptions.length > 0 && (
+        <div className="mb-4 pb-4 border-b border-[var(--color-border)]">
+          <label className={labelClass}>Link to a staff account</label>
+          <select
+            defaultValue=""
+            onChange={(e) => handleLink(e.target.value)}
+            className={inputClass}
+            disabled={status === "linking"}
+          >
+            <option value="" disabled>
+              {status === "linking" ? "Linking…" : "Select a staff account…"}
+            </option>
+            {staffOptions.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.fullName || s.email}
+              </option>
+            ))}
+          </select>
+          <p className="text-[12px] text-[var(--color-muted-text)] mt-1">
+            Once linked, name/role/icon colors sync from that person&apos;s staff profile instead
+            of the fields below.
+          </p>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className={labelClass}>Name</label>
@@ -147,4 +252,17 @@ export function EditTeamMemberForm({ teamMember }: { teamMember: TeamMemberRecor
       </form>
     </Card>
   );
+}
+
+export function EditTeamMemberForm({
+  teamMember,
+  currentUserId,
+}: {
+  teamMember: TeamMemberRecord;
+  currentUserId: string | null;
+}) {
+  if (teamMember.staffId) {
+    return <LinkedTeamMemberView teamMember={teamMember} currentUserId={currentUserId} />;
+  }
+  return <UnlinkedTeamMemberForm teamMember={teamMember} />;
 }
