@@ -76,10 +76,19 @@ export type ClientTask = {
   url: string;
 };
 
+type ClickUpFieldOption = {
+  id: string;
+  // "drop_down" options use `name`, "labels" options use `label` -- both
+  // confirmed against real API responses, not assumed from docs alone.
+  name?: string;
+  label?: string;
+  orderindex: number;
+};
+
 type ClickUpCustomField = {
   name: string;
   type: string;
-  type_config?: { options?: { id: string; name: string; orderindex: number }[] };
+  type_config?: { options?: ClickUpFieldOption[] };
   value?: unknown;
 };
 
@@ -92,19 +101,29 @@ type ClickUpTask = {
   custom_fields?: ClickUpCustomField[];
 };
 
-// Dropdown fields store `value` as the selected option's orderindex (a
-// number), not its name or id -- resolved by looking that index up against
-// the field's own type_config.options. Non-dropdown field types (in case
-// "Position" is ever set up as plain text) fall back to a direct string
-// comparison.
+// "Position" turned out to be a "labels" field (multi-select), not
+// "drop_down" -- confirmed by inspecting a real task response, not assumed.
+// Its value is an ARRAY of selected option ids, and its options use `label`
+// instead of `name`. Handled alongside "drop_down" (value is a single
+// option orderindex) since either could be how this field ends up
+// configured, plus a plain string fallback for a simple text field.
 function isClientVisible(task: ClickUpTask): boolean {
   const field = task.custom_fields?.find((f) => f.name === VISIBILITY_FIELD_NAME);
   if (!field || field.value === undefined || field.value === null) return false;
 
-  if (field.type === "drop_down") {
-    const option = field.type_config?.options?.find((o) => o.orderindex === field.value);
-    return option?.name === VISIBILITY_FIELD_VALUE;
+  const optionMatches = (option: ClickUpFieldOption) =>
+    (option.label ?? option.name) === VISIBILITY_FIELD_VALUE;
+
+  if (field.type === "labels" && Array.isArray(field.value)) {
+    const selectedIds = new Set(field.value as string[]);
+    return (field.type_config?.options ?? []).some((o) => selectedIds.has(o.id) && optionMatches(o));
   }
+
+  if (field.type === "drop_down" && typeof field.value === "number") {
+    const option = field.type_config?.options?.find((o) => o.orderindex === field.value);
+    return !!option && optionMatches(option);
+  }
+
   return String(field.value) === VISIBILITY_FIELD_VALUE;
 }
 
