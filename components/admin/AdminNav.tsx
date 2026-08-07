@@ -188,11 +188,11 @@ export function AdminNav({
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={handleCopyPortalUrl} className="gap-2">
                   <Copy className="size-3.5" />
-                  Copy link
+                  Copy
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleSendAccessLink} disabled={sendingAccessLink} className="gap-2">
                   <Send className="size-3.5" />
-                  {sendingAccessLink ? "Sending…" : "Send access link"}
+                  {sendingAccessLink ? "Sending…" : "Send link"}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
