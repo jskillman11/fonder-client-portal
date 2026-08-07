@@ -52,7 +52,7 @@ const inputClass =
   "w-full mt-1 rounded-[10px] border border-[var(--color-border)] px-3 py-2 text-[14px]";
 const labelClass = "text-[13px] font-medium text-[var(--color-muted-text)]";
 
-export default function PortalContentPage() {
+export function PortalContentForm() {
   const [values, setValues] = useState<Record<string, string>>(PORTAL_COPY_DEFAULTS);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -87,29 +87,26 @@ export default function PortalContentPage() {
 
   if (loading) {
     return (
-      <main className="py-12 px-4">
-        <p className="text-center text-[14px] text-[var(--color-muted-text)]">Loading…</p>
-      </main>
+      <div>
+        <h2 className="text-[15px] font-bold text-[var(--color-ink)] mb-1">Portal content</h2>
+        <p className="text-[13px] text-[var(--color-muted-text)]">Loading…</p>
+      </div>
     );
   }
 
   return (
-    <main className="py-12 px-4">
-      <div className="max-w-2xl mx-auto space-y-5">
-        <div>
-          <h1 className="text-[20px] font-bold text-[var(--color-ink)]">
-            Portal content
-          </h1>
-          <p className="text-[13px] text-[var(--color-muted-text)] mt-1">
-            Edit once — applies to every client&apos;s portal immediately.
-          </p>
-        </div>
+    <div>
+      <h2 className="text-[15px] font-bold text-[var(--color-ink)] mb-1">Portal content</h2>
+      <p className="text-[13px] text-[var(--color-muted-text)] mb-3">
+        Edit once — applies to every client&apos;s portal immediately.
+      </p>
 
+      <div className="space-y-3">
         {FIELD_GROUPS.map((group) => (
           <Card key={group.heading} className="px-9 py-8">
-            <h2 className="text-[16px] font-bold text-[var(--color-ink)] mb-4">
+            <h3 className="text-[15px] font-bold text-[var(--color-ink)] mb-4">
               {group.heading}
-            </h2>
+            </h3>
             {group.fields.map((field) => (
               <div key={field.key} className="mb-4 last:mb-0">
                 <label className={labelClass}>{field.label}</label>
@@ -135,22 +132,22 @@ export default function PortalContentPage() {
             ))}
           </Card>
         ))}
-
-        {status === "error" && (
-          <p className="text-[13px] text-center text-[#a32d2d]">{errorDetail}</p>
-        )}
-        {status === "saved" && (
-          <p className="text-[13px] text-center text-[var(--color-ink)]">
-            Saved — every client&apos;s portal now uses this copy.
-          </p>
-        )}
-
-        <div className="flex justify-center pb-8">
-          <PillButton onClick={handleSave}>
-            {status === "saving" ? "Saving…" : "Save changes"}
-          </PillButton>
-        </div>
       </div>
-    </main>
+
+      {status === "error" && (
+        <p className="text-[13px] text-center text-[#a32d2d] mt-3">{errorDetail}</p>
+      )}
+      {status === "saved" && (
+        <p className="text-[13px] text-center text-[var(--color-ink)] mt-3">
+          Saved — every client&apos;s portal now uses this copy.
+        </p>
+      )}
+
+      <div className="flex justify-center mt-4">
+        <PillButton onClick={handleSave}>
+          {status === "saving" ? "Saving…" : "Save changes"}
+        </PillButton>
+      </div>
+    </div>
   );
 }

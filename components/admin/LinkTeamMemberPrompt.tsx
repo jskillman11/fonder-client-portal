@@ -77,7 +77,7 @@ export function LinkTeamMemberPrompt({ teamMember }: { teamMember: TeamMemberRec
       toast.error([data.error, data.detail].filter(Boolean).join(" — "));
       return;
     }
-    router.push("/admin/settings/team");
+    router.push("/admin/settings");
   }
 
   return (
@@ -110,7 +110,7 @@ export function LinkTeamMemberPrompt({ teamMember }: { teamMember: TeamMemberRec
       ) : (
         <p className="text-[13px] text-[var(--color-muted-text)]">
           No unlinked staff accounts available —{" "}
-          <Link href="/admin/settings/team" className="underline text-[var(--color-ink)]">
+          <Link href="/admin/settings" className="underline text-[var(--color-ink)]">
             invite one
           </Link>{" "}
           first.

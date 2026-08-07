@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ChevronsUpDown, HelpCircle, LogOut, UserCircle, ArrowLeft, Eye } from "lucide-react";
+import { ChevronsUpDown, HelpCircle, LogOut, UserCircle, ArrowLeft, Eye, Settings } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -120,6 +120,12 @@ export function AdminAccountMenu({
                 <Link href="/admin/settings/profile">
                   <UserCircle />
                   Profile
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/admin/settings">
+                  <Settings />
+                  Workspace Settings
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>

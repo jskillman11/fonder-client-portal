@@ -9,8 +9,6 @@ import {
   LayoutDashboard,
   Users,
   FileText,
-  UserCog,
-  Globe,
   Receipt,
   Settings,
   ExternalLink,
@@ -48,24 +46,22 @@ function computeNavItems(pathname: string, isSuperAdmin: boolean): ShellNavItem[
       { href: base, label: "Overview", section: "Company", icon: LayoutDashboard },
       { href: `${base}/clients`, label: "Clients", section: "Company", icon: Users },
       { href: `${base}/documents`, label: "Documents", section: "Company", icon: FileText },
-      { href: `${base}/team`, label: "Team", section: "Company", icon: UserCog },
-      { href: `${base}/portal`, label: "Portal", section: "Company", icon: Globe },
       { href: `${base}/billing`, label: "Billing", section: "Company", icon: Receipt },
+      { href: `${base}/settings`, label: "Brand Settings", section: "Company", icon: Settings },
       { href: `${base}/connectors`, label: "Data Connectors", section: "Integrations", icon: Plug },
     ];
   }
 
-  // The Fonder (org-level, no company selected) tabs -- Team/Portal content
-  // are dissolved out of the old collapsible Settings group now that these
-  // ARE the org-level content, not a secondary settings area buried behind a
-  // back-link. Settings itself now lives in the secondary nav pinned above
-  // the account menu (see buildSecondaryNavItems) rather than duplicated
-  // here. Team merges the account-team roster and staff account management
-  // (previously "Staff accounts") into one page/tab.
+  // The Fonder (org-level, no company selected) tabs. Workspace Settings
+  // folds in what used to be separate Team/Portal content tabs -- mirrors
+  // how each company's own Brand Settings tab folds in its Team/Portal
+  // tabs, so "Settings" means the same thing (this level's settings) at
+  // both scopes. The secondary nav's old Settings link (see
+  // buildSecondaryNavItems) moved into the account menu instead, since it's
+  // now redundant with this tab.
   return [
     { href: "/admin", label: "Overview", icon: House },
-    { href: "/admin/settings/team", label: "Team", icon: Users },
-    { href: "/admin/settings/content", label: "Portal content", icon: FileText },
+    { href: "/admin/settings", label: "Workspace Settings", icon: Settings },
     ...(isSuperAdmin
       ? [{ href: "/admin/settings/connectors", label: "Data Connectors", section: "Integrations", icon: Plug }]
       : []),
@@ -74,7 +70,6 @@ function computeNavItems(pathname: string, isSuperAdmin: boolean): ShellNavItem[
 
 function buildSecondaryNavItems(): ShellSecondaryNavItem[] {
   return [
-    { href: "/admin/settings", label: "Settings", icon: Settings },
     { href: "/admin/help", label: "Get Help", icon: HelpCircle },
     // Placeholder -- no search feature exists yet to wire this up to.
     { href: "#", label: "Search", icon: Search },
@@ -93,17 +88,13 @@ function computeBreadcrumb(pathname: string, activeCompany: Company | null) {
     return [{ label: "Fonder" }];
   }
   const subLabel =
-    pathname === "/admin/settings/team"
-      ? "Team"
-      : pathname === "/admin/settings/content"
-        ? "Portal content"
-        : pathname === "/admin/settings/connectors"
-          ? "Data Connectors"
-          : pathname === "/admin/settings/profile"
-            ? "Profile"
-            : pathname.startsWith("/admin/settings")
-              ? "Settings"
-              : null;
+    pathname === "/admin/settings/connectors"
+      ? "Data Connectors"
+      : pathname === "/admin/settings/profile"
+        ? "Profile"
+        : pathname.startsWith("/admin/settings")
+          ? "Workspace Settings"
+          : null;
   return subLabel ? [{ label: "Fonder", href: "/admin" }, { label: subLabel }] : [{ label: "Fonder" }];
 }
 
