@@ -50,25 +50,11 @@ function verifySignature(rawBody: string, header: string | null, secret: string)
   return crypto.timingSafeEqual(expectedBuf, signatureBuf);
 }
 
-type SupabaseClient = ReturnType<typeof createServiceClient>;
-
-async function resolveActiveEngagement(
-  supabase: SupabaseClient,
-  externalId: string | undefined,
-): Promise<{ engagementId: string; docType: "sow" | "msa" } | null> {
+function resolveDocRequest(externalId: string | undefined): { companyId: string; docType: "sow" | "msa" } | null {
   if (!externalId || !externalId.includes(":")) return null;
   const [companyId, docType] = externalId.split(":");
   if (docType !== "sow" && docType !== "msa") return null;
-
-  const { data: activeEngagement } = await supabase
-    .from("engagements")
-    .select("id")
-    .eq("company_id", companyId)
-    .eq("status", "active")
-    .maybeSingle();
-
-  if (!activeEngagement) return null;
-  return { engagementId: activeEngagement.id, docType };
+  return { companyId, docType };
 }
 
 // DocuSeal's document download URLs are signed and expirable by default,
@@ -109,9 +95,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ received: true });
     }
 
-    const resolved = await resolveActiveEngagement(supabase, data?.external_id);
+    const resolved = resolveDocRequest(data?.external_id);
     if (!resolved) {
-      console.log("DocuSeal webhook: form.completed (Client) with no resolvable engagement", {
+      console.log("DocuSeal webhook: form.completed (Client) with no resolvable company", {
         externalId: data?.external_id,
       });
       return NextResponse.json({ received: true });
@@ -119,9 +105,9 @@ export async function POST(req: NextRequest) {
 
     const signedColumn = resolved.docType === "sow" ? "sow_signed_at" : "msa_signed_at";
     await supabase
-      .from("engagements")
+      .from("companies")
       .update({ [signedColumn]: new Date().toISOString() })
-      .eq("id", resolved.engagementId);
+      .eq("id", resolved.companyId);
 
     return NextResponse.json({ received: true });
   }
@@ -131,9 +117,9 @@ export async function POST(req: NextRequest) {
       ? data.submitters[0]?.external_id
       : undefined;
 
-    const resolved = await resolveActiveEngagement(supabase, submitterExternalId);
+    const resolved = resolveDocRequest(submitterExternalId);
     if (!resolved) {
-      console.log("DocuSeal webhook: submission.completed with no resolvable engagement", {
+      console.log("DocuSeal webhook: submission.completed with no resolvable company", {
         externalId: submitterExternalId,
       });
       return NextResponse.json({ received: true });
@@ -146,7 +132,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      const path = `${resolved.engagementId}/${resolved.docType}.pdf`;
+      const path = `${resolved.companyId}/${resolved.docType}.pdf`;
       const bytes = await fetchDocuSealDocument(documents[0].url);
 
       const uploadResult = await uploadToStorage("engagement-documents", path, bytes, "application/pdf", {
@@ -156,10 +142,10 @@ export async function POST(req: NextRequest) {
 
       const pathColumn =
         resolved.docType === "sow" ? "sow_signed_document_path" : "msa_signed_document_path";
-      await supabase.from("engagements").update({ [pathColumn]: path }).eq("id", resolved.engagementId);
+      await supabase.from("companies").update({ [pathColumn]: path }).eq("id", resolved.companyId);
     } catch (err) {
       console.log("DocuSeal webhook: failed to store signed document", {
-        engagementId: resolved.engagementId,
+        companyId: resolved.companyId,
         docType: resolved.docType,
         error: err instanceof Error ? err.message : String(err),
       });

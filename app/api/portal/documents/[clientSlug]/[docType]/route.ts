@@ -4,17 +4,14 @@ import { getEngagementPdfBytes } from "@/lib/get-engagement";
 
 // Streams a signed SOW/MSA PDF from the (private) engagement-documents
 // bucket. Gated the same way every other portal route is: hasPortalAccess
-// covers "does this session have current access to this clientSlug at
-// all" (staff always pass; a client passes if their profile.client_id
-// matches); the extra company_id check below covers a HISTORICAL
-// engagement that may not be the one hasPortalAccess itself resolved.
+// covers "does this session have current access to this clientSlug at all"
+// (staff always pass; a client passes if their profile.client_id matches
+// the company's designated stakeholder).
 export async function GET(
   req: NextRequest,
-  {
-    params,
-  }: { params: Promise<{ clientSlug: string; engagementId: string; docType: string }> },
+  { params }: { params: Promise<{ clientSlug: string; docType: string }> },
 ) {
-  const { clientSlug, engagementId, docType } = await params;
+  const { clientSlug, docType } = await params;
 
   if (docType !== "sow" && docType !== "msa") {
     return NextResponse.json({ error: "Invalid document type" }, { status: 400 });
@@ -28,7 +25,7 @@ export async function GET(
   const supabase = createServiceClient();
   const { data: company } = await supabase
     .from("companies")
-    .select("id")
+    .select("sow_signed_document_path, msa_signed_document_path")
     .eq("client_slug", clientSlug)
     .maybeSingle();
 
@@ -36,18 +33,7 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const { data: engagement } = await supabase
-    .from("engagements")
-    .select("company_id, sow_signed_document_path, msa_signed_document_path")
-    .eq("id", engagementId)
-    .maybeSingle();
-
-  if (!engagement || engagement.company_id !== company.id) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-
-  const path =
-    docType === "sow" ? engagement.sow_signed_document_path : engagement.msa_signed_document_path;
+  const path = docType === "sow" ? company.sow_signed_document_path : company.msa_signed_document_path;
   if (!path) {
     return NextResponse.json({ error: "Document not available" }, { status: 404 });
   }

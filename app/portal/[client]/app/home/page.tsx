@@ -85,7 +85,7 @@ export default async function HomeTabPage({
         kickoffStartTime={engagement.kickoffStartTime}
         qbInvoiceLink={engagement.qbInvoiceLink}
         invoicePaid={engagement.invoicePaid}
-        engagementId={engagement.id}
+        companyId={engagement.companyId ?? engagement.id}
         canSimulatePayment={canSimulatePayment}
       />
     </div>

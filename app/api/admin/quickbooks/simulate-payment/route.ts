@@ -17,46 +17,45 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { engagementId } = body;
-  if (!engagementId) {
-    return NextResponse.json({ error: "engagementId is required" }, { status: 400 });
+  const { companyId } = body;
+  if (!companyId) {
+    return NextResponse.json({ error: "companyId is required" }, { status: 400 });
   }
 
   const supabase = createServiceClient();
-  const { data: engagement, error } = await supabase
-    .from("engagements")
-    .select("id, qb_invoice_id, total_fee_amount, invoice_paid_at, companies(qb_customer_id)")
-    .eq("id", engagementId)
+  const { data: company, error } = await supabase
+    .from("companies")
+    .select("id, qb_invoice_id, total_fee_amount, invoice_paid_at, qb_customer_id")
+    .eq("id", companyId)
     .single();
 
-  if (error || !engagement) {
-    return NextResponse.json({ error: "Engagement not found" }, { status: 404 });
+  if (error || !company) {
+    return NextResponse.json({ error: "Company not found" }, { status: 404 });
   }
 
-  if (engagement.invoice_paid_at) {
+  if (company.invoice_paid_at) {
     return NextResponse.json({ success: true });
   }
 
-  if (!engagement.qb_invoice_id || !engagement.total_fee_amount) {
-    return NextResponse.json({ error: "This engagement has no invoice to simulate a payment for" }, { status: 400 });
+  if (!company.qb_invoice_id || !company.total_fee_amount) {
+    return NextResponse.json({ error: "This company has no invoice to simulate a payment for" }, { status: 400 });
   }
 
-  const company = Array.isArray(engagement.companies) ? engagement.companies[0] : engagement.companies;
-  if (!company?.qb_customer_id) {
+  if (!company.qb_customer_id) {
     return NextResponse.json({ error: "No QuickBooks customer on file for this company" }, { status: 400 });
   }
 
   try {
     await recordTestPayment({
       customerId: company.qb_customer_id,
-      invoiceId: engagement.qb_invoice_id,
-      amount: engagement.total_fee_amount,
+      invoiceId: company.qb_invoice_id,
+      amount: company.total_fee_amount,
     });
 
     await supabase
-      .from("engagements")
+      .from("companies")
       .update({ invoice_paid_at: new Date().toISOString() })
-      .eq("id", engagementId);
+      .eq("id", companyId);
 
     return NextResponse.json({ success: true });
   } catch (err) {

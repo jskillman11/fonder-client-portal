@@ -26,7 +26,7 @@ export function WhatsNext({
   kickoffStartTime,
   qbInvoiceLink,
   invoicePaid,
-  engagementId,
+  companyId,
   canSimulatePayment,
 }: {
   heading: string;
@@ -48,7 +48,7 @@ export function WhatsNext({
   kickoffStartTime: string | null;
   qbInvoiceLink: string | null;
   invoicePaid: boolean;
-  engagementId: string;
+  companyId: string;
   canSimulatePayment?: boolean;
 }) {
   const [booked, setBooked] = useState(kickoffBooked);
@@ -116,7 +116,7 @@ export function WhatsNext({
                       <PayInvoiceAction
                         invoiceLink={qbInvoiceLink}
                         invoicePaid={paid}
-                        engagementId={engagementId}
+                        companyId={companyId}
                         canSimulate={canSimulatePayment}
                         onSimulated={() => setPaid(true)}
                       />

@@ -1,22 +1,15 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getCompany } from "@/lib/companies-clients";
-import { listEngagementsForCompany, getActiveEngagementForCompany } from "@/lib/get-engagement";
-import { listInstallments, listBillingCycles } from "@/lib/engagement-billing";
+import { getCompanyEngagement } from "@/lib/get-engagement";
+import { listInstallments, listBillingCycles } from "@/lib/company-billing";
 import { getConnectionStatus } from "@/lib/quickbooks";
 import { Card } from "@/components/Card";
-import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EngagementInstallmentsTable } from "@/components/admin/EngagementInstallmentsTable";
 import { EngagementBillingCyclesTable } from "@/components/admin/EngagementBillingCyclesTable";
+import { CreateInvoiceForm } from "@/components/admin/CreateInvoiceForm";
 
 export const dynamic = "force-dynamic";
-
-function invoiceStatus(e: { qbInvoiceId: string | null; invoicePaidAt: string | null }) {
-  if (!e.qbInvoiceId) return { label: "None", variant: "outline" as const };
-  if (e.invoicePaidAt) return { label: "Paid", variant: "default" as const };
-  return { label: "Awaiting payment", variant: "secondary" as const };
-}
 
 export default async function CompanyBillingPage({
   params,
@@ -27,91 +20,62 @@ export default async function CompanyBillingPage({
   const company = await getCompany(id);
   if (!company) notFound();
 
-  const [engagements, activeEngagement, qb] = await Promise.all([
-    listEngagementsForCompany(id),
-    getActiveEngagementForCompany(id),
+  const engagement = await getCompanyEngagement(id);
+  if (!engagement) notFound();
+
+  const [installments, cycles, qb] = await Promise.all([
+    engagement.engagementType === "project" ? listInstallments(id) : Promise.resolve([]),
+    engagement.engagementType === "partnership" ? listBillingCycles(id) : Promise.resolve([]),
     getConnectionStatus(),
   ]);
 
-  const [installments, cycles] = activeEngagement
-    ? await Promise.all([
-        activeEngagement.engagementType === "project" ? listInstallments(activeEngagement.id) : Promise.resolve([]),
-        activeEngagement.engagementType === "partnership"
-          ? listBillingCycles(activeEngagement.id)
-          : Promise.resolve([]),
-      ])
-    : [[], []];
-
-  const history = engagements.filter((e) => e.id !== activeEngagement?.id);
-
   return (
     <>
-      {activeEngagement && (
-        <Card className="px-9 py-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[16px] font-bold text-[var(--color-ink)]">
-              Payment schedule — {activeEngagement.engagementTitle}
-            </h2>
-            <Link
-              href={`/admin/companies/${id}/engagements/${activeEngagement.id}`}
-              className="text-[12px] underline text-[var(--color-muted-text)]"
-            >
-              View engagement
-            </Link>
-          </div>
-          {activeEngagement.engagementType === "project" ? (
-            <EngagementInstallmentsTable installments={installments} />
-          ) : (
-            <EngagementBillingCyclesTable cycles={cycles} />
-          )}
-        </Card>
-      )}
-
       <Card className="px-9 py-8">
-        <h2 className="text-[16px] font-bold text-[var(--color-ink)] mb-4">History</h2>
-        {history.length === 0 ? (
-          <p className="text-[13px] text-[var(--color-muted-text)]">No past engagements for this company.</p>
+        <h2 className="text-[16px] font-bold text-[var(--color-ink)] mb-4">
+          Payment schedule — {engagement.engagementTitle || company.name}
+        </h2>
+        {engagement.engagementType === "project" ? (
+          <EngagementInstallmentsTable installments={installments} />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Engagement</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Fee</TableHead>
-                <TableHead>Invoice</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {history.map((e) => {
-                const invoice = invoiceStatus(e);
-                return (
-                  <TableRow key={e.id}>
-                    <TableCell>
-                      <Link
-                        href={`/admin/companies/${id}/engagements/${e.id}`}
-                        className="font-semibold text-[var(--color-ink)] underline"
-                      >
-                        {e.engagementTitle}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{e.status}</Badge>
-                    </TableCell>
-                    <TableCell>{e.totalFee}</TableCell>
-                    <TableCell>
-                      {e.qbInvoiceLink ? (
-                        <a href={e.qbInvoiceLink} target="_blank" rel="noreferrer">
-                          <Badge variant={invoice.variant}>{invoice.label}</Badge>
-                        </a>
-                      ) : (
-                        <Badge variant={invoice.variant}>{invoice.label}</Badge>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          <EngagementBillingCyclesTable cycles={cycles} />
+        )}
+      </Card>
+
+      <Card className="px-9 py-9">
+        <h2 className="text-[16px] font-bold text-[var(--color-ink)] mb-4">Invoice</h2>
+        {!engagement.totalFeeAmount ? (
+          <p className="text-[13px] text-[var(--color-muted-text)]">
+            Set a numeric total fee on the Overview tab and save, then come back here to create the invoice.
+          </p>
+        ) : engagement.qbInvoiceId ? (
+          <>
+            <p className="text-[14px] font-semibold text-[var(--color-ink)] mb-1">
+              {engagement.invoicePaidAt ? "Paid" : "Awaiting payment"}
+            </p>
+            {engagement.invoiceSentAt && (
+              <p className="text-[13px] text-[var(--color-muted-text)]">
+                Sent {new Date(engagement.invoiceSentAt).toLocaleDateString()}
+              </p>
+            )}
+            {engagement.invoicePaidAt && (
+              <p className="text-[13px] text-[var(--color-muted-text)]">
+                Paid {new Date(engagement.invoicePaidAt).toLocaleDateString()}
+              </p>
+            )}
+            {engagement.qbInvoiceLink && (
+              <a
+                href={engagement.qbInvoiceLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[13px] font-medium text-[var(--color-ink)] underline mt-2 inline-block"
+              >
+                View hosted invoice
+              </a>
+            )}
+          </>
+        ) : (
+          <CreateInvoiceForm companyId={id} />
         )}
       </Card>
 

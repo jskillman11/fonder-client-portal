@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
         const invoice = await getInvoice(invoiceId);
         if (invoice.balance === 0) {
           await supabase
-            .from("engagements")
+            .from("companies")
             .update({ invoice_paid_at: new Date().toISOString() })
             .eq("qb_invoice_id", invoiceId)
             .is("invoice_paid_at", null);

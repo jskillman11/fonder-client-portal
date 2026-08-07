@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { listCompanies } from "@/lib/companies-clients";
-import { listAllEngagements } from "@/lib/get-engagement";
+import { listAllCompanyEngagements } from "@/lib/get-engagement";
 import { listStaff } from "@/lib/staff";
 import { Card } from "@/components/Card";
 
@@ -9,18 +9,18 @@ export const dynamic = "force-dynamic";
 export default async function AdminHomePage() {
   const [companies, engagements, staff] = await Promise.all([
     listCompanies(),
-    listAllEngagements(),
+    listAllCompanyEngagements(),
     listStaff(),
   ]);
 
-  const activeEngagements = engagements.filter((e) => e.status === "active");
-  const pendingSignatures = activeEngagements.filter((e) => !e.sowSigned || !e.msaSigned);
+  const configuredEngagements = engagements.filter((e) => e.engagementTitle);
+  const pendingSignatures = configuredEngagements.filter((e) => !e.sowSigned || !e.msaSigned);
   const unpaidInvoices = engagements.filter((e) => e.qbInvoiceId && !e.invoicePaidAt);
-  const recent = engagements.slice(0, 6);
+  const recent = configuredEngagements.slice(0, 6);
 
   const stats = [
     { label: "Brands", value: companies.length },
-    { label: "Active engagements", value: activeEngagements.length },
+    { label: "Engagements configured", value: configuredEngagements.length },
     { label: "Pending signatures", value: pendingSignatures.length },
     { label: "Unpaid invoices", value: unpaidInvoices.length },
   ];
@@ -59,15 +59,17 @@ export default async function AdminHomePage() {
             <Card className="px-7 py-2">
               {recent.map((e) => (
                 <Link
-                  key={e.id}
-                  href={`/admin/companies/${e.companyId}/engagements/${e.id}`}
+                  key={e.companyId}
+                  href={`/admin/companies/${e.companyId}`}
                   className="flex items-center justify-between gap-3 py-3 border-b border-[var(--color-border)] last:border-b-0 hover:bg-[var(--color-cream)] -mx-7 px-7"
                 >
                   <div>
                     <p className="text-[14.5px] font-semibold text-[var(--color-ink)]">{e.engagementTitle}</p>
                     <p className="text-[13px] text-[var(--color-muted-text)]">{e.companyName}</p>
                   </div>
-                  <span className="text-[12px] uppercase tracking-wide text-[var(--color-muted-text)]">{e.status}</span>
+                  <span className="text-[12px] uppercase tracking-wide text-[var(--color-muted-text)]">
+                    {e.invoicePaidAt ? "paid" : e.qbInvoiceId ? "invoiced" : "in progress"}
+                  </span>
                 </Link>
               ))}
             </Card>

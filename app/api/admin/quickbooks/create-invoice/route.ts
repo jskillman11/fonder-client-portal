@@ -7,40 +7,33 @@ export async function POST(req: NextRequest) {
   if (admin instanceof NextResponse) return admin;
 
   const body = await req.json();
-  const { engagementId } = body;
-  if (!engagementId) {
-    return NextResponse.json({ error: "engagementId is required" }, { status: 400 });
+  const { companyId } = body;
+  if (!companyId) {
+    return NextResponse.json({ error: "companyId is required" }, { status: 400 });
   }
 
   const supabase = createServiceClient();
-  const { data: engagement, error } = await supabase
-    .from("engagements")
-    .select(
-      "id, engagement_title, total_fee_amount, company_id, companies(id, name, qb_customer_id), clients(email)",
-    )
-    .eq("id", engagementId)
+  const { data: company, error } = await supabase
+    .from("companies")
+    .select("id, name, engagement_title, total_fee_amount, qb_customer_id, clients:client_id(email)")
+    .eq("id", companyId)
     .single();
 
-  if (error || !engagement) {
-    return NextResponse.json({ error: "Engagement not found" }, { status: 404 });
+  if (error || !company) {
+    return NextResponse.json({ error: "Company not found" }, { status: 404 });
   }
 
-  if (!engagement.total_fee_amount) {
+  if (!company.total_fee_amount) {
     return NextResponse.json(
-      { error: "Set a numeric total fee on this engagement before creating an invoice" },
+      { error: "Set a numeric total fee on this company's engagement before creating an invoice" },
       { status: 400 },
     );
   }
 
-  const company = Array.isArray(engagement.companies) ? engagement.companies[0] : engagement.companies;
-  if (!company) {
-    return NextResponse.json({ error: "Company not found for this engagement" }, { status: 404 });
-  }
-
-  const client = Array.isArray(engagement.clients) ? engagement.clients[0] : engagement.clients;
+  const client = Array.isArray(company.clients) ? company.clients[0] : company.clients;
   if (!client?.email) {
     return NextResponse.json(
-      { error: "This engagement's client has no email on file — required for QuickBooks to generate a pay link" },
+      { error: "This company's client has no email on file — required for QuickBooks to generate a pay link" },
       { status: 400 },
     );
   }
@@ -54,19 +47,19 @@ export async function POST(req: NextRequest) {
 
     const invoice = await createInvoice({
       customerId,
-      amount: engagement.total_fee_amount,
-      description: engagement.engagement_title,
+      amount: company.total_fee_amount,
+      description: company.engagement_title ?? company.name,
       billEmail: client.email,
     });
 
     await supabase
-      .from("engagements")
+      .from("companies")
       .update({
         qb_invoice_id: invoice.invoiceId,
         qb_invoice_link: invoice.invoiceLink,
         invoice_sent_at: new Date().toISOString(),
       })
-      .eq("id", engagementId);
+      .eq("id", companyId);
 
     return NextResponse.json({ success: true, invoiceLink: invoice.invoiceLink });
   } catch (err) {

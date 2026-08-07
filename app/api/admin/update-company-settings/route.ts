@@ -36,6 +36,30 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = createServiceClient();
+
+  // Swapping which SOW/MSA document is in force invalidates any existing
+  // signature for that doc type -- the client needs to sign the document
+  // that's actually current, not inherit "signed" from whatever was
+  // swapped out.
+  if ("sow_document_id" in update || "msa_document_id" in update) {
+    const { data: current } = await supabase
+      .from("companies")
+      .select("sow_document_id, msa_document_id")
+      .eq("id", companyId)
+      .single();
+
+    if (current) {
+      if ("sow_document_id" in update && update.sow_document_id !== current.sow_document_id) {
+        update.sow_signed_at = null;
+        update.sow_signed_document_path = null;
+      }
+      if ("msa_document_id" in update && update.msa_document_id !== current.msa_document_id) {
+        update.msa_signed_at = null;
+        update.msa_signed_document_path = null;
+      }
+    }
+  }
+
   const { error } = await supabase
     .from("companies")
     .update(update)

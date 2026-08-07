@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getCompanyEngagementHistory } from "@/lib/get-engagement";
+import { getEngagement } from "@/lib/get-engagement";
 import { Card } from "@/components/Card";
 import { PlaceholderTab } from "@/components/portal-app/PlaceholderTab";
 
@@ -45,50 +45,44 @@ export default async function DocumentsPage({
   params: Promise<{ client: string }>;
 }) {
   const { client } = await params;
-  const history = await getCompanyEngagementHistory(client);
-  if (!history) notFound();
+  const engagement = await getEngagement(client);
+  if (!engagement) notFound();
 
-  const engagementsWithDocs = history.engagements.filter(
-    (e) => e.sowSigned || e.msaSigned || e.sowDocumentPath || e.msaDocumentPath,
-  );
+  const hasSow = engagement.sowSigned || Boolean(engagement.sowDocumentPath);
+  const hasMsa = engagement.msaSigned || Boolean(engagement.msaDocumentPath);
 
-  if (engagementsWithDocs.length === 0) {
+  if (!hasSow && !hasMsa) {
     return (
       <PlaceholderTab
         title="Documents"
-        description="Signed contracts for this engagement will appear here once they're signed."
+        description="Signed contracts will appear here once they're signed."
       />
     );
   }
 
   return (
     <div className="max-w-5xl mx-auto space-y-5">
-      {engagementsWithDocs.map((e) => (
-        <Card key={e.id} className="px-9 py-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[16px] font-bold text-[var(--color-ink)]">{e.engagementTitle}</h2>
-            <span className="text-[12px] text-[var(--color-muted-text)] capitalize">{e.status}</span>
-          </div>
-          <div className="space-y-3">
-            {(e.sowSigned || e.sowDocumentPath) && (
-              <DocumentRow
-                label="Statement of Work"
-                signed={e.sowSigned}
-                documentPath={e.sowDocumentPath}
-                downloadHref={`/api/portal/documents/${client}/${e.id}/sow`}
-              />
-            )}
-            {(e.msaSigned || e.msaDocumentPath) && (
-              <DocumentRow
-                label="Master Services Agreement"
-                signed={e.msaSigned}
-                documentPath={e.msaDocumentPath}
-                downloadHref={`/api/portal/documents/${client}/${e.id}/msa`}
-              />
-            )}
-          </div>
-        </Card>
-      ))}
+      <Card className="px-9 py-8">
+        <h2 className="text-[16px] font-bold text-[var(--color-ink)] mb-4">{engagement.engagementTitle}</h2>
+        <div className="space-y-3">
+          {hasSow && (
+            <DocumentRow
+              label="Statement of Work"
+              signed={engagement.sowSigned}
+              documentPath={engagement.sowDocumentPath}
+              downloadHref={`/api/portal/documents/${client}/sow`}
+            />
+          )}
+          {hasMsa && (
+            <DocumentRow
+              label="Master Services Agreement"
+              signed={engagement.msaSigned}
+              documentPath={engagement.msaDocumentPath}
+              downloadHref={`/api/portal/documents/${client}/msa`}
+            />
+          )}
+        </div>
+      </Card>
     </div>
   );
 }

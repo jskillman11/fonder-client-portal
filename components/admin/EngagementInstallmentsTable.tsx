@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { InstallmentRow } from "@/lib/engagement-billing";
+import type { InstallmentRow } from "@/lib/company-billing";
 
 function statusBadge(status: InstallmentRow["status"]) {
   if (status === "paid") return { label: "Paid", variant: "default" as const };

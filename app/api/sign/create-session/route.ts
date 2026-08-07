@@ -59,13 +59,12 @@ export async function POST(req: NextRequest) {
     });
 
     // A new session always supersedes any prior signature for this doc type.
-    // Engagement-scoped (per-contract), not company-scoped.
     const supabase = createServiceClient();
     const signedColumn = docType === "sow" ? "sow_signed_at" : "msa_signed_at";
     await supabase
-      .from("engagements")
+      .from("companies")
       .update({ [signedColumn]: null })
-      .eq("id", engagement.id);
+      .eq("id", engagement.companyId);
 
     // Encodes which company/doc type this submission is for -- echoed back
     // verbatim on every submitter in the completion webhook, so matching it

@@ -3,10 +3,10 @@
 import { useState } from "react";
 
 export function SimulatePaymentButton({
-  engagementId,
+  companyId,
   onSimulated,
 }: {
-  engagementId: string;
+  companyId: string;
   onSimulated?: () => void;
 }) {
   const [status, setStatus] = useState<"idle" | "working" | "error">("idle");
@@ -19,7 +19,7 @@ export function SimulatePaymentButton({
     const res = await fetch("/api/admin/quickbooks/simulate-payment", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ engagementId }),
+      body: JSON.stringify({ companyId }),
     });
     const data = await res.json();
 

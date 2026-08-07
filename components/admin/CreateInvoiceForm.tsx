@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PillButton } from "@/components/PillButton";
 
-export function CreateInvoiceForm({ engagementId }: { engagementId: string }) {
+export function CreateInvoiceForm({ companyId }: { companyId: string }) {
   const router = useRouter();
   const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
@@ -16,7 +16,7 @@ export function CreateInvoiceForm({ engagementId }: { engagementId: string }) {
     const res = await fetch("/api/admin/quickbooks/create-invoice", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ engagementId }),
+      body: JSON.stringify({ companyId }),
     });
     const data = await res.json();
 

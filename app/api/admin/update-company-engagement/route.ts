@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient, requireAdmin } from "@/lib/supabase/server";
-import { createInstallmentsForEngagement } from "@/lib/engagement-billing";
+import { createInstallmentsForCompany } from "@/lib/company-billing";
 
-// Maps the camelCase body keys the engagement Overview form may send to
-// their snake_case columns -- only keys actually present in the body are
-// applied, so a save or a "mark completed" action can each write just their
-// own slice.
+// Maps the camelCase body keys the Overview form may send to their
+// snake_case columns -- only keys actually present in the body are applied.
 const COLUMN_MAP: Record<string, string> = {
   clientId: "client_id",
   engagementTitle: "engagement_title",
@@ -18,7 +16,6 @@ const COLUMN_MAP: Record<string, string> = {
   finalDeliveryDate: "final_delivery_date",
   kickoffEarliestDate: "kickoff_earliest_date",
   scopeSummary: "scope_summary",
-  status: "status",
 };
 
 export async function POST(req: NextRequest) {
@@ -26,10 +23,10 @@ export async function POST(req: NextRequest) {
   if (admin instanceof NextResponse) return admin;
 
   const body = await req.json();
-  const { engagementId } = body;
+  const { companyId } = body;
 
-  if (!engagementId) {
-    return NextResponse.json({ error: "engagementId is required" }, { status: 400 });
+  if (!companyId) {
+    return NextResponse.json({ error: "companyId is required" }, { status: 400 });
   }
 
   const update: Record<string, unknown> = {};
@@ -59,22 +56,14 @@ export async function POST(req: NextRequest) {
 
   const supabase = createServiceClient();
   const { data: updated, error } = await supabase
-    .from("engagements")
+    .from("companies")
     .update(update)
-    .eq("id", engagementId)
+    .eq("id", companyId)
     .select("engagement_type, payment_terms, total_fee_amount")
     .single();
 
   if (error) {
-    return NextResponse.json(
-      {
-        error: "Failed to save engagement",
-        detail: error.message.includes("engagements_one_active_per_company")
-          ? "This company already has an active engagement — mark it completed first."
-          : error.message,
-      },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to save engagement", detail: error.message }, { status: 500 });
   }
 
   // Regenerate the pending installment plan whenever the terms or budget
@@ -82,7 +71,7 @@ export async function POST(req: NextRequest) {
   // matching plan) and harmless if neither field was actually touched.
   const touchedInstallmentInputs = "payment_terms" in update || "total_fee_amount" in update;
   if (touchedInstallmentInputs && updated.engagement_type === "project") {
-    await createInstallmentsForEngagement(engagementId, updated.payment_terms, updated.total_fee_amount);
+    await createInstallmentsForCompany(companyId, updated.payment_terms, updated.total_fee_amount);
   }
 
   return NextResponse.json({ success: true });

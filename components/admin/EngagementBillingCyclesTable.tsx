@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { BillingCycleRow } from "@/lib/engagement-billing";
+import type { BillingCycleRow } from "@/lib/company-billing";
 
 function statusBadge(status: BillingCycleRow["status"]) {
   if (status === "paid") return { label: "Paid", variant: "default" as const };

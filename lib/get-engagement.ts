@@ -34,6 +34,8 @@ export type EngagementData = {
   msaContentMarkdown: string | null;
   sowSigned: boolean;
   msaSigned: boolean;
+  sowDocumentPath: string | null;
+  msaDocumentPath: string | null;
   kickoffBooked: boolean;
   kickoffStartTime: string | null;
   kickoffEarliestDate: string | null;
@@ -67,102 +69,35 @@ export function computeDocsSigned(engagement: {
   );
 }
 
-export type EngagementStatus = "active" | "completed";
-
 export type EngagementType = "project" | "partnership";
 export type PartnershipTier = "growth" | "venture";
 export type PaymentTerms = "50_25_25" | "50_40_10" | "monthly_in_advance";
 
-export type EngagementRecord = {
-  id: string;
-  companyId: string;
-  companyName: string;
-  clientId: string | null;
-  clientEmail: string | null;
-  engagementTitle: string;
-  engagementType: EngagementType;
-  partnershipTier: PartnershipTier | null;
-  paymentTerms: PaymentTerms | null;
-  durationMonths: number | null;
-  totalFee: string;
-  totalFeeAmount: number | null;
-  finalDeliveryDate: string;
-  kickoffEarliestDate: string | null;
-  scopeSummary: string | null;
-  status: EngagementStatus;
-  milestones: Milestone[];
-  qbInvoiceId: string | null;
-  qbInvoiceLink: string | null;
-  invoiceSentAt: string | null;
-  invoicePaidAt: string | null;
-  qbCustomerId: string | null;
-};
-
-export type CompanyEngagementRow = {
-  id: string;
-  engagementTitle: string;
-  status: EngagementStatus;
-  totalFee: string;
-  qbInvoiceId: string | null;
-  qbInvoiceLink: string | null;
-  invoiceSentAt: string | null;
-  invoicePaidAt: string | null;
-};
-
-export async function listEngagementsForCompany(companyId: string): Promise<CompanyEngagementRow[]> {
-  const supabase = createServiceClient();
-  const { data } = await supabase
-    .from("engagements")
-    .select(
-      "id, engagement_title, status, total_fee, qb_invoice_id, qb_invoice_link, invoice_sent_at, invoice_paid_at",
-    )
-    .eq("company_id", companyId)
-    .order("created_at", { ascending: false });
-
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    engagementTitle: row.engagement_title,
-    status: row.status as EngagementStatus,
-    totalFee: row.total_fee,
-    qbInvoiceId: row.qb_invoice_id,
-    qbInvoiceLink: row.qb_invoice_link,
-    invoiceSentAt: row.invoice_sent_at,
-    invoicePaidAt: row.invoice_paid_at,
-  }));
-}
-
-// Portal-facing lookup, keyed by the company's (stable) portal slug --
-// resolves the company, then its currently active engagement, and merges
-// company-level settings (docs in force, shared drive, portal locks, team)
-// into the same EngagementData shape every portal page already expects, so
-// none of those pages need to change.
-export async function getEngagement(
-  clientSlug: string,
-): Promise<EngagementData | null> {
+// Portal-facing lookup, keyed by the company's (stable) portal slug -- a
+// company always has a portal once it exists (client_slug is set at
+// creation, see lib/companies-clients.ts's createCompany), regardless of
+// whether staff have filled in engagement details yet. Fields below default
+// to empty/false until then, rather than this returning null.
+export async function getEngagement(clientSlug: string): Promise<EngagementData | null> {
   const supabase = createServiceClient();
 
-  const { data: company, error: companyError } = await supabase
+  const { data: company, error } = await supabase
     .from("companies")
     .select(
-      "id, name, logo_storage_path, sow_document_id, msa_document_id, lock_portal_tabs, shared_drive_url, tab_lock_overrides, sow_doc:sow_document_id(content_markdown), msa_doc:msa_document_id(content_markdown)",
+      `id, name, logo_storage_path, sow_document_id, msa_document_id, lock_portal_tabs,
+       shared_drive_url, tab_lock_overrides, client_id, engagement_title, total_fee,
+       final_delivery_date, fonder_signatory_name, fonder_signatory_email, sow_signed_at,
+       msa_signed_at, sow_signed_document_path, msa_signed_document_path, kickoff_booked_at,
+       kickoff_start_time, kickoff_earliest_date, scope_summary, qb_invoice_link, invoice_paid_at,
+       sow_doc:sow_document_id(content_markdown), msa_doc:msa_document_id(content_markdown),
+       clients:client_id(id, first_name, last_name, email)`,
     )
     .eq("client_slug", clientSlug)
     .single();
 
-  if (companyError || !company) return null;
+  if (error || !company) return null;
 
-  const { data: engagement } = await supabase
-    .from("engagements")
-    .select("*, clients(id, first_name, last_name, email)")
-    .eq("company_id", company.id)
-    .eq("status", "active")
-    .maybeSingle();
-
-  if (!engagement) return null;
-
-  const client = Array.isArray(engagement.clients)
-    ? engagement.clients[0]
-    : engagement.clients;
+  const client = Array.isArray(company.clients) ? company.clients[0] : company.clients;
   const sowDoc = Array.isArray(company.sow_doc) ? company.sow_doc[0] : company.sow_doc;
   const msaDoc = Array.isArray(company.msa_doc) ? company.msa_doc[0] : company.msa_doc;
 
@@ -173,16 +108,14 @@ export async function getEngagement(
     .order("sort_order", { ascending: true });
 
   const { data: milestoneRows } = await supabase
-    .from("engagement_milestones")
+    .from("company_milestones")
     .select("label, milestone_date")
-    .eq("engagement_id", engagement.id)
+    .eq("company_id", company.id)
     .order("milestone_date", { ascending: true });
 
   let clientLogoUrl: string | null = null;
   if (company.logo_storage_path) {
-    const { data } = supabase.storage
-      .from("engagement-logos")
-      .getPublicUrl(company.logo_storage_path);
+    const { data } = supabase.storage.from("engagement-logos").getPublicUrl(company.logo_storage_path);
     clientLogoUrl = data.publicUrl;
   }
 
@@ -190,40 +123,39 @@ export async function getEngagement(
   const lastName = client?.last_name ?? "";
 
   return {
-    id: engagement.id,
+    id: company.id,
     clientSlug,
     clientName: company.name,
-    engagementTitle: engagement.engagement_title,
-    totalFee: engagement.total_fee,
-    finalDeliveryDate: engagement.final_delivery_date,
+    engagementTitle: company.engagement_title ?? "",
+    totalFee: company.total_fee ?? "",
+    finalDeliveryDate: company.final_delivery_date ?? "",
     companyId: company.id,
-    clientId: engagement.client_id,
+    clientId: company.client_id,
     sowDocumentId: company.sow_document_id,
     msaDocumentId: company.msa_document_id,
     clientSignatoryName: `${firstName} ${lastName}`.trim(),
     clientSignatoryFirstName: firstName,
     clientSignatoryLastName: lastName,
     clientSignatoryEmail: client?.email ?? "",
-    fonderSignatoryName: engagement.fonder_signatory_name,
-    fonderSignatoryEmail: engagement.fonder_signatory_email,
+    fonderSignatoryName: company.fonder_signatory_name,
+    fonderSignatoryEmail: company.fonder_signatory_email,
     clientLogoUrl,
     sowContentMarkdown: sowDoc?.content_markdown ?? null,
     msaContentMarkdown: msaDoc?.content_markdown ?? null,
-    sowSigned: Boolean(engagement.sow_signed_at),
-    msaSigned: Boolean(engagement.msa_signed_at),
-    kickoffBooked: Boolean(engagement.kickoff_booked_at),
-    kickoffStartTime: engagement.kickoff_start_time,
-    kickoffEarliestDate: engagement.kickoff_earliest_date,
-    scopeSummary: engagement.scope_summary,
+    sowSigned: Boolean(company.sow_signed_at),
+    msaSigned: Boolean(company.msa_signed_at),
+    sowDocumentPath: company.sow_signed_document_path,
+    msaDocumentPath: company.msa_signed_document_path,
+    kickoffBooked: Boolean(company.kickoff_booked_at),
+    kickoffStartTime: company.kickoff_start_time,
+    kickoffEarliestDate: company.kickoff_earliest_date,
+    scopeSummary: company.scope_summary,
     lockPortalTabs: company.lock_portal_tabs,
     sharedDriveUrl: company.shared_drive_url,
     tabLockOverrides: company.tab_lock_overrides ?? {},
-    qbInvoiceLink: engagement.qb_invoice_link,
-    invoicePaid: Boolean(engagement.invoice_paid_at),
-    milestones: (milestoneRows ?? []).map((m) => ({
-      label: m.label,
-      date: m.milestone_date,
-    })),
+    qbInvoiceLink: company.qb_invoice_link,
+    invoicePaid: Boolean(company.invoice_paid_at),
+    milestones: (milestoneRows ?? []).map((m) => ({ label: m.label, date: m.milestone_date })),
     team: (teamRows ?? [])
       .map((row) => {
         const tm = Array.isArray(row.team_members) ? row.team_members[0] : row.team_members;
@@ -239,196 +171,116 @@ export async function getEngagement(
   };
 }
 
-export type EngagementHistoryItem = {
-  id: string;
+export type CompanyEngagementRecord = {
+  companyId: string;
+  companyName: string;
+  clientId: string | null;
+  clientEmail: string | null;
   engagementTitle: string;
-  status: EngagementStatus;
+  engagementType: EngagementType;
+  partnershipTier: PartnershipTier | null;
+  paymentTerms: PaymentTerms | null;
+  durationMonths: number | null;
   totalFee: string;
-  sowSigned: boolean;
-  msaSigned: boolean;
-  sowDocumentPath: string | null;
-  msaDocumentPath: string | null;
+  totalFeeAmount: number | null;
+  finalDeliveryDate: string;
+  kickoffEarliestDate: string | null;
+  scopeSummary: string | null;
+  milestones: Milestone[];
+  qbInvoiceId: string | null;
   qbInvoiceLink: string | null;
-  invoicePaid: boolean;
+  invoiceSentAt: string | null;
+  invoicePaidAt: string | null;
+  qbCustomerId: string | null;
 };
 
-// Portal-facing lookup across a company's FULL engagement history, not just
-// the one currently-active engagement getEngagement() resolves -- feeds the
-// Documents and Invoices tabs, so a client can still reach a prior,
-// completed engagement's signed contract or invoice.
-export async function getCompanyEngagementHistory(clientSlug: string): Promise<{
-  companyName: string;
-  clientLogoUrl: string | null;
-  engagements: EngagementHistoryItem[];
-} | null> {
+// Admin-facing lookup for the company Overview tab -- always returns a
+// record (a company's engagement fields are just empty/null until staff
+// fill them in), so the Overview form has nothing conditional to branch on.
+export async function getCompanyEngagement(companyId: string): Promise<CompanyEngagementRecord | null> {
   const supabase = createServiceClient();
-
-  const { data: company, error: companyError } = await supabase
+  const { data: company, error } = await supabase
     .from("companies")
-    .select("id, name, logo_storage_path")
-    .eq("client_slug", clientSlug)
-    .single();
-
-  if (companyError || !company) return null;
-
-  const { data: engagementRows } = await supabase
-    .from("engagements")
     .select(
-      "id, engagement_title, status, total_fee, sow_signed_at, msa_signed_at, sow_signed_document_path, msa_signed_document_path, qb_invoice_link, invoice_paid_at",
+      `id, name, qb_customer_id, client_id, engagement_title, engagement_type, partnership_tier,
+       payment_terms, duration_months, total_fee, total_fee_amount, final_delivery_date,
+       kickoff_earliest_date, scope_summary, qb_invoice_id, qb_invoice_link, invoice_sent_at,
+       invoice_paid_at, clients:client_id(email)`,
     )
-    .eq("company_id", company.id)
-    .order("created_at", { ascending: false });
-
-  let clientLogoUrl: string | null = null;
-  if (company.logo_storage_path) {
-    const { data } = supabase.storage
-      .from("engagement-logos")
-      .getPublicUrl(company.logo_storage_path);
-    clientLogoUrl = data.publicUrl;
-  }
-
-  return {
-    companyName: company.name,
-    clientLogoUrl,
-    engagements: (engagementRows ?? []).map((e) => ({
-      id: e.id,
-      engagementTitle: e.engagement_title,
-      status: e.status as EngagementStatus,
-      totalFee: e.total_fee,
-      sowSigned: Boolean(e.sow_signed_at),
-      msaSigned: Boolean(e.msa_signed_at),
-      sowDocumentPath: e.sow_signed_document_path,
-      msaDocumentPath: e.msa_signed_document_path,
-      qbInvoiceLink: e.qb_invoice_link,
-      invoicePaid: Boolean(e.invoice_paid_at),
-    })),
-  };
-}
-
-// Admin-facing lookup, keyed by the engagement's own id -- a lean record,
-// since documents/team/shared-drive/portal-locks no longer live here.
-export async function getEngagementById(
-  engagementId: string,
-): Promise<EngagementRecord | null> {
-  const supabase = createServiceClient();
-  const { data: engagement, error } = await supabase
-    .from("engagements")
-    .select("*, companies(id, name, qb_customer_id), clients(email)")
-    .eq("id", engagementId)
+    .eq("id", companyId)
     .single();
 
-  if (error || !engagement) return null;
-  const company = Array.isArray(engagement.companies)
-    ? engagement.companies[0]
-    : engagement.companies;
-  const client = Array.isArray(engagement.clients) ? engagement.clients[0] : engagement.clients;
+  if (error || !company) return null;
+  const client = Array.isArray(company.clients) ? company.clients[0] : company.clients;
 
   const { data: milestoneRows } = await supabase
-    .from("engagement_milestones")
+    .from("company_milestones")
     .select("label, milestone_date")
-    .eq("engagement_id", engagementId)
+    .eq("company_id", companyId)
     .order("milestone_date", { ascending: true });
 
   return {
-    id: engagement.id,
-    companyId: engagement.company_id,
-    companyName: company?.name ?? "",
-    clientId: engagement.client_id,
+    companyId: company.id,
+    companyName: company.name,
+    clientId: company.client_id,
     clientEmail: client?.email ?? null,
-    engagementTitle: engagement.engagement_title,
-    engagementType: engagement.engagement_type as EngagementType,
-    partnershipTier: engagement.partnership_tier,
-    paymentTerms: engagement.payment_terms,
-    durationMonths: engagement.duration_months,
-    totalFee: engagement.total_fee,
-    totalFeeAmount: engagement.total_fee_amount,
-    finalDeliveryDate: engagement.final_delivery_date,
-    kickoffEarliestDate: engagement.kickoff_earliest_date,
-    scopeSummary: engagement.scope_summary,
-    status: engagement.status as EngagementStatus,
-    milestones: (milestoneRows ?? []).map((m) => ({
-      label: m.label,
-      date: m.milestone_date,
-    })),
-    qbInvoiceId: engagement.qb_invoice_id,
-    qbInvoiceLink: engagement.qb_invoice_link,
-    invoiceSentAt: engagement.invoice_sent_at,
-    invoicePaidAt: engagement.invoice_paid_at,
-    qbCustomerId: company?.qb_customer_id ?? null,
+    engagementTitle: company.engagement_title ?? "",
+    engagementType: company.engagement_type as EngagementType,
+    partnershipTier: company.partnership_tier,
+    paymentTerms: company.payment_terms,
+    durationMonths: company.duration_months,
+    totalFee: company.total_fee ?? "",
+    totalFeeAmount: company.total_fee_amount,
+    finalDeliveryDate: company.final_delivery_date ?? "",
+    kickoffEarliestDate: company.kickoff_earliest_date,
+    scopeSummary: company.scope_summary,
+    milestones: (milestoneRows ?? []).map((m) => ({ label: m.label, date: m.milestone_date })),
+    qbInvoiceId: company.qb_invoice_id,
+    qbInvoiceLink: company.qb_invoice_link,
+    invoiceSentAt: company.invoice_sent_at,
+    invoicePaidAt: company.invoice_paid_at,
+    qbCustomerId: company.qb_customer_id,
   };
 }
 
-// Admin-facing lookup for the company Overview tab -- the current
-// engagement's full record (if the company has one active), reusing the
-// exact same shape as getEngagementById so the Overview tab's form can share
-// EngagementOverviewForm with the (now-removed) standalone engagement page.
-export async function getActiveEngagementForCompany(companyId: string): Promise<EngagementRecord | null> {
-  const supabase = createServiceClient();
-  const { data: row } = await supabase
-    .from("engagements")
-    .select("id")
-    .eq("company_id", companyId)
-    .eq("status", "active")
-    .maybeSingle();
-
-  if (!row) return null;
-  return getEngagementById(row.id);
-}
-
-export type EngagementSummary = {
-  id: string;
+export type CompanyEngagementSummary = {
   companyId: string;
   companyName: string;
   engagementTitle: string;
-  status: EngagementStatus;
   sowSigned: boolean;
   msaSigned: boolean;
   qbInvoiceId: string | null;
   invoicePaidAt: string | null;
-  createdAt: string;
 };
 
-// Cross-company lookup for the admin Home dashboard -- everything else in
-// this file is scoped to one company/engagement. "Signed" here just checks
-// sow_signed_at/msa_signed_at directly rather than reproducing
+// Cross-company lookup for the admin Home dashboard. "Signed" here just
+// checks sow_signed_at/msa_signed_at directly rather than reproducing
 // computeDocsSigned's per-company hasAnyDoc nuance (that needs each
 // company's configured sow/msa document, a join this overview doesn't
-// otherwise need), so an engagement with no SOW/MSA configured at all reads
-// as "pending" here -- acceptable for a summary count, not exact per-company.
-export async function listAllEngagements(): Promise<EngagementSummary[]> {
+// otherwise need), so a company with no SOW/MSA configured at all reads as
+// "pending" here -- acceptable for a summary count, not exact per-company.
+export async function listAllCompanyEngagements(): Promise<CompanyEngagementSummary[]> {
   const supabase = createServiceClient();
   const { data } = await supabase
-    .from("engagements")
-    .select(
-      "id, company_id, engagement_title, status, sow_signed_at, msa_signed_at, qb_invoice_id, invoice_paid_at, created_at, companies(name)",
-    )
-    .order("created_at", { ascending: false });
+    .from("companies")
+    .select("id, name, engagement_title, sow_signed_at, msa_signed_at, qb_invoice_id, invoice_paid_at")
+    .order("name", { ascending: true });
 
-  return (data ?? []).map((row) => {
-    const company = Array.isArray(row.companies) ? row.companies[0] : row.companies;
-    return {
-      id: row.id,
-      companyId: row.company_id,
-      companyName: company?.name ?? "",
-      engagementTitle: row.engagement_title,
-      status: row.status as EngagementStatus,
-      sowSigned: Boolean(row.sow_signed_at),
-      msaSigned: Boolean(row.msa_signed_at),
-      qbInvoiceId: row.qb_invoice_id,
-      invoicePaidAt: row.invoice_paid_at,
-      createdAt: row.created_at,
-    };
-  });
+  return (data ?? []).map((row) => ({
+    companyId: row.id,
+    companyName: row.name,
+    engagementTitle: row.engagement_title ?? "",
+    sowSigned: Boolean(row.sow_signed_at),
+    msaSigned: Boolean(row.msa_signed_at),
+    qbInvoiceId: row.qb_invoice_id,
+    invoicePaidAt: row.invoice_paid_at,
+  }));
 }
 
-// Downloads the actual PDF bytes from Supabase Storage for a given engagement.
-export async function getEngagementPdfBytes(
-  documentStoragePath: string,
-): Promise<Buffer> {
+// Downloads the actual PDF bytes from Supabase Storage for a given document.
+export async function getEngagementPdfBytes(documentStoragePath: string): Promise<Buffer> {
   const supabase = createServiceClient();
-  const { data, error } = await supabase.storage
-    .from("engagement-documents")
-    .download(documentStoragePath);
+  const { data, error } = await supabase.storage.from("engagement-documents").download(documentStoragePath);
 
   if (error || !data) {
     throw new Error(`Failed to download document: ${error?.message}`);

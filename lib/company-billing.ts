@@ -44,44 +44,44 @@ export type BillingCycleRow = {
   invoicePaidAt: string | null;
 };
 
-// Regenerates the PENDING installment plan for a project engagement from its
-// payment_terms + budget -- called after create/update whenever either
-// changes. Rows already invoiced/paid are left alone (they represent a real
-// QuickBooks invoice that already exists and shouldn't be silently deleted
-// out from under it).
-export async function createInstallmentsForEngagement(
-  engagementId: string,
+// Regenerates the PENDING installment plan for a project-type company from
+// its payment_terms + budget -- called after the Overview form saves
+// whenever either changes. Rows already invoiced/paid are left alone (they
+// represent a real QuickBooks invoice that already exists and shouldn't be
+// silently deleted out from under it).
+export async function createInstallmentsForCompany(
+  companyId: string,
   paymentTerms: string | null,
   budgetAmount: number | null,
 ): Promise<void> {
   const supabase = createServiceClient();
 
   await supabase
-    .from("engagement_invoice_installments")
+    .from("company_invoice_installments")
     .delete()
-    .eq("engagement_id", engagementId)
+    .eq("company_id", companyId)
     .eq("status", "pending");
 
   const plan = paymentTerms && paymentTerms in INSTALLMENT_PLANS ? INSTALLMENT_PLANS[paymentTerms as ProjectPaymentTerms] : null;
   if (!plan || !budgetAmount) return;
 
   const rows = plan.map((step, i) => ({
-    engagement_id: engagementId,
+    company_id: companyId,
     sequence: i,
     trigger_label: step.label,
     percentage: step.percentage,
     amount: Math.round(((budgetAmount * step.percentage) / 100) * 100) / 100,
   }));
 
-  await supabase.from("engagement_invoice_installments").insert(rows);
+  await supabase.from("company_invoice_installments").insert(rows);
 }
 
-export async function listInstallments(engagementId: string): Promise<InstallmentRow[]> {
+export async function listInstallments(companyId: string): Promise<InstallmentRow[]> {
   const supabase = createServiceClient();
   const { data } = await supabase
-    .from("engagement_invoice_installments")
+    .from("company_invoice_installments")
     .select("*")
-    .eq("engagement_id", engagementId)
+    .eq("company_id", companyId)
     .order("sequence", { ascending: true });
 
   return (data ?? []).map((row) => ({
@@ -98,12 +98,12 @@ export async function listInstallments(engagementId: string): Promise<Installmen
   }));
 }
 
-export async function listBillingCycles(engagementId: string): Promise<BillingCycleRow[]> {
+export async function listBillingCycles(companyId: string): Promise<BillingCycleRow[]> {
   const supabase = createServiceClient();
   const { data } = await supabase
-    .from("engagement_billing_cycles")
+    .from("company_billing_cycles")
     .select("*")
-    .eq("engagement_id", engagementId)
+    .eq("company_id", companyId)
     .order("period_start", { ascending: false });
 
   return (data ?? []).map((row) => ({
@@ -119,36 +119,7 @@ export async function listBillingCycles(engagementId: string): Promise<BillingCy
   }));
 }
 
-// Feeds the cron job (app/api/cron/partnership-invoices) -- every currently
-// active partnership engagement, with just the fields ensureCurrentBillingCycle
-// needs to create this month's draft invoice.
-export async function listActivePartnershipEngagements(): Promise<PartnershipEngagementForBilling[]> {
-  const supabase = createServiceClient();
-  const { data } = await supabase
-    .from("engagements")
-    .select(
-      "id, company_id, total_fee_amount, duration_months, companies(name, qb_customer_id), clients(email)",
-    )
-    .eq("status", "active")
-    .eq("engagement_type", "partnership");
-
-  return (data ?? []).map((row) => {
-    const company = Array.isArray(row.companies) ? row.companies[0] : row.companies;
-    const client = Array.isArray(row.clients) ? row.clients[0] : row.clients;
-    return {
-      id: row.id,
-      companyId: row.company_id,
-      companyName: company?.name ?? "",
-      qbCustomerId: company?.qb_customer_id ?? null,
-      totalFeeAmount: row.total_fee_amount,
-      durationMonths: row.duration_months,
-      clientEmail: client?.email ?? null,
-    };
-  });
-}
-
-export type PartnershipEngagementForBilling = {
-  id: string;
+export type PartnershipCompanyForBilling = {
   companyId: string;
   companyName: string;
   qbCustomerId: string | null;
@@ -157,18 +128,41 @@ export type PartnershipEngagementForBilling = {
   clientEmail: string | null;
 };
 
-// Creates this month's draft invoice for one partnership engagement, if one
+// Feeds the cron job (app/api/cron/partnership-invoices) -- every
+// partnership-type company, with just the fields ensureCurrentBillingCycle
+// needs to create this month's draft invoice.
+export async function listActivePartnershipCompanies(): Promise<PartnershipCompanyForBilling[]> {
+  const supabase = createServiceClient();
+  const { data } = await supabase
+    .from("companies")
+    .select("id, name, qb_customer_id, total_fee_amount, duration_months, clients:client_id(email)")
+    .eq("engagement_type", "partnership");
+
+  return (data ?? []).map((row) => {
+    const client = Array.isArray(row.clients) ? row.clients[0] : row.clients;
+    return {
+      companyId: row.id,
+      companyName: row.name,
+      qbCustomerId: row.qb_customer_id,
+      totalFeeAmount: row.total_fee_amount,
+      durationMonths: row.duration_months,
+      clientEmail: client?.email ?? null,
+    };
+  });
+}
+
+// Creates this month's draft invoice for one partnership company, if one
 // doesn't already exist -- the only place a billing cycle is ever created.
-// Safe to call any number of times for the same engagement in the same
-// month: the (engagement_id, period_start) unique index makes this a no-op
-// on every call after the first.
+// Safe to call any number of times for the same company in the same month:
+// the (company_id, period_start) unique index makes this a no-op on every
+// call after the first.
 export async function ensureCurrentBillingCycle(
-  engagement: PartnershipEngagementForBilling,
+  company: PartnershipCompanyForBilling,
 ): Promise<{ created: boolean; reason?: string }> {
-  if (!engagement.totalFeeAmount || !engagement.durationMonths) {
+  if (!company.totalFeeAmount || !company.durationMonths) {
     return { created: false, reason: "Missing budget or duration" };
   }
-  if (!engagement.clientEmail) {
+  if (!company.clientEmail) {
     return { created: false, reason: "No client email on file" };
   }
 
@@ -178,9 +172,9 @@ export async function ensureCurrentBillingCycle(
 
   const supabase = createServiceClient();
   const { data: existing } = await supabase
-    .from("engagement_billing_cycles")
+    .from("company_billing_cycles")
     .select("id")
-    .eq("engagement_id", engagement.id)
+    .eq("company_id", company.companyId)
     .eq("period_start", periodStart)
     .maybeSingle();
 
@@ -188,22 +182,22 @@ export async function ensureCurrentBillingCycle(
     return { created: false, reason: "Cycle already created for this period" };
   }
 
-  let customerId = engagement.qbCustomerId;
+  let customerId = company.qbCustomerId;
   if (!customerId) {
-    customerId = await findOrCreateCustomer(engagement.companyName, engagement.clientEmail);
-    await supabase.from("companies").update({ qb_customer_id: customerId }).eq("id", engagement.companyId);
+    customerId = await findOrCreateCustomer(company.companyName, company.clientEmail);
+    await supabase.from("companies").update({ qb_customer_id: customerId }).eq("id", company.companyId);
   }
 
-  const amount = Math.round((engagement.totalFeeAmount / engagement.durationMonths) * 100) / 100;
+  const amount = Math.round((company.totalFeeAmount / company.durationMonths) * 100) / 100;
   const invoice = await createInvoice({
     customerId,
     amount,
-    description: `${engagement.companyName} — ${periodLabel}`,
-    billEmail: engagement.clientEmail,
+    description: `${company.companyName} — ${periodLabel}`,
+    billEmail: company.clientEmail,
   });
 
-  await supabase.from("engagement_billing_cycles").insert({
-    engagement_id: engagement.id,
+  await supabase.from("company_billing_cycles").insert({
+    company_id: company.companyId,
     period_label: periodLabel,
     period_start: periodStart,
     amount,

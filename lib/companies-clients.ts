@@ -304,6 +304,23 @@ export async function deleteCompany(
   return { success: true };
 }
 
+// Slugifies the company name into a portal URL, appending -2/-3/... on
+// collision. A company's portal now exists the moment it's created --
+// there's no separate "start an engagement" step that used to be the only
+// place a client_slug got assigned.
+async function generateUniqueClientSlug(supabase: ReturnType<typeof createServiceClient>, name: string): Promise<string> {
+  const base = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "client";
+
+  for (let suffix = 0; ; suffix++) {
+    const candidate = suffix === 0 ? base : `${base}-${suffix + 1}`;
+    const { data } = await supabase.from("companies").select("id").eq("client_slug", candidate).maybeSingle();
+    if (!data) return candidate;
+  }
+}
+
 export async function createCompany(
   name: string,
   logoFile: File | null,
@@ -315,9 +332,16 @@ export async function createCompany(
   const logo = await uploadCompanyLogo(supabase, name, logoFile, logoDomain, logoBackgroundColor, null);
   if ("error" in logo) return { error: logo.error };
 
+  const clientSlug = await generateUniqueClientSlug(supabase, name);
+
   const { data, error } = await supabase
     .from("companies")
-    .insert({ name, logo_storage_path: logo.path, logo_background_color: logoBackgroundColor })
+    .insert({
+      name,
+      logo_storage_path: logo.path,
+      logo_background_color: logoBackgroundColor,
+      client_slug: clientSlug,
+    })
     .select("id")
     .single();
 

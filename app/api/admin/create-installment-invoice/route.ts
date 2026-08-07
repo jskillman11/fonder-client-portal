@@ -4,8 +4,8 @@ import { findOrCreateCustomer, createInvoice } from "@/lib/quickbooks";
 
 // Staff-triggered project installment invoicing -- mirrors
 // quickbooks/create-invoice/route.ts exactly, but reads/writes one
-// engagement_invoice_installments row instead of the engagement itself
-// (an engagement can have several installments, each with its own invoice).
+// company_invoice_installments row instead of the company itself (a company
+// can have several installments, each with its own invoice).
 export async function POST(req: NextRequest) {
   const admin = await requireAdmin();
   if (admin instanceof NextResponse) return admin;
@@ -18,9 +18,9 @@ export async function POST(req: NextRequest) {
 
   const supabase = createServiceClient();
   const { data: installment, error } = await supabase
-    .from("engagement_invoice_installments")
+    .from("company_invoice_installments")
     .select(
-      "id, trigger_label, amount, status, engagements(id, engagement_title, company_id, companies(id, name, qb_customer_id), clients(email))",
+      "id, trigger_label, amount, status, companies:company_id(id, name, engagement_title, qb_customer_id, clients:client_id(email))",
     )
     .eq("id", installmentId)
     .single();
@@ -33,20 +33,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "This installment already has an invoice" }, { status: 400 });
   }
 
-  const engagement = Array.isArray(installment.engagements) ? installment.engagements[0] : installment.engagements;
-  if (!engagement) {
-    return NextResponse.json({ error: "Engagement not found for this installment" }, { status: 404 });
-  }
-
-  const company = Array.isArray(engagement.companies) ? engagement.companies[0] : engagement.companies;
+  const company = Array.isArray(installment.companies) ? installment.companies[0] : installment.companies;
   if (!company) {
-    return NextResponse.json({ error: "Company not found for this engagement" }, { status: 404 });
+    return NextResponse.json({ error: "Company not found for this installment" }, { status: 404 });
   }
 
-  const client = Array.isArray(engagement.clients) ? engagement.clients[0] : engagement.clients;
+  const client = Array.isArray(company.clients) ? company.clients[0] : company.clients;
   if (!client?.email) {
     return NextResponse.json(
-      { error: "This engagement's client has no email on file — required for QuickBooks to generate a pay link" },
+      { error: "This company's client has no email on file — required for QuickBooks to generate a pay link" },
       { status: 400 },
     );
   }
@@ -61,12 +56,12 @@ export async function POST(req: NextRequest) {
     const invoice = await createInvoice({
       customerId,
       amount: installment.amount,
-      description: `${engagement.engagement_title} — ${installment.trigger_label}`,
+      description: `${company.engagement_title ?? company.name} — ${installment.trigger_label}`,
       billEmail: client.email,
     });
 
     await supabase
-      .from("engagement_invoice_installments")
+      .from("company_invoice_installments")
       .update({
         status: "invoiced",
         qb_invoice_id: invoice.invoiceId,
