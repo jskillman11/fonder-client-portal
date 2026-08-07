@@ -1,4 +1,5 @@
 import { createServiceClient } from "./supabase/server";
+import { uploadToStorage } from "./storage-upload";
 
 export async function updateMyClientProfile(
   clientId: string,
@@ -23,12 +24,14 @@ export async function updateMyClientProfile(
     // which browsers/CDNs then cache and keep serving stale after a
     // re-upload (same bug found and fixed for company logos/staff avatars).
     const avatarStoragePath = `client-avatars/${clientId}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
-    const { error: uploadError } = await supabase.storage
-      .from("engagement-logos")
-      .upload(avatarStoragePath, photoFile, {
-        contentType: photoFile.type || "image/png",
-      });
-    if (uploadError) return { error: uploadError.message };
+    const photoBuffer = Buffer.from(await photoFile.arrayBuffer());
+    const uploadResult = await uploadToStorage(
+      "engagement-logos",
+      avatarStoragePath,
+      photoBuffer,
+      photoFile.type || "image/png",
+    );
+    if ("error" in uploadResult) return uploadResult;
     update.avatar_storage_path = avatarStoragePath;
 
     const { data: current } = await supabase

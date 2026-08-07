@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient, requireAdmin } from "@/lib/supabase/server";
 import { normalizeLogoImage } from "@/lib/logo-processing";
+import { uploadToStorage } from "@/lib/storage-upload";
 
 // One-off maintenance route: re-normalizes every existing company logo
 // through the new fixed-canvas/padding/background pipeline, since logos
@@ -40,11 +41,9 @@ export async function POST() {
     const slug = c.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
     const newPath = `companies/${slug}/logo-${crypto.randomUUID().slice(0, 8)}.png`;
 
-    const { error: uploadError } = await supabase.storage
-      .from("engagement-logos")
-      .upload(newPath, normalized, { contentType: "image/png" });
-    if (uploadError) {
-      results.push({ name: c.name, status: "upload-failed", error: uploadError.message });
+    const uploadResult = await uploadToStorage("engagement-logos", newPath, normalized, "image/png");
+    if ("error" in uploadResult) {
+      results.push({ name: c.name, status: "upload-failed", error: uploadResult.error });
       continue;
     }
 

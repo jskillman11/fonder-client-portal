@@ -1,5 +1,6 @@
 import { createServiceClient } from "./supabase/server";
 import { normalizeLogoImage } from "./logo-processing";
+import { uploadToStorage } from "./storage-upload";
 
 export type Company = {
   id: string;
@@ -178,10 +179,8 @@ async function uploadCompanyLogo(
   // then kept serving from cache even after the underlying file changed.
   const slug = companyName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   const path = `companies/${slug}/logo-${crypto.randomUUID().slice(0, 8)}.png`;
-  const { error } = await supabase.storage.from("engagement-logos").upload(path, normalized, {
-    contentType: "image/png",
-  });
-  if (error) return { error: error.message };
+  const uploadResult = await uploadToStorage("engagement-logos", path, normalized, "image/png");
+  if ("error" in uploadResult) return uploadResult;
   return { path };
 }
 

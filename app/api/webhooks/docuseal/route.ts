@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createServiceClient } from "@/lib/supabase/server";
+import { uploadToStorage } from "@/lib/storage-upload";
 
 // Receives events from DocuSeal. Register this URL in DocuSeal's console
 // under Webhooks: https://[your-vercel-domain]/api/webhooks/docuseal --
@@ -148,9 +149,10 @@ export async function POST(req: NextRequest) {
       const path = `${resolved.engagementId}/${resolved.docType}.pdf`;
       const bytes = await fetchDocuSealDocument(documents[0].url);
 
-      await supabase.storage
-        .from("engagement-documents")
-        .upload(path, bytes, { contentType: "application/pdf", upsert: true });
+      const uploadResult = await uploadToStorage("engagement-documents", path, bytes, "application/pdf", {
+        upsert: true,
+      });
+      if ("error" in uploadResult) throw new Error(uploadResult.error);
 
       const pathColumn =
         resolved.docType === "sow" ? "sow_signed_document_path" : "msa_signed_document_path";

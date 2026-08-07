@@ -1,5 +1,6 @@
 import { createServiceClient } from "./supabase/server";
 import { resizeStandaloneLogo } from "./logo-processing";
+import { uploadToStorage } from "./storage-upload";
 
 export type BrandLogoSlot = "login" | "sidebar";
 
@@ -84,10 +85,8 @@ export async function updateBrandLogo(
   // stale from cache -- same reasoning as companies' per-upload logo paths.
   const path = `brand/${slot}-logo-${crypto.randomUUID().slice(0, 8)}.${extension}`;
 
-  const { error: uploadError } = await supabase.storage.from("engagement-logos").upload(path, uploadBuffer, {
-    contentType,
-  });
-  if (uploadError) return { error: uploadError.message };
+  const uploadResult = await uploadToStorage("engagement-logos", path, uploadBuffer, contentType);
+  if ("error" in uploadResult) return uploadResult;
 
   const { error } = await supabase
     .from("brand_settings")
