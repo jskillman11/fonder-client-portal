@@ -45,6 +45,31 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Bypass @supabase/storage-js entirely -- raw fetch() straight to the
+  // Storage REST API, to isolate whether the SDK's upload() wrapper is
+  // where the corruption is introduced, or if it happens even one layer
+  // lower (Vercel/Next's fetch itself mishandling a Buffer body).
+  const rawPath = `debug/raw-probe-${crypto.randomUUID().slice(0, 8)}.png`;
+  const rawUploadRes = await fetch(
+    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/engagement-logos/${rawPath}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        "Content-Type": "image/png",
+      },
+      body: new Uint8Array(resized),
+    },
+  );
+  const rawUploadStatus = rawUploadRes.status;
+  const rawUploadBody = await rawUploadRes.text();
+  let downloadedViaRawFetch: ReturnType<typeof describe> | null = null;
+  if (rawUploadRes.ok) {
+    const rawUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/engagement-logos/${rawPath}`;
+    downloadedViaRawFetch = describe(Buffer.from(await (await fetch(rawUrl)).arrayBuffer()));
+  }
+
   return NextResponse.json({
     receivedAt,
     fileName: file.name,
@@ -57,5 +82,7 @@ export async function POST(req: NextRequest) {
     downloadedViaStorageApi,
     storageApiError,
     path,
+    rawFetchUpload: { status: rawUploadStatus, body: rawUploadBody, path: rawPath },
+    downloadedViaRawFetch,
   });
 }
