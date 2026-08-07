@@ -11,14 +11,13 @@ export async function POST(req: NextRequest) {
   const name = formData.get("name") as string;
   const logo = formData.get("logo") as File | null;
   const logoDomain = formData.get("logoDomain") as string | null;
-  const logoBackgroundColor = formData.get("logoBackgroundColor") as string | null;
   const removeLogo = formData.get("removeLogo") === "true";
 
   if (!id || !name?.trim()) {
     return NextResponse.json({ error: "id and name are required" }, { status: 400 });
   }
 
-  const result = await updateCompany(id, name, logo, logoDomain, logoBackgroundColor, removeLogo);
+  const result = await updateCompany(id, name, logo, logoDomain, removeLogo);
   if ("error" in result) {
     return NextResponse.json({ error: "Failed to update company", detail: result.error }, { status: 500 });
   }

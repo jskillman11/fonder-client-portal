@@ -6,7 +6,6 @@ export type Company = {
   id: string;
   name: string;
   logoUrl: string | null;
-  logoBackgroundColor: string;
   clientSlug: string | null;
   qbCustomerId: string | null;
   clickupListIds: string[];
@@ -14,7 +13,7 @@ export type Company = {
 };
 
 const COMPANY_COLUMNS =
-  "id, name, logo_storage_path, logo_background_color, client_slug, qb_customer_id, clickup_list_ids, google_sheet_ids";
+  "id, name, logo_storage_path, client_slug, qb_customer_id, clickup_list_ids, google_sheet_ids";
 
 function mapCompanyRow(
   supabase: ReturnType<typeof createServiceClient>,
@@ -22,7 +21,6 @@ function mapCompanyRow(
     id: string;
     name: string;
     logo_storage_path: string | null;
-    logo_background_color: string;
     client_slug: string | null;
     qb_customer_id: string | null;
     clickup_list_ids: string[] | null;
@@ -35,7 +33,6 @@ function mapCompanyRow(
     logoUrl: data.logo_storage_path
       ? supabase.storage.from("engagement-logos").getPublicUrl(data.logo_storage_path).data.publicUrl
       : null,
-    logoBackgroundColor: data.logo_background_color,
     clientSlug: data.client_slug,
     qbCustomerId: data.qb_customer_id,
     clickupListIds: data.clickup_list_ids ?? [],
@@ -151,28 +148,17 @@ async function resolveLogoSource(
 
 // Every logo (manual upload or fetched favicon) is normalized to a fixed
 // canvas/padding via lib/logo-processing.ts, so brands look consistent
-// regardless of source. existingLogoPath lets a background-color-only
-// change (no new file/domain) re-normalize the CURRENT stored image against
-// the new color, rather than requiring a re-upload just to recolor.
+// regardless of source.
 async function uploadCompanyLogo(
-  supabase: ReturnType<typeof createServiceClient>,
   companyName: string,
   logoFile: File | null,
   logoDomain: string | null,
-  backgroundColor: string,
-  existingLogoPath: string | null,
 ): Promise<{ path: string | null } | { error: string }> {
   const resolved = await resolveLogoSource(logoFile, logoDomain);
   if ("error" in resolved) return { error: resolved.error };
+  if (!resolved.buffer) return { path: null };
 
-  let rawBuffer = resolved.buffer;
-  if (!rawBuffer && existingLogoPath) {
-    const { data } = await supabase.storage.from("engagement-logos").download(existingLogoPath);
-    if (data) rawBuffer = Buffer.from(await data.arrayBuffer());
-  }
-  if (!rawBuffer) return { path: null };
-
-  const normalized = await normalizeLogoImage(rawBuffer, backgroundColor);
+  const normalized = await normalizeLogoImage(resolved.buffer);
   // A unique path per upload (rather than a fixed companies/{slug}/logo.png
   // upsert target) so the public URL actually changes when the logo does --
   // re-uploading to the SAME path kept the same URL, which browsers/CDNs
@@ -189,21 +175,19 @@ export async function updateCompany(
   name: string,
   logoFile: File | null,
   logoDomain: string | null = null,
-  logoBackgroundColor: string | null = null,
   removeLogo: boolean = false,
 ): Promise<{ success: true } | { error: string }> {
   const supabase = createServiceClient();
 
   const { data: current } = await supabase
     .from("companies")
-    .select("logo_storage_path, logo_background_color")
+    .select("logo_storage_path")
     .eq("id", id)
     .single();
 
   const update: {
     name: string;
     logo_storage_path?: string | null;
-    logo_background_color?: string;
   } = { name };
 
   if (removeLogo) {
@@ -212,11 +196,7 @@ export async function updateCompany(
     }
     update.logo_storage_path = null;
   } else {
-    const backgroundColor = logoBackgroundColor ?? current?.logo_background_color ?? "#ffffff";
-    const backgroundColorChanged = logoBackgroundColor != null && logoBackgroundColor !== current?.logo_background_color;
-    const existingPath = backgroundColorChanged ? (current?.logo_storage_path ?? null) : null;
-
-    const logo = await uploadCompanyLogo(supabase, name, logoFile, logoDomain, backgroundColor, existingPath);
+    const logo = await uploadCompanyLogo(name, logoFile, logoDomain);
     if ("error" in logo) return { error: logo.error };
     if (logo.path) {
       update.logo_storage_path = logo.path;
@@ -227,7 +207,6 @@ export async function updateCompany(
         await supabase.storage.from("engagement-logos").remove([current.logo_storage_path]);
       }
     }
-    if (logoBackgroundColor != null) update.logo_background_color = logoBackgroundColor;
   }
 
   const { error } = await supabase.from("companies").update(update).eq("id", id);
@@ -318,11 +297,10 @@ export async function createCompany(
   name: string,
   logoFile: File | null,
   logoDomain: string | null = null,
-  logoBackgroundColor: string = "#ffffff",
 ): Promise<{ id: string } | { error: string }> {
   const supabase = createServiceClient();
 
-  const logo = await uploadCompanyLogo(supabase, name, logoFile, logoDomain, logoBackgroundColor, null);
+  const logo = await uploadCompanyLogo(name, logoFile, logoDomain);
   if ("error" in logo) return { error: logo.error };
 
   const clientSlug = await generateUniqueClientSlug(supabase, name);
@@ -332,7 +310,6 @@ export async function createCompany(
     .insert({
       name,
       logo_storage_path: logo.path,
-      logo_background_color: logoBackgroundColor,
       client_slug: clientSlug,
     })
     .select("id")

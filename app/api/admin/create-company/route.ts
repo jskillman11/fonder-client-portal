@@ -10,13 +10,12 @@ export async function POST(req: NextRequest) {
   const name = formData.get("name") as string;
   const logo = formData.get("logo") as File | null;
   const logoDomain = formData.get("logoDomain") as string | null;
-  const logoBackgroundColor = (formData.get("logoBackgroundColor") as string | null) || "#ffffff";
 
   if (!name?.trim()) {
     return NextResponse.json({ error: "Company name is required" }, { status: 400 });
   }
 
-  const result = await createCompany(name, logo, logoDomain, logoBackgroundColor);
+  const result = await createCompany(name, logo, logoDomain);
   if ("error" in result) {
     return NextResponse.json({ error: "Failed to create company", detail: result.error }, { status: 500 });
   }
